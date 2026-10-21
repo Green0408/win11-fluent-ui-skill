@@ -123,6 +123,38 @@
           </div>
         </div>
         <div style="margin-top: var(--fl-space-3);">
+          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">ComboBox 长列表（20 项 → 出现滚动条）</span>
+          <div class="fl-combo" id="sel-long" data-open="false">
+            <button class="fl-combo-btn" id="sel-long-btn" type="button"
+                    role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="sel-long-list">
+              <span class="fl-combo-value">滚动条样张</span>
+              <svg class="fl-combo-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5"/></svg>
+            </button>
+            <div class="fl-combo-popup fl-overlay fl-scroll" id="sel-long-list" role="listbox" tabindex="-1">
+              <div class="fl-combo-item" role="option" aria-selected="false">1 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">2 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">3 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">4 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">5 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">6 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">7 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">8 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">9 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">10 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">11 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">12 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">13 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">14 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">15 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">16 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">17 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">18 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">19 项</div>
+              <div class="fl-combo-item" role="option" aria-selected="false">20 项</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: var(--fl-space-3);">
           <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">Slider（30 / 100 / 0 / 禁用）</span>
           <input class="fl-slider" id="sld" type="range" min="0" max="100" value="30" aria-label="Slider">
           <input class="fl-slider" id="sld-100" type="range" min="0" max="100" value="100" aria-label="Slider 满值">

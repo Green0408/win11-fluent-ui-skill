@@ -592,24 +592,29 @@ button.fl-settings-row, a.fl-settings-row {
 /* 没有图标列时，缩进退回行内边距，线从文字左缘开始 */
 .fl-settings-row[data-divided]:not(:has(.fl-settings-icon))::after { left: var(--fl-space-3); }
 
-/* ---- 细滚动条（.fl-scroll）----
+/* ---- 细滚动条（.fl-scroll / .fl-page / .fl-nav）----
    浏览器默认滚动条是 17px 带上下箭头的方块，在 Acrylic 弹层里非常出戏。
-   Win11 的做法是「细、圆头、无箭头、hover 才略微变粗」：
-     · 命中区 12px，静止画 4px（4px 透明 border + content-box 裁出）；颜色用实色而非半透明 ——
-       55% alpha 的灰叠在 Acrylic 上几乎看不见（曾经收到 2px + 半透明，用户直接说"没有滚动条"）
-     · hover / 拖动时 border 收到 3px → 视觉 6px，颜色再深一档
-     · **聚焦不触发变粗**：`focus-within` 曾让下拉一展开就变粗（焦点自动进 listbox），
-       用户看到的是"一打开就一根粗杠"。只有指针真的移到弹层上才加粗
-     · **拖动（:active）不再继续变粗** —— 曾经收到 0 直接画满 12px
-     · 永远透明轨道，不占视觉空间
-   ⚠ 关键坑：Chromium 116+ 里，只要元素上出现 `scrollbar-width` / `scrollbar-color` 的**非 auto** 值，
+   Win11 的做法是「细、圆头、无箭头、指针落在滚动条上才变粗」：
+
+     · 命中区 12px；静止画 6px（3px 透明 border + content-box 裁出）
+       —— 曾用过 2px / 4px，用户两次反馈"看不见"：弹层又小、底色又是 Acrylic，低于 6px 就是不可见；
+     · **变粗只认指针在 thumb 上**（`::-webkit-scrollbar-thumb:hover`）。
+       绝不能把 `:hover` 挂在容器上：`.fl-page:hover` 在鼠标位于页面任何位置时都成立，
+       结果整页的滚动条永远处于"变粗"态（这是用户明确报的 bug）；
+       也不能用 `:focus-within`：下拉一展开焦点自动进 listbox，等于一打开就变粗；
+     · 拖动（`:active`）与 hover 同宽，不再继续变粗（曾经收到 0 直接画满 12px 命中区）；
+     · 轨道永远透明，不占视觉空间。
+
+   ⚠ 关键坑：Chromium 116+ 里，只要元素上出现 `scrollbar-width` / `scrollbar-color` 的非 auto 值，
      `::-webkit-scrollbar-*` 全部失效（标准属性优先）。所以两套写法必须互斥：
        默认（Firefox）用标准属性；支持 webkit 伪元素的引擎里先把它们重置回 auto，再写伪元素样式。
-     写成"两套并存"的结果是 Chrome 里悄悄退化成原生样式，而且测不出报错。 */
+     写成"两套并存"的结果是 Chrome 里悄悄退化成原生 Fluent 滚动条（默认半透明、悬停才显形），
+     表现为"看不见滚动条 / 鼠标一进就变粗"，而且控制台零报错。 */
 :is(.fl-scroll, .fl-page, .fl-nav) {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--fl-control-strong-fill) 55%, transparent) transparent;
+  scrollbar-color: var(--fl-control-strong-fill) transparent;
 }
+
 @supports selector(::-webkit-scrollbar) {
   :is(.fl-scroll, .fl-page, .fl-nav) { scrollbar-width: auto; scrollbar-color: auto; }  /* 让位给下面的伪元素写法 */
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar { width: 12px; height: 12px; }
@@ -617,21 +622,19 @@ button.fl-settings-row, a.fl-settings-row {
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-corner { background: transparent; }
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-button { display: none; }  /* 去掉上下箭头与双箭头 */
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--fl-control-strong-fill) 85%, transparent);
+    /* 颜色直接用 ControlStrongFillColorDefault（暗 55% 白 / 亮 45% 黑）：
+       再往上混透明等于自己把对比度稀释掉，Acrylic 底上直接消失 */
+    background: var(--fl-control-strong-fill);
     background-clip: content-box;
-    border: 4px solid transparent;      /* 4px 透明边框 → 视觉 4px */
+    border: 3px solid transparent;      /* 12 - 3×2 = 视觉 6px */
     border-radius: 999px;
-    min-height: 24px;
+    min-height: 28px;
   }
-  /* 只认指针悬停：不加 :focus-within —— 否则下拉一打开（焦点自动进 listbox）就变成粗条 */
-  :is(.fl-scroll, .fl-page, .fl-nav):hover::-webkit-scrollbar-thumb {
-    background: var(--fl-control-strong-fill);
-    border-width: 3px;                  /* hover 视觉 6px */
-  }
-  /* 拖动时与 hover 同宽：再收窄就画满 12px 命中区，弹层里会显得又粗又重 */
+  /* 只认「指针落在 thumb 上」。容器 hover 一定不能写，见上方注释 */
+  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:hover,
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:active {
-    background: var(--fl-control-strong-fill);
-    border-width: 3px;
+    background: var(--fl-text-secondary);   /* 暗 77% 白 / 亮 62% 黑，再深一档 */
+    border-width: 2px;                      /* 视觉 8px */
   }
 }
 

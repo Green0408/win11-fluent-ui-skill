@@ -186,6 +186,10 @@
     applyShift(next, cur, shift.axis, shift.sign);
     void next.offsetWidth;         // 单次 reflow：让「移除类 → 添加类」真实发生，动画才会重播
 
+    /* 侧栏选中指示条：先把当前项记下来（首次进入时用于"从无到有"），再移到目标项 */
+    var navItem = kind === "nav" ? document.querySelector('.fl-nav-item[data-page="' + pageId + '"]') : null;
+    if (navItem) moveIndicatorTo(navItem);
+
     if (REDUCED) {                 // 无障碍：瞬时切换，不做位移与淡入淡出
       if (cur) cur.classList.remove("fl-current");
       next.classList.add("fl-current");
@@ -232,6 +236,178 @@
     return M.transitionTo(pageStack[pageStack.length - 2], { kind: kind || "nav", dir: "back" });
   };
   M.stack = function () { return pageStack.slice(); };
+
+  /* ---- 侧栏选中指示条（NavigationView SelectionIndicator）-------------------------
+     官方实现（microsoft-ui-xaml: NavigationView::PlayIndicatorAnimations）：
+       · 总时长 600ms；缩放关键帧在 33.3%（=200ms）处达到 |Δ|/dim + 1，即"拉伸到刚好覆盖两项"
+       · 位移用 singleStep：前 200ms 不动，200ms 处直接跳到目标（所以看起来是"先长出来再跳"）
+       · 缩放中心 200ms 内从顶边切到底边 → 于是前半段往下长、后半段往上收
+       · 拉伸段缓动 (0.9,0.1,1,0.2)（慢起后加速）；收缩段 (0.1,0.9,0.2,1)
+       · 旧指示条在 33.3% 之后淡出（600ms 内）
+     本实现用两个层拟合同一效果：ghost 停在旧位置往下长、pill 落在新位置往上收，
+     两者在 0–200ms 完全重合（所以看不出是两层），200ms 后 ghost 淡出、pill 收缩。 */
+  var IND_MS = 600, IND_PEAK = 0.3333;
+  var IND_EASE_GROW = "cubic-bezier(0.9,0.1,1,0.2)";
+  var IND_EASE_SHRINK = "cubic-bezier(0.1,0.9,0.2,1)";
+
+  function indSize(nav) {
+    var cs = global.getComputedStyle(nav);
+    var h = parseFloat(cs.getPropertyValue("--fl-nav-indicator-h")) || 16;
+    var w = parseFloat(cs.getPropertyValue("--fl-nav-indicator-w")) || 3;
+    return { h: h, w: w };
+  }
+
+  function itemCenter(nav, item) {
+    /* offsetTop 相对 offsetParent（.fl-nav 是 position:relative），再加半行高 */
+    var h = indSize(nav).h;
+    return item.offsetTop + (item.offsetHeight - h) / 2;
+  }
+
+  function makeInd(nav, role) {
+    var el = nav.querySelector('.fl-nav-ind[data-role="' + role + '"]');
+    if (el) return el;
+    el = document.createElement("i");
+    el.className = "fl-nav-ind";
+    el.setAttribute("data-role", role);
+    el.setAttribute("aria-hidden", "true");
+    nav.appendChild(el);
+    return el;
+  }
+
+  /* 把指示条放到某项上；animate=true 时按官方节奏从 fromItem 过渡过去 */
+  function placeIndicator(nav, toItem, fromItem) {
+    if (!nav || !toItem) return;
+    nav.setAttribute("data-fl-indicator", "on");
+    var size = indSize(nav);
+    var top = itemCenter(nav, toItem);
+    var pill = makeInd(nav, "pill");
+    var ghost = makeInd(nav, "ghost");
+
+    /* 横向：对齐到行的左边缘（nav 有 padding，CSS 里写死 left:0 会偏出去）；
+       RTL 下改贴右边缘 —— 用 insetInlineStart 语义由 CSS 变量控制更麻烦，这里直接算 */
+    var rtl = global.getComputedStyle(nav).direction === "rtl";
+    var lateral = rtl ? (nav.clientWidth - toItem.offsetLeft - toItem.offsetWidth) : toItem.offsetLeft;
+    pill.style.height = size.h + "px";
+    pill.style.width = size.w + "px";
+    ghost.style.height = size.h + "px";
+    ghost.style.width = size.w + "px";
+    pill.style[rtl ? "right" : "left"] = lateral + "px";
+    ghost.style[rtl ? "right" : "left"] = lateral + "px";
+    pill.style[rtl ? "left" : "right"] = "auto";
+    ghost.style[rtl ? "left" : "right"] = "auto";
+
+    var canAnimate = !REDUCED && fromItem && fromItem !== toItem && pill.animate;
+    if (!canAnimate) {
+      if (pill.getAnimations) pill.getAnimations().forEach(function (a) { a.cancel(); });
+      if (ghost.getAnimations) ghost.getAnimations().forEach(function (a) { a.cancel(); });
+      pill.style.top = top + "px";
+      pill.style.transform = "none";
+      pill.style.opacity = "1";
+      ghost.style.opacity = "0";
+      return;
+    }
+
+    /* 连点保护：先掐掉上一轮，避免两个 WAAPI 动画叠加成"抖" */
+    if (pill.getAnimations) pill.getAnimations().forEach(function (a) { a.cancel(); });
+    if (ghost.getAnimations) ghost.getAnimations().forEach(function (a) { a.cancel(); });
+
+    var fromTop = itemCenter(nav, fromItem);
+    var d = top - fromTop;
+    var scale = (size.h + Math.abs(d)) / size.h;   // 拉伸到刚好覆盖两项
+    var down = d > 0;
+
+    /* ghost：留在旧位置，往下（或往上）长到覆盖新项，200ms 后开始淡出 */
+    ghost.style.top = fromTop + "px";
+    ghost.style.transformOrigin = down ? "50% 0" : "50% 100%";
+    ghost.style.opacity = "1";
+    ghost.animate([
+      { transform: "scaleY(1)", opacity: 1, offset: 0, easing: IND_EASE_GROW },
+      { transform: "scaleY(" + scale + ")", opacity: 1, offset: IND_PEAK, easing: IND_EASE_SHRINK },
+      { transform: "scaleY(" + scale + ")", opacity: 0, offset: 1 }
+    ], { duration: IND_MS, fill: "both" });
+
+    /* pill：落在新位置，反向 —— 前 200ms 不可见（这一段由 ghost 独自"长出来"），
+       200ms 处一次性显形并保持"覆盖两项"的尺寸，再用 400ms 收成 16px。
+       ⚠ 不能只靠 delay：WAAPI 在 delay 期间就会套用首个关键帧，
+         pill 会从一开始就是拉伸态、把 ghost 的生长阶段整个盖住（实测过）。 */
+    pill.style.top = top + "px";
+    pill.style.transformOrigin = down ? "50% 100%" : "50% 0";
+    var atFull = "scaleY(" + scale + ")";
+    var anim = pill.animate([
+      { transform: atFull, opacity: 0, offset: 0 },
+      { transform: atFull, opacity: 0, offset: IND_PEAK - 0.002 },
+      { transform: atFull, opacity: 1, offset: IND_PEAK },
+      { transform: "scaleY(1)", opacity: 1, offset: 1, easing: IND_EASE_SHRINK }
+    ], { duration: IND_MS, fill: "both" });
+    anim.onfinish = function () {
+      pill.style.transform = "none";      // 结算后不留合成层，避免长期挂在 GPU 上
+      pill.style.opacity = "1";
+      pill.getAnimations().forEach(function (a) { a.cancel(); });
+      ghost.style.opacity = "0";
+    };
+  }
+
+  /* 公开 API：M.nav.indicator.sync() 按当前 aria-current 落位（不animate）；
+     M.nav.indicator.to(item, { animate }) 用于自己接管导航的场景。 */
+  M.nav = M.nav || {};
+  M.nav.indicator = {
+    nav: function (el) {
+      return (typeof el === "string" ? document.querySelector(el) : el) ||
+        document.querySelector(".fl-nav");
+    },
+    current: function (nav) {
+      nav = M.nav.indicator.nav(nav);
+      return nav ? nav.querySelector('.fl-nav-item[aria-current="page"]') : null;
+    },
+    to: function (toItem, opts) {
+      opts = opts || {};
+      var nav = opts.nav || (toItem && toItem.closest ? toItem.closest(".fl-nav") : null) ||
+        M.nav.indicator.nav();
+      if (!nav || !toItem) return;
+      var prev = nav.__flIndItem || null;
+      placeIndicator(nav, toItem, opts.animate === false ? null : prev);
+      nav.__flIndItem = toItem;
+    },
+    sync: function (nav) {
+      nav = M.nav.indicator.nav(nav);
+      if (!nav) return;
+      var item = M.nav.indicator.current(nav);
+      if (item) {
+        nav.__flIndItem = item;
+        placeIndicator(nav, item, null);
+      }
+    }
+  };
+
+  /* transitionTo 内部用：更新 aria-current 并让指示条移动过去。
+     先 sync 一次是为了让「首次进入页面」也有落位基准（否则第一跳会没有起点）。 */
+  function moveIndicatorTo(item) {
+    var nav = item.closest ? item.closest(".fl-nav") : null;
+    if (!nav) return;
+    if (!nav.__flIndReady) {
+      M.nav.indicator.sync(nav);
+      nav.__flIndReady = true;
+    }
+    var items = nav.querySelectorAll(".fl-nav-item");
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] !== item) items[i].removeAttribute("aria-current");
+    }
+    item.setAttribute("aria-current", "page");
+    M.nav.indicator.to(item, { nav: nav });
+  }
+
+  /* 首屏：按现有的 aria-current 落位（不播动画） */
+  function initIndicator() {
+    var nav = document.querySelector(".fl-nav");
+    if (!nav) return;
+    M.nav.indicator.sync(nav);
+    nav.__flIndReady = true;
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initIndicator, { once: true });
+  } else {
+    global.setTimeout(initIndicator, 0);
+  }
 
   /* 列表/卡片分批入场：.fl-entrance + 83ms 步进、上限 333ms
      延迟写进 --fl-stagger-delay（只影响本动画的 animation-delay），不污染 hover/active 过渡 */

@@ -77,6 +77,7 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
    结构/选择规则出处：learn.../design/basics/navigation-basics（顶层页、>5 项、不频繁切换） */
 .fl-nav {
   width: var(--fl-nav-width, 240px); flex-shrink: 0;
+  position: relative;          /* 指示条层的定位基准（.fl-nav-ind 的 offsetParent） */
   background: var(--fl-layer-fill, var(--fl-solid-bg-secondary));
   border-right: var(--fl-stroke) solid var(--fl-divider-stroke);
   padding: var(--fl-space-2); display: flex; flex-direction: column; gap: var(--fl-space-1);
@@ -94,12 +95,30 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 .fl-nav-item:hover { background: var(--fl-subtle-fill-hover); }
 .fl-nav-item:active { background: var(--fl-subtle-fill-pressed); color: var(--fl-text-secondary); }
 .fl-nav-item[aria-current="page"] { background: var(--fl-subtle-fill-hover); font-weight: var(--fl-weight-semibold); }
-/* 选中指示条：3×16 胶囊（NavigationViewSelectionIndicatorWidth/Height/Radius） */
+/* 选中指示条：3×16 胶囊（NavigationViewSelectionIndicatorWidth/Height/Radius）
+   默认由 JS 挂一个独立的 .fl-nav-ind 层来画，以便在两项之间做"拉伸→收缩"的移动动画
+   （与 WinUI NavigationView 的 offset/scale 动画同构）。没有 JS 时退回每项的 ::before。 */
 .fl-nav-item[aria-current="page"]::before {
   content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   width: var(--fl-nav-indicator-w); height: var(--fl-nav-indicator-h);
   border-radius: var(--fl-radius-indicator); background: var(--fl-accent-fill);
 }
+/* JS 挂上指示条层之后，关掉每项的静态胶囊，否则会看到两条 */
+.fl-nav[data-fl-indicator="on"] .fl-nav-item[aria-current="page"]::before { content: none; }
+
+.fl-nav-ind {
+  position: absolute; left: 0; top: 0;
+  width: var(--fl-nav-indicator-w); height: var(--fl-nav-indicator-h);
+  border-radius: var(--fl-radius-indicator);
+  background: var(--fl-accent-fill);
+  pointer-events: none; opacity: 0;
+  /* 拉伸阶段的锚点由 JS 按方向切换：向下移动锚顶边、向上移动锚底边 */
+  transform-origin: 50% 0;
+  will-change: transform, opacity;
+}
+/* 过渡期克隆：只负责"旧位置向新位置拉长"这一半 */
+.fl-nav-ind[data-role="ghost"] { z-index: 1; }
+.fl-nav-ind[data-role="pill"] { z-index: 2; }
 
 /* ---- 按钮（Button XAML：Padding 11,5,11,6；Rest elevation 2 / Pressed 1；圆角 4） ---- */
 .fl-btn {

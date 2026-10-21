@@ -71,8 +71,9 @@ body {
 }
 .fl-nav-item {
   position: relative; display: flex; align-items: center; gap: var(--fl-space-3);
-  min-height: var(--fl-control-height); padding: 0 var(--fl-space-2) 0 var(--fl-space-4);
-  border-radius: var(--fl-radius-control); color: var(--fl-text-primary);
+  min-height: var(--fl-nav-item-height); /* NavigationViewItemOnLeftMinHeight 36（不是控件标准高 32） */
+  padding: 0 var(--fl-space-2) 0 var(--fl-space-4);
+  border-radius: var(--fl-radius-indicator); color: var(--fl-text-primary);
   text-decoration: none; cursor: pointer; border: 0; background: transparent; width: 100%;
   font: inherit; text-align: left;
   transition: background var(--fl-dur-fast) var(--fl-ease-standard);
@@ -80,11 +81,11 @@ body {
 .fl-nav-item:hover { background: var(--fl-subtle-fill-hover); }
 .fl-nav-item:active { background: var(--fl-subtle-fill-pressed); color: var(--fl-text-secondary); }
 .fl-nav-item[aria-current="page"] { background: var(--fl-subtle-fill-hover); font-weight: var(--fl-weight-semibold); }
-/* 选中指示条：3px 圆角胶囊（ListViewItemSelectionIndicatorCornerRadius=1 的控件化形态） */
+/* 选中指示条：3×16 胶囊（NavigationViewSelectionIndicatorWidth/Height/Radius） */
 .fl-nav-item[aria-current="page"]::before {
   content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  width: calc(var(--fl-space-1) - 1px); height: var(--fl-space-4);
-  border-radius: var(--fl-stroke); background: var(--fl-accent-fill);
+  width: var(--fl-nav-indicator-w); height: var(--fl-nav-indicator-h);
+  border-radius: var(--fl-radius-indicator); background: var(--fl-accent-fill);
 }
 
 /* ---- 按钮（Button XAML：Padding 11,5,11,6；Rest elevation 2 / Pressed 1；圆角 4） ---- */
@@ -170,27 +171,89 @@ body {
               0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
 
-/* ---- CheckBox / Radio（20x20，圆角 4） ---- */
-.fl-check, .fl-radio { display: inline-flex; align-items: center; gap: var(--fl-space-2); cursor: pointer; }
-.fl-check input, .fl-radio input { position: absolute; opacity: 0; width: 0; height: 0; }
-.fl-check .fl-box, .fl-radio .fl-box {
-  width: 20px; height: 20px; flex-shrink: 0; border-radius: var(--fl-radius-control);
-  border: var(--fl-stroke) solid var(--fl-control-strong-fill);
+/* ---- CheckBox / RadioButton ----
+   几何：方框 20×20（CheckBoxSize）、圆角 4（ControlCornerRadius）、描边 1（CheckBoxBorderThickness）
+   勾号：SVG 描画（官方 ListViewItem CheckGlyph 的 2.5 描边宽，见 --fl-glyph-stroke），
+        不是文本字符 —— 文本 ✓ 无法描画、字重随字体漂移，且在中文字体下会被替换成异体字。
+   状态：底色 83ms（官方 XAML 该控件是 DiscreteObjectKeyFrame 瞬时切色，此处保留 83ms 避免硬切，
+        属登记级偏离，见 KIT 规则 12）；勾号描绘 167ms（= ControlFastAnimationDuration）。 */
+.fl-check, .fl-radio { position: relative; display: inline-flex; align-items: center; gap: var(--fl-space-2); cursor: pointer; }
+.fl-check input, .fl-radio input {
+  position: absolute; opacity: 0;
+  width: 1px; height: 1px; clip-path: inset(50%); /* 视觉隐藏但保留可聚焦命中区（0×0 会让辅助技术拿不到） */
+}
+/* 方框视觉是共用的：.fl-check / .fl-radio 用它，列表多选列也用它（状态分别由 :checked 与行的 aria-selected 驱动） */
+.fl-box {
+  width: var(--fl-check-size); height: var(--fl-check-size); flex-shrink: 0;
+  border-radius: var(--fl-radius-control);
+  border: var(--fl-check-stroke) solid var(--fl-control-strong-fill);
   background: var(--fl-control-fill-default);
   display: inline-flex; align-items: center; justify-content: center;
-  transition: background var(--fl-dur-fast) var(--fl-ease-standard), border-color var(--fl-dur-fast) var(--fl-ease-standard);
+  transition: background var(--fl-dur-control-faster) var(--fl-ease-standard),
+              border-color var(--fl-dur-control-faster) var(--fl-ease-standard);
 }
 .fl-radio .fl-box { border-radius: 50%; }
-.fl-check input:checked + .fl-box, .fl-radio input:checked + .fl-box { background: var(--fl-accent-fill); border-color: var(--fl-accent-fill); color: var(--fl-text-on-accent-primary); }
-.fl-check input:checked + .fl-box::after { content: "✓"; font-size: var(--fl-font-size-caption); line-height: 1; }
-.fl-radio input:checked + .fl-box::after { content: ""; width: var(--fl-space-2); height: var(--fl-space-2); border-radius: 50%; background: var(--fl-text-on-accent-primary); }
+
+/* hover / pressed（未选中档；选中档写在后面，优先级更高） */
+.fl-check:hover .fl-box, .fl-radio:hover .fl-box { background: var(--fl-control-fill-secondary); }
+.fl-check:active .fl-box, .fl-radio:active .fl-box { background: var(--fl-control-fill-tertiary); }
+
+/* 选中档（必须排在 hover/pressed 之后） */
+.fl-check input:checked + .fl-box, .fl-radio input:checked + .fl-box,
+.fl-check input:indeterminate + .fl-box {
+  background: var(--fl-accent-fill); border-color: var(--fl-accent-fill); color: var(--fl-text-on-accent-primary);
+}
+.fl-check:hover input:checked + .fl-box, .fl-radio:hover input:checked + .fl-box,
+.fl-check:hover input:indeterminate + .fl-box { background: var(--fl-accent-fill-hover); border-color: var(--fl-accent-fill-hover); }
+.fl-check:active input:checked + .fl-box, .fl-radio:active input:checked + .fl-box,
+.fl-check:active input:indeterminate + .fl-box { background: var(--fl-accent-fill-pressed); border-color: var(--fl-accent-fill-pressed); }
+
+/* 禁用档 */
+.fl-check input:disabled ~ .fl-box, .fl-radio input:disabled ~ .fl-box {
+  background: var(--fl-control-fill-disabled);
+  border-color: var(--fl-control-strong-fill-disabled);
+}
+.fl-check input:disabled:checked ~ .fl-box, .fl-radio input:disabled:checked ~ .fl-box,
+.fl-check input:disabled:indeterminate ~ .fl-box {
+  background: var(--fl-accent-fill-disabled); border-color: var(--fl-accent-fill-disabled);
+  color: var(--fl-text-on-accent-disabled);
+}
+.fl-check input:disabled ~ span, .fl-radio input:disabled ~ span { color: var(--fl-text-disabled); cursor: default; }
+
+/* 勾号：中心线 + pathLength="1"，靠 stroke-dashoffset 描画
+   终态由 :checked 决定（未选中态才写 dashoffset:1），动画只由 transition 承担 ——
+   reduced-motion 时只需关掉 transition，勾号自动是终态，不会"永远不出现" */
+.fl-check-glyph { width: var(--fl-check-glyph); height: var(--fl-check-glyph); display: block; overflow: visible; }
+.fl-check-glyph path {
+  fill: none; stroke: currentColor; stroke-width: var(--fl-glyph-stroke);
+  stroke-linecap: butt; stroke-linejoin: miter;
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset var(--fl-dur-control-fast) var(--fl-ease-standard);
+}
+.fl-check-glyph .fl-check-dash { display: none; }
+.fl-check input:not(:checked):not(:indeterminate) + .fl-box .fl-check-glyph path { stroke-dashoffset: 1; }
+.fl-check input:indeterminate + .fl-box .fl-check-glyph .fl-check-mark { display: none; }
+.fl-check input:indeterminate + .fl-box .fl-check-glyph .fl-check-dash { display: block; }
+
+/* 单选内点：12（RadioButtonCheckGlyphSize）；hover 1.167 / pressed 0.833 由 --fl-radio-boost 叠乘，
+   不用 width 过渡（会触发布局） */
+.fl-radio .fl-box::after {
+  content: ""; width: var(--fl-radio-glyph); height: var(--fl-radio-glyph);
+  border-radius: 50%; background: var(--fl-text-on-accent-primary);
+  transform: scale(calc(var(--fl-radio-on, 0) * var(--fl-radio-boost, 1)));
+  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard);
+}
+.fl-radio input:checked + .fl-box::after { --fl-radio-on: 1; }
+.fl-radio:hover .fl-box::after { --fl-radio-boost: 1.167; }
+.fl-radio:active .fl-box::after { --fl-radio-boost: 0.833; }
+
 .fl-check input:focus-visible + .fl-box, .fl-radio input:focus-visible + .fl-box {
   box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
               0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
 
 /* ---- Slider（XAML Slider_themeresources：SliderTrackThemeHeight=4、SliderInnerThumbWidth=12、
-        SliderThumbCornerRadius=10；hover scale 1.167 / pressed 0.833，ControlNormal 250ms + FastOutSlowIn） ---- */
+        SliderThumbCornerRadius=10；hover scale 1.167 / pressed 0.833，ControlNormalAnimationDuration 250ms + FastOutSlowIn） ---- */
 .fl-slider {
   -webkit-appearance: none; appearance: none;
   width: 100%; height: var(--fl-control-height);
@@ -208,7 +271,7 @@ body {
   border: 0; border-radius: var(--fl-slider-radius);
   background: var(--fl-accent-fill);
   box-shadow: 0 0 0 var(--fl-space-1) var(--fl-control-solid-fill); /* 外环 20px 近似 SliderOuterThumbBackground */
-  transition: transform var(--fl-dur-normal) var(--fl-ease-standard);
+  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard);
 }
 .fl-slider:hover::-webkit-slider-thumb  { transform: scale(1.167); } /* 14px */
 .fl-slider:active::-webkit-slider-thumb { transform: scale(0.833); } /* 10px */
@@ -226,7 +289,7 @@ body {
   width: var(--fl-slider-inner); height: var(--fl-slider-inner);
   border: 0; border-radius: var(--fl-slider-radius);
   background: var(--fl-accent-fill);
-  transition: transform var(--fl-dur-normal) var(--fl-ease-standard);
+  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard);
 }
 .fl-slider:hover::-moz-range-thumb  { transform: scale(1.167); }
 .fl-slider:active::-moz-range-thumb { transform: scale(0.833); }
@@ -247,23 +310,205 @@ body {
   border-radius: 50%; background: var(--fl-text-primary);
 }
 
-/* ---- 列表项（ListViewItem：MinHeight 40、圆角 4、禁用透明度 0.3） ---- */
+/* ---- 列表（ListView）----
+   行结构（对应 Win11 设置页实测形态）：图标 + 主标题/副标题 + 尾部区域（数值/开关/箭头）
+   六档背景严格对应 XAML ListViewItemPresenter（顺序即语义，勿按字母序重排 ——
+   选中+hover 必须写在 :hover 之后，否则同权重会被 .fl-listitem:hover 抢走）：
+     Rest                SubtleFillColorTransparent → --fl-control-fill-transparent
+     PointerOver         SubtleFillColorSecondary   → --fl-subtle-fill-hover
+     Pressed             SubtleFillColorTertiary    → --fl-subtle-fill-pressed
+     Selected            SubtleFillColorSecondary   → --fl-subtle-fill-hover
+     SelectedPointerOver SubtleFillColorTertiary    → --fl-subtle-fill-pressed
+     SelectedPressed     SubtleFillColorSecondary   → --fl-subtle-fill-hover
+   注意：Tertiary 比 Secondary 更淡，所以「选中+hover」比「仅选中」略淡是官方行为，不是 bug。 */
+.fl-list { display: flex; flex-direction: column; min-width: var(--fl-list-min-width); }
+
 .fl-listitem {
-  display: flex; align-items: center; gap: var(--fl-space-3);
-  min-height: var(--fl-list-item-height);
+  --fl-check-col: 0px;   /* 多选模式下由 .fl-list[data-multiselect] 改成 40.5px */
+  position: relative;
+  display: grid;
+  /* 第 1 列 = 多选勾选列（平时 0 宽），第 2 列 = 行内容
+     minmax(0,1fr) 是省略号生效的关键：否则长标题会把尾部箭头挤出容器 */
+  grid-template-columns: var(--fl-check-col) minmax(0, 1fr);
+  align-items: center;
+  min-height: var(--fl-list-item-height);      /* ListViewItemMinHeight 40（单行） */
   padding: 0 var(--fl-space-3);
-  border-radius: var(--fl-radius-control); cursor: pointer;
-  transition: background var(--fl-dur-fast) var(--fl-ease-standard);
+  border-radius: var(--fl-radius-control);
+  background: var(--fl-control-fill-transparent);
+  cursor: pointer;
+  transition: background var(--fl-dur-control-faster) var(--fl-ease-standard),
+              grid-template-columns var(--fl-dur-control-faster) var(--fl-ease-standard);
 }
-.fl-listitem:hover { background: var(--fl-subtle-fill-hover); }
-.fl-listitem:active { background: var(--fl-subtle-fill-pressed); }
-.fl-listitem[aria-selected="true"] { background: var(--fl-subtle-fill-hover); position: relative; }
-.fl-listitem[aria-selected="true"]::before {
-  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  width: calc(var(--fl-space-1) - 1px); height: var(--fl-space-4);
-  border-radius: var(--fl-stroke); background: var(--fl-accent-fill);
+/* 多选模式：腾出 40.5px（= -ListViewItemContentOffsetX）给勾选列，内容整体右移
+   用列宽过渡而不是 transform —— transform 会让尾部箭头冲出右内边距 */
+.fl-list[data-multiselect] .fl-listitem { --fl-check-col: var(--fl-list-check-offset); }
+
+/* 行内容：图标 + 主副标题 + 尾部区域（数值/开关/箭头） */
+.fl-list-content {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--fl-space-3);
+  min-width: 0;
 }
-.fl-listitem[aria-disabled="true"] { opacity: 0.3; /* ListViewItemDisabledThemeOpacity */ }
+
+/* 两行档：图标 + 主标题 + 副标题，行高 64（KIT 自定，见 tokens 注释） */
+.fl-listitem[data-lines="2"] {
+  min-height: var(--fl-list-item-height-two-line);
+  padding-top: var(--fl-space-2);
+  padding-bottom: var(--fl-space-2);
+}
+
+/* 勾选列：列宽为 0 时靠 overflow 裁掉，不外溢到内容上 */
+.fl-listitem-check {
+  grid-column: 1;
+  display: inline-flex; align-items: center; min-width: 0;
+  overflow: hidden;
+}
+/* 多选列的勾选状态由行的 aria-selected 驱动（不在 role="option" 里嵌套 checkbox，避免 ARIA 冲突） */
+.fl-listitem[aria-selected="true"] .fl-box {
+  background: var(--fl-accent-fill); border-color: var(--fl-accent-fill);
+  color: var(--fl-text-on-accent-primary);
+}
+.fl-listitem[aria-selected="true"]:hover .fl-box { background: var(--fl-accent-fill-hover); border-color: var(--fl-accent-fill-hover); }
+.fl-listitem[aria-selected="true"] .fl-check-glyph path { stroke-dashoffset: 0; }
+.fl-listitem:not([aria-selected="true"]) .fl-check-glyph path { stroke-dashoffset: 1; }
+
+.fl-list-lead {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--fl-icon-size); height: var(--fl-icon-size);
+  flex-shrink: 0; color: var(--fl-text-primary);
+}
+.fl-list-lead > * { width: 100%; height: 100%; display: block; }
+
+.fl-list-text { display: flex; flex-direction: column; min-width: 0; }
+.fl-list-text > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-list-sub { color: var(--fl-text-secondary); }
+.fl-listitem:not([data-lines="2"]) .fl-list-sub { display: none; }
+
+/* 尾部箭头：仅静态右向。若要做「展开/收起」旋转，请换 SVG ——
+   border 三角在中途旋转会短暂变成菱形 */
+.fl-list-chevron {
+  width: 8px; height: 8px; flex-shrink: 0;
+  border-right: var(--fl-stroke) solid var(--fl-text-secondary);
+  border-bottom: var(--fl-stroke) solid var(--fl-text-secondary);
+  transform: rotate(-45deg);
+  margin-right: var(--fl-space-1);
+}
+
+/* 六档背景（顺序即语义） */
+.fl-listitem:not([aria-disabled="true"]):hover { background: var(--fl-subtle-fill-hover); }
+.fl-listitem:not([aria-disabled="true"]):active { background: var(--fl-subtle-fill-pressed); }
+.fl-listitem[aria-selected="true"] { background: var(--fl-subtle-fill-hover); }
+.fl-listitem[aria-selected="true"]:hover { background: var(--fl-subtle-fill-pressed); }
+.fl-listitem[aria-selected="true"]:active { background: var(--fl-subtle-fill-hover); }
+
+/* 选中指示条：3×16、圆角 1.5（ListViewItemSelectionIndicatorCornerRadius）
+   用 transition 而非 animation —— 在两行之间来回换选是可逆状态，keyframe 会"两条同时长出来" */
+.fl-listitem::before {
+  content: ""; position: absolute; left: 0; top: 50%;
+  width: var(--fl-nav-indicator-w); height: var(--fl-nav-indicator-h);
+  margin-top: calc(var(--fl-nav-indicator-h) / -2);
+  border-radius: var(--fl-radius-list-indicator);
+  background: var(--fl-accent-fill);
+  transform: scaleY(0); opacity: 0;      /* 只动合成友好属性，不动 height */
+  transition: transform var(--fl-dur-control-faster) var(--fl-ease-standard),
+              opacity var(--fl-dur-control-faster) var(--fl-ease-linear);
+}
+.fl-listitem[aria-selected="true"]::before { transform: scaleY(1); opacity: 1; }
+
+/* 分组分隔线：独立兄弟元素（几何上与行背景不重叠，不需要"有背景就隐藏"的动态逻辑） */
+.fl-list-sep {
+  height: var(--fl-stroke); flex-shrink: 0;
+  margin: var(--fl-space-1) var(--fl-space-3);
+  background: var(--fl-divider-stroke);
+  border: 0;
+}
+
+/* ListViewItemDisabledThemeOpacity = 0.3 */
+.fl-listitem[aria-disabled="true"] { opacity: 0.3; cursor: default; }
+
+/* ---- ComboBox（自绘）----
+   为什么自绘：原生 <select> 的 <option> 面板由操作系统绘制，暗色主题下会漏白底、
+   且无法承载 hover/selected 状态与开合动画。`<select class="fl-select">` 仅作无 JS 回退保留。
+   闭合态几何同 TextBox：高 32、padding 10,5,6,6、圆角 4、底边加重；
+   箭头 12×12（DropDownGlyph），距右缘 14（Margin 0,0,14,0）。
+   弹层：Acrylic + elevation 32 + 圆角 8（OverlayCornerRadius）+ 描边 2（ComboBoxPopupBorderThemeThickness）、
+        min-width 80、最大高 504（15 项一屏）；项高 32、圆角 3（ComboBoxItemCornerRadius）、
+        选中胶囊圆角 1.5（ComboBoxItemPillCornerRadius）。
+   开合复用 .fl-overlay（opacity 83ms + 位移 8px + 缩放 .98）：官方 XAML 里没有 popup 时长，
+   按 motion 的 Consistent 规则"同一入口的表面以相同方式开合"，与 flyout/dialog 同档。 */
+.fl-combo { position: relative; display: inline-block; min-width: var(--fl-combo-min-width); }
+
+.fl-combo-btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: var(--fl-space-2);
+  width: 100%; min-height: var(--fl-control-height);
+  padding: var(--fl-text-pad-t) var(--fl-combo-glyph-gap) var(--fl-text-pad-b) var(--fl-text-pad-l);
+  border-radius: var(--fl-radius-control);
+  border: var(--fl-stroke) solid var(--fl-control-stroke);
+  border-bottom-color: var(--fl-control-strong-fill);
+  background: var(--fl-control-fill-default);
+  color: var(--fl-text-primary); font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--fl-dur-control-faster) var(--fl-ease-standard),
+              border-color var(--fl-dur-control-faster) var(--fl-ease-standard);
+}
+.fl-combo-btn:hover { background: var(--fl-control-fill-secondary); }
+.fl-combo-btn:active { background: var(--fl-control-fill-tertiary); }
+/* 展开态：底边转 accent（官方 ComboBox 聚焦/展开的底边高亮） */
+.fl-combo-btn[aria-expanded="true"] {
+  background: var(--fl-control-fill-secondary);
+  border-bottom-color: var(--fl-accent-fill);
+}
+.fl-combo-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-combo-chevron {
+  width: var(--fl-combo-glyph); height: var(--fl-combo-glyph); flex-shrink: 0;
+  fill: none; stroke: var(--fl-text-secondary); stroke-width: 1.5px; stroke-linecap: round;
+  transition: transform var(--fl-dur-control-faster) var(--fl-ease-standard);
+}
+.fl-combo-btn[aria-expanded="true"] .fl-combo-chevron { transform: rotate(180deg); }
+
+/* 弹层：必须 position:fixed 且由 JS portal 到 body —— .fl-content-layer 有 overflow:clip（R26 强制），
+   留在页内会被裁掉。任何情况下都不要给它加 transition: top/left（每帧 layout，是新的抖动源）。 */
+.fl-combo-popup {
+  position: fixed; z-index: 40;
+  min-width: var(--fl-combo-popup-min-width);
+  max-height: var(--fl-combo-max-h);
+  overflow-y: auto;
+  padding: var(--fl-space-1);
+  background: var(--fl-acrylic-bg);
+  -webkit-backdrop-filter: blur(60px) saturate(125%);
+  backdrop-filter: blur(60px) saturate(125%);
+  border: var(--fl-combo-popup-stroke) solid var(--fl-card-stroke);
+  border-radius: var(--fl-radius-overlay);
+  box-shadow: var(--fl-shadow-flyout);
+}
+/* 向上翻时的入场方向随之取反（.fl-overlay 默认向下 8px） */
+.fl-combo-popup[data-drop="up"]:not(.fl-open) { transform: translateY(-8px) scale(0.98); }
+
+.fl-combo-item {
+  position: relative;
+  display: flex; align-items: center; gap: var(--fl-space-2);
+  min-height: var(--fl-control-height);
+  padding: 0 var(--fl-space-3);
+  border-radius: var(--fl-radius-combo-item);
+  cursor: pointer;
+  transition: background var(--fl-dur-control-faster) var(--fl-ease-standard);
+}
+/* 键盘高亮用 data-active（与鼠标 hover 同档视觉，但两者互不干扰） */
+.fl-combo-item:hover,
+.fl-combo-item[data-active="true"] { background: var(--fl-subtle-fill-hover); }
+.fl-combo-item[aria-selected="true"] { background: var(--fl-subtle-fill-hover); }
+.fl-combo-item[aria-selected="true"]::before {
+  content: ""; position: absolute; left: 0; top: 50%;
+  width: var(--fl-nav-indicator-w); height: var(--fl-nav-indicator-h);
+  margin-top: calc(var(--fl-nav-indicator-h) / -2);
+  border-radius: var(--fl-radius-combo-pill); background: var(--fl-accent-fill);
+}
+.fl-combo-item[aria-selected="true"]:hover,
+.fl-combo-item[aria-selected="true"][data-active="true"] { background: var(--fl-subtle-fill-pressed); }
+.fl-combo-item[aria-disabled="true"] { opacity: 0.3; cursor: default; }
+.fl-combo-item[aria-disabled="true"]:hover { background: transparent; }
 
 /* ---- Acrylic 浮层（flyout / contextmenu 模块）----
    官方：Acrylic 只用于瞬态轻触消失表面；elevation 32；圆角 8 */

@@ -191,7 +191,18 @@
   .fl-overlay,
   .fl-smoke,
   .fl-movable,
-  .fl-fade {
+  .fl-fade,
+  /* 控件级状态过渡（新增控件必须挂在这里，否则 reduced 下仍有位移/描画） */
+  .fl-listitem,
+  .fl-listitem::before,
+  .fl-combo-item,
+  .fl-combo-btn,
+  .fl-combo-popup,
+  .fl-combo-chevron,
+  .fl-check .fl-box,
+  .fl-radio .fl-box,
+  .fl-check-glyph path,
+  .fl-radio .fl-box::after {
     transition: none !important;
   }
 }

@@ -37,10 +37,48 @@
         <button class="fl-btn" id="btn-drill" type="button" data-kind="drill" data-page="page-c">下钻</button>
       </div>
 
-      <div id="list" role="listbox" aria-label="列表">
-        <div class="fl-listitem fl-entrance" role="option" aria-selected="true" tabindex="0">列表项一</div>
-        <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0">列表项二</div>
-        <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" aria-disabled="true">禁用项</div>
+      <div class="fl-list" id="list" role="listbox" aria-label="列表">
+        <div class="fl-listitem fl-entrance" role="option" aria-selected="true" tabindex="0" data-lines="2">
+          <div class="fl-list-content">
+            <span class="fl-list-lead"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="2"/></svg></span>
+            <span class="fl-list-text"><span class="fl-body-strong">选中 · 两行</span><span class="fl-caption fl-list-sub">副标题</span></span>
+            <span class="fl-caption fl-text-secondary">3 项</span>
+            <span class="fl-list-chevron" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" data-lines="2">
+          <div class="fl-list-content">
+            <span class="fl-list-lead"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7"/></svg></span>
+            <span class="fl-list-text"><span class="fl-body-strong">未选中 · 两行</span><span class="fl-caption fl-list-sub">hover / pressed 需交互</span></span>
+            <span class="fl-caption fl-text-secondary">1 项</span>
+            <span class="fl-list-chevron" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" aria-disabled="true">
+          <div class="fl-list-content">
+            <span class="fl-list-text"><span class="fl-body">禁用项（opacity 0.3，不响应 hover）</span></span>
+          </div>
+        </div>
+        <div class="fl-list-sep" role="separator" aria-orientation="horizontal"></div>
+        <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0">
+          <div class="fl-list-content">
+            <span class="fl-list-text"><span class="fl-body">单行项（行高 40）</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="fl-card" id="list-multi-card">
+        <span class="fl-caption">多选模式（勾选列 40.5px）</span>
+        <div class="fl-list" id="list-multi" data-multiselect role="listbox" aria-multiselectable="true" aria-label="多选列表">
+          <div class="fl-listitem" role="option" aria-selected="true" tabindex="0">
+            <span class="fl-listitem-check"><span class="fl-box" aria-hidden="true"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></span>
+            <div class="fl-list-content"><span class="fl-list-text"><span class="fl-body">已选中</span></span></div>
+          </div>
+          <div class="fl-listitem" role="option" aria-selected="false" tabindex="0">
+            <span class="fl-listitem-check"><span class="fl-box" aria-hidden="true"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></span>
+            <div class="fl-list-content"><span class="fl-list-text"><span class="fl-body">未选中</span></span></div>
+          </div>
+        </div>
       </div>
 
       <div class="fl-card fl-hoverable fl-entrance" tabindex="0" id="card">
@@ -50,9 +88,40 @@
 
       <div class="fl-card" id="controls-card">
         <label class="fl-switch"><input type="checkbox" id="sw-a" checked><span class="fl-switch-track"></span><span class="fl-body">Switch</span></label>
-        <label class="fl-check"><input type="checkbox" id="cb-a" checked><span class="fl-box"></span><span class="fl-body">CheckBox</span></label>
-        <label class="fl-radio"><input type="radio" name="r" id="rd-a" checked><span class="fl-box"></span><span class="fl-body">Radio</span></label>
-        <select class="fl-select" id="sel"><option>ComboBox</option></select>
+        <div style="display:flex; flex-wrap:wrap; gap: var(--fl-space-4); align-items:center; margin-top: var(--fl-space-3);">
+          <label class="fl-check"><input type="checkbox" id="cb-a" checked>
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">已勾选</span></label>
+          <label class="fl-check"><input type="checkbox" id="cb-b">
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">未勾选</span></label>
+          <label class="fl-check"><input type="checkbox" id="cb-c">
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">半选</span></label>
+          <label class="fl-check"><input type="checkbox" id="cb-d" disabled checked>
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">禁用</span></label>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap: var(--fl-space-4); align-items:center; margin-top: var(--fl-space-3);">
+          <label class="fl-radio"><input type="radio" name="r" id="rd-a" checked><span class="fl-box"></span><span class="fl-body">Radio 选中</span></label>
+          <label class="fl-radio"><input type="radio" name="r" id="rd-b"><span class="fl-box"></span><span class="fl-body">Radio 未选</span></label>
+          <label class="fl-radio"><input type="radio" name="r" id="rd-c" disabled><span class="fl-box"></span><span class="fl-body">Radio 禁用</span></label>
+        </div>
+        <div style="margin-top: var(--fl-space-3);">
+          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">ComboBox（自绘）</span>
+          <div class="fl-combo" id="sel" data-open="false">
+            <button class="fl-combo-btn" id="sel-btn" type="button"
+                    role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="sel-list">
+              <span class="fl-combo-value">ComboBox</span>
+              <svg class="fl-combo-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5"/></svg>
+            </button>
+            <div class="fl-combo-popup fl-overlay" id="sel-list" role="listbox" tabindex="-1">
+              <div class="fl-combo-item" role="option" aria-selected="true" data-value="a">选项一</div>
+              <div class="fl-combo-item" role="option" aria-selected="false" data-value="b">选项二</div>
+              <div class="fl-combo-item" role="option" aria-selected="false" aria-disabled="true" data-value="c">选项三（禁用）</div>
+            </div>
+          </div>
+        </div>
         <div style="margin-top: var(--fl-space-3);">
           <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">Slider</span>
           <input class="fl-slider" id="sld" type="range" min="0" max="100" value="30" aria-label="Slider">
@@ -115,6 +184,15 @@
     });
   });
   if ($("btn-infobar-close")) $("btn-infobar-close").addEventListener("click", function () { $("infobar").remove(); });
+  /* 半选演示 + 自绘 ComboBox */
+  if ($("cb-c")) $("cb-c").indeterminate = true;
+  M.combo.auto();
+  /* 多选列表：点整行切换 */
+  document.querySelectorAll("#list-multi .fl-listitem").forEach(function (item) {
+    item.addEventListener("click", function () {
+      item.setAttribute("aria-selected", item.getAttribute("aria-selected") === "true" ? "false" : "true");
+    });
+  });
   /* 二级下钻与返回（drill = 水平；返回方向取反） */
   if ($("btn-drill")) $("btn-drill").addEventListener("click", function () { M.transitionTo("page-c", { kind: "drill" }); });
   if ($("btn-back")) $("btn-back").addEventListener("click", function () { M.back("drill"); });

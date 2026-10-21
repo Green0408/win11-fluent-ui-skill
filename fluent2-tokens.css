@@ -75,6 +75,7 @@
   --fl-list-min-width: 88px; /* ListViewItemMinWidth */
   --fl-list-check-offset: 40.5px; /* = -ListViewItemContentOffsetX（XAML 为 -40.5，负号表示内容右移；此处取正值使用） */
   --fl-list-item-height-two-line: 64px; /* KIT 自定：图标+主副两行，官方未单列 */
+  --fl-icon-size: 20px; /* 列表项图标 20（Fluent 图标族 16/20/24 中档） */
   --fl-combo-min-width: 64px; /* ComboBoxThemeMinWidth */
   --fl-combo-popup-min-width: 80px; /* ComboBoxPopupThemeMinWidth */
   --fl-combo-popup-stroke: 2px; /* ComboBoxPopupBorderThemeThickness */

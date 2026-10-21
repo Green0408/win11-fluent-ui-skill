@@ -47,17 +47,45 @@
         <button class="fl-btn fl-btn-subtle" id="btn-more" type="button" aria-haspopup="true">⋯</button>
       </div>
 
-      <!-- 模块：list-detail —— 列表 + 详情（条目管理型核心模块） -->
+      <!-- 模块：list-detail —— 列表 + 详情（条目管理型核心模块）
+           行结构 = 勾选列（多选时才有）+ 图标 + 主标题/副标题 + 尾部区域（数值 / 开关 / 箭头） -->
       <div style="display:flex; gap: var(--fl-space-3); align-items:flex-start;">
-        <div id="list" style="flex:1; min-width: 240px;" role="listbox" aria-label="条目列表">
-          <div class="fl-listitem fl-entrance" role="option" aria-selected="true" tabindex="0" data-detail="示例条目甲|这是示例条目甲的详情内容。">
-            <span class="fl-body-strong">示例条目甲</span><span style="flex:1"></span><span class="fl-caption fl-text-secondary">3 项</span>
+        <div class="fl-list" id="list" style="flex:1; min-width: 240px;" role="listbox" aria-label="条目列表">
+          <div class="fl-listitem fl-entrance" role="option" aria-selected="true" tabindex="0" data-lines="2"
+               data-detail="示例条目甲|这是示例条目甲的详情内容。">
+            <div class="fl-list-content">
+              <span class="fl-list-lead"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="2"/><path d="M6.5 7h7M6.5 10.5h7M6.5 14h4"/></svg></span>
+              <span class="fl-list-text">
+                <span class="fl-body-strong">示例条目甲</span>
+                <span class="fl-caption fl-list-sub">两行结构：主标题 + 副标题</span>
+              </span>
+              <span class="fl-caption fl-text-secondary">3 项</span>
+              <span class="fl-list-chevron" aria-hidden="true"></span>
+            </div>
           </div>
-          <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" data-detail="示例条目乙|这是示例条目乙的详情内容。">
-            <span class="fl-body-strong">示例条目乙</span><span style="flex:1"></span><span class="fl-caption fl-text-secondary">1 项</span>
+          <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" data-lines="2"
+               data-detail="示例条目乙|这是示例条目乙的详情内容。">
+            <div class="fl-list-content">
+              <span class="fl-list-lead"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2.5 6.5a2 2 0 0 1 2-2h3l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2z"/></svg></span>
+              <span class="fl-list-text">
+                <span class="fl-body-strong">示例条目乙</span>
+                <span class="fl-caption fl-list-sub">图标 + 副标题 + 尾部区域</span>
+              </span>
+              <span class="fl-caption fl-text-secondary">1 项</span>
+              <span class="fl-list-chevron" aria-hidden="true"></span>
+            </div>
           </div>
-          <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" data-detail="示例条目丙|这是示例条目丙的详情内容。">
-            <span class="fl-body-strong">示例条目丙</span><span style="flex:1"></span><span class="fl-caption fl-text-secondary">0 项</span>
+          <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" data-lines="2"
+               aria-disabled="true" data-detail="示例条目丙|这是示例条目丙的详情内容。">
+            <div class="fl-list-content">
+              <span class="fl-list-lead"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2.5"/></svg></span>
+              <span class="fl-list-text">
+                <span class="fl-body-strong">示例条目丙（禁用）</span>
+                <span class="fl-caption fl-list-sub">禁用透明度 0.3，且不响应 hover</span>
+              </span>
+              <span class="fl-caption fl-text-secondary">0 项</span>
+              <span class="fl-list-chevron" aria-hidden="true"></span>
+            </div>
           </div>
         </div>
         <div class="fl-card" id="detail" style="flex:1.2;">
@@ -66,23 +94,93 @@
           <div class="fl-toolbar">
             <button class="fl-btn" id="btn-edit" type="button">编辑</button>
             <button class="fl-btn fl-btn-subtle" id="btn-delete" type="button">删除</button>
-            <!-- 二级下钻入口：内容区里的入口用 drill（水平转场），侧栏用 nav（垂直转场） -->
+            <!-- 二级下钻入口：内容区里的入口用 drill（水平转场），侧栏用 nav（垂直转场）
+                 data-dir 可选，写 up/down/left/right 覆盖入场方位 -->
             <button class="fl-btn" id="btn-open-detail" type="button"
-                    data-kind="drill" data-page="page-detail">打开详情页</button>
+                    data-kind="drill" data-page="page-detail" data-dir="right">打开详情页</button>
           </div>
         </div>
       </div>
 
-      <!-- 模块：settings-panel —— 属性/设置面板（设置型工具用；与 list-detail 二选一或并存） -->
+      <!-- 模块：list-flat —— 单行列表 + 分组分隔线 + 多选模式（命令项/分组设置一类）
+           多选列宽 40.5px（= -ListViewItemContentOffsetX）：勾选列平时 0 宽，进入多选模式后展开，
+           行内容整体右移；用列宽过渡而不是 transform，否则尾部箭头会冲出右内边距 -->
+      <div class="fl-card" id="list-flat" style="margin-top: var(--fl-space-3); padding: var(--fl-space-2);">
+        <div style="display:flex; align-items:center; gap: var(--fl-space-2); padding: 0 var(--fl-space-3) var(--fl-space-2);">
+          <label class="fl-check"><input type="checkbox" id="list-all">
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-caption">全选</span></label>
+          <span style="flex:1"></span>
+          <span class="fl-caption fl-text-secondary">多选模式：勾选列 40.5px</span>
+        </div>
+        <div class="fl-list" id="list-multi" data-multiselect role="listbox" aria-multiselectable="true" aria-label="多选列表">
+          <div class="fl-listitem" role="option" aria-selected="true" tabindex="0">
+            <span class="fl-listitem-check"><span class="fl-box" aria-hidden="true"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></span>
+            <div class="fl-list-content">
+              <span class="fl-list-text"><span class="fl-body">单行项：只有主标题</span></span>
+              <span class="fl-caption fl-text-secondary">行高 40</span>
+            </div>
+          </div>
+          <div class="fl-list-sep" role="separator" aria-orientation="horizontal"></div>
+          <div class="fl-listitem" role="option" aria-selected="false" tabindex="0">
+            <span class="fl-listitem-check"><span class="fl-box" aria-hidden="true"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></span>
+            <div class="fl-list-content">
+              <span class="fl-list-text"><span class="fl-body">选中项带 accent 指示条 3×16</span></span>
+              <span class="fl-caption fl-text-secondary">选中</span>
+            </div>
+          </div>
+          <div class="fl-list-sep" role="separator" aria-orientation="horizontal"></div>
+          <div class="fl-listitem" role="option" aria-selected="false" tabindex="0">
+            <span class="fl-listitem-check"><span class="fl-box" aria-hidden="true"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></span>
+            <div class="fl-list-content">
+              <span class="fl-list-text"><span class="fl-body">分隔线是独立兄弟元素</span></span>
+              <span class="fl-caption fl-text-secondary">1px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模块：settings-panel —— 属性/设置面板（设置型工具用；与 list-detail 二选一或并存）
+           勾选框的勾是 SVG 描画（不是文本 ✓）：未选中时 stroke-dashoffset:1，选中时归 0 -->
       <div class="fl-card" id="settings-panel" style="margin-top: var(--fl-space-3);">
         <h3 class="fl-body-strong" style="margin:0 0 var(--fl-space-3);">面板设置</h3>
-        <label class="fl-switch"><input type="checkbox" id="set-switch" checked><span class="fl-switch-track"></span><span class="fl-body">开关设置项</span></label>
-        <label class="fl-check"><input type="checkbox" id="set-check" checked><span class="fl-box"></span><span class="fl-body">勾选设置项</span></label>
-        <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-a" checked><span class="fl-box"></span><span class="fl-body">选项 A</span></label>
-        <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-b"><span class="fl-box"></span><span class="fl-body">选项 B</span></label>
+        <div style="display:flex; flex-wrap:wrap; gap: var(--fl-space-4); align-items:center;">
+          <label class="fl-switch"><input type="checkbox" id="set-switch" checked><span class="fl-switch-track"></span><span class="fl-body">开关设置项</span></label>
+          <label class="fl-check"><input type="checkbox" id="set-check" checked>
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">已勾选</span></label>
+          <label class="fl-check"><input type="checkbox" id="set-check-off">
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">未勾选</span></label>
+          <label class="fl-check"><input type="checkbox" id="set-check-half">
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">半选</span></label>
+          <label class="fl-check"><input type="checkbox" id="set-check-dis" disabled>
+            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
+            <span class="fl-body">禁用</span></label>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap: var(--fl-space-4); align-items:center; margin-top: var(--fl-space-3);">
+          <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-a" checked><span class="fl-box"></span><span class="fl-body">选项 A</span></label>
+          <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-b"><span class="fl-box"></span><span class="fl-body">选项 B</span></label>
+          <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-c" disabled><span class="fl-box"></span><span class="fl-body">选项 C（禁用）</span></label>
+        </div>
         <div style="margin-top: var(--fl-space-3);">
           <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">下拉设置项</span>
-          <select class="fl-select" id="set-select"><option>选项一</option><option>选项二</option></select>
+          <!-- 模块：combo —— 自绘 ComboBox（闭合态 + Acrylic 弹层 + 项状态 + 键盘）
+               没有 JS 时可退回 <select class="fl-select">（原生面板不可样式化，暗色会漏白） -->
+          <div class="fl-combo" id="combo-view" data-open="false">
+            <button class="fl-combo-btn" id="combo-view-btn" type="button"
+                    role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="combo-view-list">
+              <span class="fl-combo-value">列表</span>
+              <svg class="fl-combo-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5"/></svg>
+            </button>
+            <div class="fl-combo-popup fl-overlay" id="combo-view-list" role="listbox" tabindex="-1">
+              <div class="fl-combo-item" role="option" id="combo-view-o1" aria-selected="true" data-value="列表">列表</div>
+              <div class="fl-combo-item" role="option" id="combo-view-o2" aria-selected="false" data-value="网格">网格</div>
+              <div class="fl-combo-item" role="option" id="combo-view-o3" aria-selected="false" data-value="紧凑">紧凑</div>
+              <div class="fl-combo-item" role="option" id="combo-view-o4" aria-selected="false" aria-disabled="true" data-value="详情">详情（禁用）</div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -209,6 +307,48 @@
     item.addEventListener("keydown", function (e) { if (e.key === "Enter") selectItem(item); });
   });
   selectItem(document.querySelector('#list .fl-listitem[aria-selected="true"]'));
+
+  /* 多选列表（list-flat）：点整行切换选中；表头「全选」联动并显示半选 */
+  var multiList = $("list-multi");
+  var multiItems = multiList ? Array.prototype.slice.call(multiList.querySelectorAll(".fl-listitem")) : [];
+  function syncMulti() {
+    if (!multiItems.length) return;
+    M.list.syncParent($("list-all"), multiItems);
+    /* 列表本身不是多选模式时，勾选列收起 */
+    M.list.multiselect(multiList, true);
+  }
+  multiItems.forEach(function (item) {
+    item.addEventListener("click", function () {
+      var on = item.getAttribute("aria-selected") === "true";
+      item.setAttribute("aria-selected", on ? "false" : "true");
+      syncMulti();
+    });
+    item.addEventListener("keydown", function (e) {
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        item.click();
+      }
+    });
+  });
+  if ($("list-all")) {
+    $("list-all").addEventListener("change", function () {
+      var on = $("list-all").checked;
+      multiItems.forEach(function (item) { item.setAttribute("aria-selected", on ? "true" : "false"); });
+      syncMulti();
+    });
+    syncMulti();
+  }
+
+  /* 半选演示：indeterminate 只能由 JS 设置，纯属性写不出来 */
+  if ($("set-check-half")) $("set-check-half").indeterminate = true;
+
+  /* 自绘 ComboBox：绑定页面上所有 .fl-combo（选择结果通过 fl-combo-change 事件回传） */
+  M.combo.auto();
+  if ($("combo-view")) {
+    $("combo-view").addEventListener("fl-combo-change", function (e) {
+      M.toast("视图切换为：" + e.detail.text);
+    });
+  }
 
   /* flyout（⋯ 溢出菜单） */
   if ($("btn-more")) $("btn-more").addEventListener("click", function (e) { e.stopPropagation(); M.flyout.toggle("flyout-more"); });

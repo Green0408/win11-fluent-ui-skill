@@ -512,6 +512,11 @@
       "value": "64",
       "type": "Double",
       "source": "KIT 自定（官方只给 ListViewItemMinHeight=40）：图标+主副两行文本的行高，4 的倍数，与 Win11 设置页实测观感一致"
+    },
+    "extra:IconSize": {
+      "value": "20",
+      "type": "Double",
+      "source": "Fluent 图标族 16/20/24 三档的中档（列表项图标）；4 的倍数，与 raw/xaml_ListViewItem 里 MultiSelectCheckBox 的 20px 槽位一致"
     }
   },
   "motion": {

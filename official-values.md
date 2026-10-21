@@ -194,6 +194,7 @@
 | 下拉面板最大高（15 项一屏） | `504` | raw/xaml_ComboBox_themeresources.xaml：ComboBox MaxDropDownHeight=504（下拉面板最大高，按 15 项一屏） |
 | 勾号描边宽（ListViewItem CheckGlyph） | `2.5` | raw/xaml_ListViewItem_themeresources.xaml：CheckGlyph Path StrokeThickness=2.5（18.5x17 视箱，Stretch=Fill） |
 | 两行列表项行高（KIT 自定） | `64` | KIT 自定（官方只给 ListViewItemMinHeight=40）：图标+主副两行文本的行高，4 的倍数，与 Win11 设置页实测观感一致 |
+| 列表项图标尺寸 | `20` | Fluent 图标族 16/20/24 三档的中档（列表项图标）；4 的倍数，与 raw/xaml_ListViewItem 里 MultiSelectCheckBox 的 20px 槽位一致 |
 
 ## 断点与单位
 出处：<https://learn.microsoft.com/en-us/windows/apps/design/layout/screen-sizes-and-breakpoints-for-responsive-design>

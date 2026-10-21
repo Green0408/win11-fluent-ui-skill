@@ -38,7 +38,9 @@ body {
 /* ---- 双层系统：Base（导航/命令）+ Content（卡片内容） ---- */
 .fl-shell { display: flex; min-height: 100vh; }
 /* Content layer = 页面叠放容器：所有 .fl-page 放同一网格单元，转场期互相覆盖而不是上下堆叠 */
-.fl-content-layer { flex: 1; padding: var(--fl-space-4); background: var(--fl-solid-bg-base); display: grid; }
+.fl-content-layer { flex: 1; padding: var(--fl-space-4); background: var(--fl-solid-bg-base); display: grid; overflow: clip; }
+/* overflow: clip：页面转场会横向平移 ±--fl-page-shift-drill，必须裁掉，否则出现横向滚动条；
+   clip 不产生滚动容器（比 hidden 安全）。若页内需要 position:sticky，改 overflow:hidden + overflow-clip-margin。 */
 
 /* 卡片：Content layer 表面，elevation 8（hover 提升视觉），8px 圆角（浮层级容器） */
 .fl-card {
@@ -48,7 +50,7 @@ body {
   box-shadow: var(--fl-shadow-card);
   padding: var(--fl-space-4);
 }
-.fl-card.fl-hoverable { cursor: default; transition: background var(--fl-dur-fast) var(--fl-ease-linear); }
+.fl-card.fl-hoverable { cursor: default; transition: background var(--fl-dur-fast) var(--fl-ease-standard); }
 .fl-card.fl-hoverable:hover { background: var(--fl-card-bg-secondary); }
 
 /* ---- 标题栏（titlebar 模块） ---- */
@@ -73,7 +75,7 @@ body {
   border-radius: var(--fl-radius-control); color: var(--fl-text-primary);
   text-decoration: none; cursor: pointer; border: 0; background: transparent; width: 100%;
   font: inherit; text-align: left;
-  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+  transition: background var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-nav-item:hover { background: var(--fl-subtle-fill-hover); }
 .fl-nav-item:active { background: var(--fl-subtle-fill-pressed); color: var(--fl-text-secondary); }
@@ -97,7 +99,7 @@ body {
   font: inherit;
   box-shadow: var(--fl-shadow-e2); /* Control elevation 2 (Rest) */
   cursor: pointer; text-decoration: none;
-  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+  transition: background var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-btn:hover { background: var(--fl-control-fill-secondary); }
 /* 官方控件状态海拔：Rest/Hover=2、Pressed=1（阴影瞬时切换，不做过渡，1px 级无感） */
@@ -127,7 +129,7 @@ body {
   border-bottom-color: var(--fl-control-strong-fill); /* Win11 底边加重 */
   background: var(--fl-control-fill-default);
   color: var(--fl-text-primary); font: inherit;
-  transition: border-color var(--fl-dur-fast) var(--fl-ease-linear), background var(--fl-dur-fast) var(--fl-ease-linear);
+  transition: border-color var(--fl-dur-fast) var(--fl-ease-standard), background var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-input::placeholder { color: var(--fl-text-tertiary); }
 .fl-input:hover, .fl-select:hover { background: var(--fl-control-fill-secondary); }
@@ -139,21 +141,30 @@ body {
 .fl-input:disabled { background: var(--fl-control-fill-disabled); color: var(--fl-text-disabled); }
 
 /* ---- ToggleSwitch（knob 12x12，on=accent） ---- */
-.fl-switch { display: inline-flex; align-items: center; gap: var(--fl-space-2); cursor: pointer; }
+/* ---- ToggleSwitch（XAML ToggleSwitch_themeresources：轨道 40×20、旋钮 12、开态位移 X=20，
+        hover 旋钮 14 / pressed 17，全用 ControlFasterAnimationDuration=83ms + FastOutSlowIn 曲线） ---- */
+.fl-switch { --fl-knob: 12px; --fl-knob-x: 20px; display: inline-flex; align-items: center; gap: var(--fl-space-2); cursor: pointer; }
+.fl-switch:hover  { --fl-knob: 14px; --fl-knob-x: 18px; }  /* XAML hover Value 14（右缘保持一致） */
+.fl-switch:active { --fl-knob: 17px; --fl-knob-x: 15px; }  /* XAML pressed Value 17 */
 .fl-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .fl-switch .fl-switch-track {
   width: 40px; height: 20px; border-radius: var(--fl-space-3);
   border: var(--fl-stroke) solid var(--fl-control-strong-fill);
   background: var(--fl-control-fill-default); position: relative;
-  transition: background var(--fl-dur-normal) var(--fl-ease-point), border-color var(--fl-dur-normal) var(--fl-ease-point);
+  transition: background var(--fl-dur-fast) var(--fl-ease-standard),
+              border-color var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-switch .fl-switch-track::after {
   content: ""; position: absolute; top: 50%; left: var(--fl-space-1); transform: translateY(-50%);
-  width: var(--fl-space-3); height: var(--fl-space-3); border-radius: 50%;
-  background: var(--fl-text-secondary); transition: transform var(--fl-dur-normal) var(--fl-ease-point), background var(--fl-dur-normal) var(--fl-ease-point);
+  width: var(--fl-knob); height: var(--fl-knob); border-radius: 50%;
+  background: var(--fl-text-secondary);
+  transition: transform var(--fl-dur-fast) var(--fl-ease-standard),
+              width var(--fl-dur-fast) var(--fl-ease-standard),
+              height var(--fl-dur-fast) var(--fl-ease-standard),
+              background var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-switch input:checked + .fl-switch-track { background: var(--fl-accent-fill); border-color: var(--fl-accent-fill); }
-.fl-switch input:checked + .fl-switch-track::after { transform: translate(var(--fl-space-4), -50%); background: var(--fl-text-on-accent-primary); }
+.fl-switch input:checked + .fl-switch-track::after { transform: translate(var(--fl-knob-x), -50%); background: var(--fl-text-on-accent-primary); }
 .fl-switch input:focus-visible + .fl-switch-track {
   box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
               0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
@@ -167,7 +178,7 @@ body {
   border: var(--fl-stroke) solid var(--fl-control-strong-fill);
   background: var(--fl-control-fill-default);
   display: inline-flex; align-items: center; justify-content: center;
-  transition: background var(--fl-dur-fast) var(--fl-ease-linear), border-color var(--fl-dur-fast) var(--fl-ease-linear);
+  transition: background var(--fl-dur-fast) var(--fl-ease-standard), border-color var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-radio .fl-box { border-radius: 50%; }
 .fl-check input:checked + .fl-box, .fl-radio input:checked + .fl-box { background: var(--fl-accent-fill); border-color: var(--fl-accent-fill); color: var(--fl-text-on-accent-primary); }
@@ -178,13 +189,55 @@ body {
               0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
 
+/* ---- Slider（XAML Slider_themeresources：SliderTrackThemeHeight=4、SliderInnerThumbWidth=12、
+        SliderThumbCornerRadius=10；hover scale 1.167 / pressed 0.833，ControlNormal 250ms + FastOutSlowIn） ---- */
+.fl-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: var(--fl-control-height);
+  background: transparent; cursor: pointer;
+}
+.fl-slider::-webkit-slider-runnable-track {
+  height: var(--fl-slider-track);
+  border-radius: calc(var(--fl-slider-track) / 2);
+  background: var(--fl-control-strong-fill);
+}
+.fl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: var(--fl-slider-inner); height: var(--fl-slider-inner);
+  margin-top: calc((var(--fl-slider-track) - var(--fl-slider-inner)) / 2);
+  border: 0; border-radius: var(--fl-slider-radius);
+  background: var(--fl-accent-fill);
+  box-shadow: 0 0 0 var(--fl-space-1) var(--fl-control-solid-fill); /* 外环 20px 近似 SliderOuterThumbBackground */
+  transition: transform var(--fl-dur-normal) var(--fl-ease-standard);
+}
+.fl-slider:hover::-webkit-slider-thumb  { transform: scale(1.167); } /* 14px */
+.fl-slider:active::-webkit-slider-thumb { transform: scale(0.833); } /* 10px */
+.fl-slider:focus-visible { outline: none; }
+.fl-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+}
+.fl-slider::-moz-range-track {
+  height: var(--fl-slider-track);
+  border-radius: calc(var(--fl-slider-track) / 2);
+  background: var(--fl-control-strong-fill);
+}
+.fl-slider::-moz-range-thumb {
+  width: var(--fl-slider-inner); height: var(--fl-slider-inner);
+  border: 0; border-radius: var(--fl-slider-radius);
+  background: var(--fl-accent-fill);
+  transition: transform var(--fl-dur-normal) var(--fl-ease-standard);
+}
+.fl-slider:hover::-moz-range-thumb  { transform: scale(1.167); }
+.fl-slider:active::-moz-range-thumb { transform: scale(0.833); }
+
 /* ---- 列表项（ListViewItem：MinHeight 40、圆角 4、禁用透明度 0.3） ---- */
 .fl-listitem {
   display: flex; align-items: center; gap: var(--fl-space-3);
   min-height: var(--fl-list-item-height);
   padding: 0 var(--fl-space-3);
   border-radius: var(--fl-radius-control); cursor: pointer;
-  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+  transition: background var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-listitem:hover { background: var(--fl-subtle-fill-hover); }
 .fl-listitem:active { background: var(--fl-subtle-fill-pressed); }
@@ -214,7 +267,7 @@ body {
   min-height: var(--fl-control-height); padding: 0 var(--fl-space-3);
   border: 0; background: transparent; color: var(--fl-text-primary);
   font: inherit; border-radius: var(--fl-radius-control); cursor: pointer;
-  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+  transition: background var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-flyout-item:hover { background: var(--fl-subtle-fill-hover); }
 

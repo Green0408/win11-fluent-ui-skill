@@ -38,8 +38,8 @@
 
 | 触发 | kind | 轴向 | 单层行程 | 时长 | 曲线 |
 |---|---|---|---|---|---|
-| 点左侧栏一级导航 | `nav`（默认） | 垂直 | `--fl-page-shift-y` 72px | `--fl-dur-page` 283ms | `--fl-ease-page` |
-| 点内容区入口进入二级页 | `drill` | 水平 | `--fl-page-shift-x` 176px | `--fl-dur-page` 283ms | `--fl-ease-page` |
+| 点左侧栏一级导航 | `nav`（默认） | 垂直 | `--fl-page-shift-y` 108px | `--fl-dur-page` 283ms | `--fl-ease-page` |
+| 点内容区入口进入二级页 | `drill` | 水平 | `--fl-page-shift-x` 264px | `--fl-dur-page` 283ms | `--fl-ease-page` |
 | 返回上一级 | `M.back(kind)` | 同上 | 同上，方向取反 | 同 | 同 |
 
 　**方向（`dir`）= 新页的入场起点方位**，六个取值：
@@ -176,7 +176,7 @@
 ## 官方关键数值速查（详见 official-values.md）
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。
-- **实测派生（非官方档，来自 60fps 录屏反解）**：页面转场 = 退场 167ms + 进场 283ms（全程 450ms）、drill 176px、nav 72px、`--fl-ease-page` = cubic-bezier(0.1,0.9,0.2,1)（进场强减速）、`--fl-ease-page-out` = cubic-bezier(0.7,0,1,0.5)（退场加速）、连续型 `--fl-dur-sweep` 60s / `--fl-dur-tick` 1s。官方四档仍是 83/167/250/333，检索官方规范时不要引用这一行。
+- **实测派生（非官方档，来自 60fps 录屏反解）**：页面转场 = 退场 167ms + 进场 283ms（全程 450ms）、drill 264px、nav 108px（= 录屏实测 176/72 的 1.5 倍，观感校准）、`--fl-ease-page` = cubic-bezier(0.1,0.9,0.2,1)（进场强减速）、`--fl-ease-page-out` = cubic-bezier(0.7,0,1,0.5)（退场加速）、连续型 `--fl-dur-sweep` 60s / `--fl-dur-tick` 1s。官方四档仍是 83/167/250/333，检索官方规范时不要引用这一行。
 - 强调色（系统色，可整体替换）：`--fl-accent-fill` **暗主题 `#60CDFF`（SystemAccentColorLight2，配黑字）/ 亮主题 `#005FB8`（SystemAccentColorDark1，配白字）** —— 暗色用浅蓝、亮色用深蓝，由 `TextOnAccentFillColorPrimary`（暗=#000000 / 亮=#FFFFFF）反证。改色只动 `extract_tokens.py` 的 `ACCENT`，不要手改 `fluent2-tokens.css`。
 - accent 状态档位（XAML brush Opacity）：`--fl-accent-fill-hover` = Default @0.9、`--fl-accent-fill-pressed` = Default @0.8。状态反馈用档位色过渡，禁用 `filter: brightness()`。**例外：滑块**的轨道填充与 thumb 不许用这两个 alpha 档（会透出底层，见规则 20）。
 - 字阶：Caption 12/16、Body 14/20、Body Strong 14/20 Semibold、Body Large 18/24、Subtitle 20/28、Title 28/36、Title Large 40/52、Display 68/92。

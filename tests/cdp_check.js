@@ -164,6 +164,25 @@ async function main() {
   check("点上方导航项 → 仍自下方进入（+shift-y，不允许反向）",
     /^var\(--fl-page-shift-y\)$/.test(up.fromY), JSON.stringify(up));
 
+  /* ---- 1.4) 行程必须是「看得见的一段路」：解析两个位移 token 的真实像素 ----
+     太小（<160px）在宽内容区上几乎看不出滑动；太大（>360px）会像整页飞出去。
+     这里用临时元素把 var 解析成 matrix，避免依赖内部实现。 */
+  const shiftPx = await evaluate(`(function(){
+    var d = document.createElement("div");
+    d.style.cssText = "position:absolute;visibility:hidden;width:10px;height:10px;" +
+      "transform:translate3d(var(--fl-page-shift-x),var(--fl-page-shift-y),0)";
+    document.body.appendChild(d);
+    var m = new DOMMatrixReadOnly(getComputedStyle(d).transform);
+    d.remove();
+    return { x: Math.round(m.m41), y: Math.round(m.m42) };
+  })()`);
+  check("水平行程（drill）落在 200–360px 之间",
+    shiftPx.x >= 200 && shiftPx.x <= 360, `${shiftPx.x}px`);
+  check("垂直行程（nav）落在 80–160px 之间",
+    shiftPx.y >= 80 && shiftPx.y <= 160, `${shiftPx.y}px`);
+  check("水平行程明显长于垂直（两轴的量级关系不能反）",
+    shiftPx.x >= shiftPx.y * 1.8, `x=${shiftPx.x} y=${shiftPx.y}`);
+
   /* ---- 1.5) drill 转场是「两拍」：旧页先淡出退场，新页再滑入 ----
      录屏实测（设置应用逐帧）：旧页在 ≈80-170ms 内消失干净，此时新页才开始从行程起点进来。
      两页同时淡入淡出会让新旧文字在中途各半透明地叠在一起，观感是重影。 */

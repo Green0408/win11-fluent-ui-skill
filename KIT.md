@@ -56,8 +56,16 @@
 　缺省解析顺序：**显式 `dir` → nav 恒 `down` / drill 按页面栈（目标是上一页=右→左反转）**。非法 `dir` 会 `console.warn` 并回退缺省（**不会**静默当成 forward）。
 　`nav` 的 `isBack` 恒为 false（一级导航没有"返回"概念）：否则 A→B→A 之后页面栈会被截断成 `[A]`，`M.back()` 无路可退。只有 `drill` 或显式 `back` 才截断栈。
 　位移由 JS 写入 `--fl-page-from-x/-y` 与 `--fl-page-to-x/-y` 四个带符号变量（keyframe 内**不写**位移字面量）。快速连点由 `pageGen` 代际 + `settlePages()` 保证无残留。
-　**转场期两页必须不透明，入页不能淡入**：两页叠在同一网格格里（靠 `overflow: clip` 裁），页面透明就会看到新旧两页的文字叠在一起（重影）；入页只要有 1% 透明度，底下的旧页就会透上来。所以 `.fl-page-in/.fl-page-leaving` 涂 `--fl-solid-bg-base`、入页 `z-index` 压过离场页，淡出 83ms 只挂离场页。校验器 **R41** + `tests/transition_shots.js`（抓连续帧）两头锁。
-　两轴共用同一节奏（283ms / `--fl-ease-page`）：§9 早期只测到竖向 250ms 的减速尾段，样本不足拆两套曲线，统一后与 drill 实测一致。
+　**节奏是「两拍」，不是同时进出**（逐帧实测 2026-10-21，见 VIDEO-ALIGN §11）：
+
+| 拍 | 时间 | 旧页 | 新页 |
+|---|---|---|---|
+| ① 退场 | 0 → 83ms | 滑动 + 淡出，**彻底消失** | 停在行程起点、`opacity: 0`（已 `display` 但不显形） |
+| ② 进场 | 83 → 366ms | 已移除 | 从行程起点滑到 0，淡入 83ms |
+
+　为什么不能同时：两页叠在同一网格格里（靠 `overflow: clip` 裁），同时淡入淡出会让新旧文字在中途各半透明地叠在一起（重影）；而给离场页涂不透明底又变成「整块面板压过去」的硬边擦除 —— 录屏里两种情况都不是。
+　实现：`.fl-page-in { animation-delay: var(--fl-dur-fast) }`、`.fl-page-out` 用 `--fl-dur-fast` 而非 `--fl-dur-page`，页面**保持透明**；`M.stagger` 也延后 83ms，否则入场元素会在页面还不可见时播完。校验器 **R41** + `tests/transition_shots.js` 两头锁。
+　两轴共用同一节奏（进场 283ms / `--fl-ease-page` + 83ms 退场）：§9 早期只测到竖向 250ms 的减速尾段，样本不足拆两套曲线，统一后与 drill 实测一致。
 16. **连续型动效**用 `.fl-continuous` / `.fl-tick`（加在指针元素本身，绕自身 `transform-origin: 50% 100%` 旋转），宿主用 `.fl-dial` + `.fl-dial-hand` + `.fl-dial-hub`。必须 linear/steps、`infinite`、`fill: none`；`prefers-reduced-motion` 下直接停住（不要退化成播完一圈就停）。
 17. **列表**必须用 `.fl-list` + `.fl-listitem` + `.fl-list-content` 三层：
     - `.fl-listitem` 只有两列（勾选列 / 内容），行内容一律放在 `.fl-list-content` 里，否则多选时内容无法整体右移；

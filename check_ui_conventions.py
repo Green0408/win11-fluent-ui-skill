@@ -48,7 +48,7 @@ R37 按钮纵向内边距必须对称：.fl-btn 的 padding 四值里 top 必须
 R38 强调色主题档位不许写反：暗主题 --fl-accent-fill 的相对亮度必须高于亮主题（XAML：暗=Light2、亮=Dark1）
 R39 自绘弹层必须用细滚动条：.fl-combo-popup 必须带 fl-scroll，且 CSS 要有 @supports selector(::-webkit-scrollbar) 互斥块
 R40 设置行造型：行高走 --fl-settings-row-h、hover 底色带圆角、分隔线左缩进对齐文字、行内必须有 .fl-settings-text
-R41 转场页必须不透明且入页不许淡入：.fl-page-in/.fl-page-leaving 要有 background，.fl-page-in 不许挂 fade 动画
+R41 转场必须两拍：.fl-page-in 要有 animation-delay、离场页不许与入页同长、转场页不得涂不透明底
 """
 import re
 import sys
@@ -596,17 +596,24 @@ def main():
             fails.append("R40: 用了 .fl-settings 但行内没有 .fl-settings-text / .fl-settings-title"
                          "（设置行必须是「左文本 + 右控件」，纯文本不应直接塞进行里）")
 
-    # R41 转场页必须不透明、且入页不许淡入
-    #     .fl-content-layer 用 overflow:clip 把两页叠在同一网格格子里；页面透明时滑动过程中
-    #     新旧两页的文字会直接叠在一起（重影）。入页哪怕 1% 透明度，底下的旧页也会透上来。
+    # R41 转场必须是「两拍」：旧页先淡出退场，新页再滑入
+    #     录屏实测：旧页在 ≈80-170ms 内消失干净，新页才开始从行程起点进来。
+    #     两页同时淡入淡出 → 中途新旧文字各半透明叠在一起（重影）；
+    #     给离场页涂不透明底 → 变成"整块面板压过去"的硬边擦除，两种都不是 Win11 的样子。
     if ".fl-page-in" in (motion_css or ""):
-        if not re.search(r"\.fl-page-(in|leaving)[^{]*\{[^}]*background\s*:", motion_css + "\n" + controls_css):
-            fails.append("R41: 转场页必须涂不透明背景（.fl-page-in/.fl-page-leaving 的 background），"
-                         "否则两页文字在滑动中会叠在一起")
         in_rule = re.search(r"\.fl-page-in\s*\{([^}]*)\}", motion_css or "")
-        if in_rule and re.search(r"animation\s*:[^;]*fade", in_rule.group(1)):
-            fails.append("R41 fluent2-motion.css: .fl-page-in 不许挂 fade 动画"
-                         "（入页半透明会把底下的旧页透上来）")
+        in_body = in_rule.group(1) if in_rule else ""
+        if "animation-delay" not in in_body:
+            fails.append("R41 fluent2-motion.css: .fl-page-in 必须设 animation-delay（= 旧页退场时长），"
+                         "否则两页同时进出会重影")
+        out_rule = re.search(r"\.fl-page-out\s*\{([^}]*)\}", motion_css or "")
+        out_body = out_rule.group(1) if out_rule else ""
+        if "var(--fl-dur-page)" in out_body:
+            fails.append("R41 fluent2-motion.css: 离场页的时长不许也用 --fl-dur-page"
+                         "（旧页要在一小段内退场，不能和新页一样长）")
+        if re.search(r"\.fl-page-(in|leaving)[^{]*\{[^}]*background\s*:", motion_css + "\n" + controls_css):
+            fails.append("R41: 转场页不得涂不透明背景 —— 会变成硬边擦除，"
+                         "与录屏的「旧页淡出 → 新页滑入」不符")
 
     # 输出
     print(f"目标：{target}")

@@ -76,6 +76,12 @@ BAD_CASES = {
             "  --fl-slider-fill: calc(var(--fl-slider-inner) / 2\n"
             "                   + (100% - var(--fl-slider-inner)) * var(--fl-slider-pct));",
             "  --fl-slider-fill: calc(100% * var(--fl-slider-pct));"),
+    "R36": ("fluent2-controls.css",
+            "  --fl-slider-accent: color-mix(in srgb, var(--fl-accent-fill) 90%, var(--fl-text-primary));",
+            "  --fl-slider-accent: var(--fl-accent-fill-hover);"),
+    "R37": ("fluent2-controls.css",
+            "  padding: var(--fl-space-1) var(--fl-btn-pad-h);",
+            "  padding: var(--fl-space-3) var(--fl-btn-pad-h) var(--fl-space-2) var(--fl-btn-pad-h);"),
 }
 
 # 处方：按模块名整块删除（与 FLUENT-COMPOSE.md 的四种处方一致）

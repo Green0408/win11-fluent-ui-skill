@@ -10,7 +10,7 @@
 |---|---|
 | `fluent2-tokens.css` | 全部 `--fl-*` 官方变量（颜色暗/亮双主题、动效时长/缓动、圆角、间距、阴影）。脚本生成，勿手改 |
 | `fluent2-controls.css` | 控件样式：按钮/输入/**列表（六档 + 行结构 + 多选列）**/**勾选·单选（SVG 勾号）**/**自绘 ComboBox**/开关/卡片/导航/浮层/对话框/InfoBar/字阶类 |
-| `fluent2-motion.css` | 动效类：fl-entrance / fl-point-to-point / fl-exit / **fl-page-in / fl-page-out（页面转场两轴四向）** / fl-fade / fl-strong-entrance / **fl-continuous / fl-tick（连续型）** / fl-overlay / fl-smoke（一次性动效用 animation，状态切换用 transition） |
+| `fluent2-motion.css` | 动效类：fl-entrance / fl-point-to-point / fl-exit / **fl-page-in / fl-page-out（页面转场两轴）** / fl-fade / fl-strong-entrance / **fl-continuous / fl-tick（连续型）** / fl-overlay / fl-smoke（一次性动效用 animation，状态切换用 transition） |
 | `fluent2-motion.js` | 编排 API：`M.transitionTo(id,{kind,dir})` / `M.back(kind)` / `M.stack()` / `M.stagger()` / **`M.combo.init/auto`** / **`M.list.multiselect/syncParent`** / **`M.slider.init/auto`** / `M.flyout` / `M.dialog` / `M.toast` / `M.theme` |
 | `fluent2-tool-starter.html` | 可拆装骨架（模块标记 `<!-- 模块：<名> -->`） |
 | `selftest.html` | 自测页（校验器应 0 FAIL） |
@@ -34,7 +34,7 @@
 12. **偏离官方要登记**：官方未定义的值（如 nav 宽度 240px）在 KIT 已登记；用户要求偏离官方时，在交付说明里注明。
 13. **多页布局**：`.fl-content-layer` 是 `display:grid` + `overflow: clip`，所有 `.fl-page` 占同一格（`grid-area: 1 / 1`），转场期重叠而非上下堆叠；非当前页靠 `.fl-current` / `.fl-page-leaving` 控制显隐。转场期 JS 会锁 `min-height`。删除或新增页面时**不要**改这层布局，否则转场会顶出布局跳变。`overflow: clip` 不支持 `position: sticky`，需要时改用 `overflow: hidden` + `overflow-clip-margin`。
 14. **stagger 延迟**只写 `--fl-stagger-delay` 自定义属性（`M.stagger` 已封装），**禁止** `transition-delay` / `transitionDelay`——它会影响该元素后续所有过渡，造成悬停/点击迟滞。
-15. **页面转场两轴 × 四向**（实测自 Win11 官方应用录屏，见 VIDEO-ALIGN.md §9/§10）：
+15. **页面转场两轴**（实测自 Win11 官方应用录屏，见 VIDEO-ALIGN.md §9/§10）：
 
 | 触发 | kind | 轴向 | 单层行程 | 时长 | 曲线 |
 |---|---|---|---|---|---|
@@ -46,14 +46,15 @@
 
 | dir | 含义 | 起点偏移 |
 |---|---|---|
-| `forward` / `back` | 逻辑方向，按轴映射（drill→右/左，nav→下/上） | ±行程 |
-| `up` | 新页**自上方**进入（点侧栏更靠上的一项） | −行程 |
-| `down` | 新页**自下方**进入（点侧栏更靠下的一项） | +行程 |
+| `forward` / `back` | 逻辑方向，按轴映射（drill→右/左；nav **两个都归一到 down**） | ±行程 |
+| `up` | 新页**自上方**进入（仅显式指定时使用） | −行程 |
+| `down` | 新页**自下方**进入（nav 的唯一缺省） | +行程 |
 | `left` / `right` | 自左 / 自右进入 | ∓行程 |
 
-　缺省解析顺序：**显式 `dir` → 导航项在侧栏中的先后序 → 页面栈（目标是上一页=back）→ forward**。
-　所以一级导航不需要传 `dir`：点上面那条就从上方进、点下面那条就从下方进。非法 `dir` 会 `console.warn` 并回退自动推断（**不会**静默当成 forward）。
-　`up/down` 一律是 forward 语义（入栈），只有「目标是上一页」或显式 `back` 才截断页面栈 —— 否则 A→C→B 之后 `M.back()` 会跳回 A。
+　**竖向铁律：一级导航只准「自下往上进入」**。点侧栏里任意一项（无论更靠上还是更靠下），内容都从下方滑入、向上归位；`forward` / `back` 在 nav 上观感完全一致。规则：`shiftOf()` 里只要 `kind !== "drill"` 且方向没显式给轴，符号恒为 `+1`。
+　早期版本按「导航项在侧栏里的先后序」定符号（点上面那条 → 内容从上方压下），**已废弃**：观感过重，且与 Win11 设置类应用不符。要反向只能显式写 `dir:"up"`（保留逃生口）。
+　缺省解析顺序：**显式 `dir` → nav 恒 `down` / drill 按页面栈（目标是上一页=右→左反转）**。非法 `dir` 会 `console.warn` 并回退缺省（**不会**静默当成 forward）。
+　`nav` 的 `isBack` 恒为 false（一级导航没有"返回"概念）：否则 A→B→A 之后页面栈会被截断成 `[A]`，`M.back()` 无路可退。只有 `drill` 或显式 `back` 才截断栈。
 　位移由 JS 写入 `--fl-page-from-x/-y` 与 `--fl-page-to-x/-y` 四个带符号变量（keyframe 内**不写**位移字面量）；淡入淡出单独 83ms linear，两条 animation 并行。快速连点由 `pageGen` 代际 + `settlePages()` 保证无残留。
 　两轴共用同一节奏（283ms / `--fl-ease-page`）：§9 早期只测到竖向 250ms 的减速尾段，样本不足拆两套曲线，统一后与 drill 实测一致。
 16. **连续型动效**用 `.fl-continuous` / `.fl-tick`（加在指针元素本身，绕自身 `transform-origin: 50% 100%` 旋转），宿主用 `.fl-dial` + `.fl-dial-hand` + `.fl-dial-hub`。必须 linear/steps、`infinite`、`fill: none`；`prefers-reduced-motion` 下直接停住（不要退化成播完一圈就停）。
@@ -67,13 +68,15 @@
 20. **滑块**的已填充段（thumb 左侧、accent 色）靠 `--fl-slider-pct`（0–1）驱动，由 `M.slider.auto()` 在 `input` 时写入 —— **没有这个变量，轨道就是整条同色**（Win11 是左 accent 右灰）。
     - 填充宽 = `calc(12px / 2 + (100% - 12px) * var(--fl-slider-pct))`：减 12px 是因为 thumb 圆心行程比轨道短一个 thumb 宽，不补偿会让两端各溢出 6px；
     - 填充段**禁止**加 `transition: background`（值跟随加过渡会变成拖影，是新的抖动源；校验器 R35 会拦）；thumb 的 `transform` 缩放保留 250ms；
-    - 填充色与 thumb 同步走四档（Default → PointerOver @0.9 → Pressed @0.8 → Disabled）；`[dir="rtl"]` 下渐变方向要翻转。
+    - **档位色必须不透明**：`--fl-slider-accent` 不许直接引用 `--fl-accent-fill-hover/-pressed`（那是 alpha 0.9/0.8），必须 `color-mix(in srgb, var(--fl-accent-fill) 90%/80%, var(--fl-text-primary))`。alpha 档位叠在卡片上会透出底下的灰环，观感就是「悬停时滑块变透明」（校验器 R36 会拦）；
+    - 填充色与 thumb 同步走四档（Default → hover → pressed → Disabled）；`[dir="rtl"]` 下渐变方向要翻转。
+21. **按钮居中交给 flex，不要抄 XAML 的 `ButtonPadding=11,5,11,6`**：那是 ContentPresenter 做字基线补偿用的 4 值，照搬进 `align-items:center` 的盒子会让内容整体下沉 2px（校验器 R37 会拦上下不对称）。正确写法是 `padding: var(--fl-space-1) var(--fl-btn-pad-h)` + `min-height: var(--fl-control-height)`，再用 CDP 量 `Range` 文本盒中心与按钮盒中心的偏差（应 ≤0.5px）。
 
 ## 官方关键数值速查（详见 official-values.md）
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。
 - **实测派生（非官方档，来自 60fps 录屏反解）**：页面转场 283ms（`--fl-dur-page`）、drill 176px、nav 72px、`--fl-ease-page` = cubic-bezier(0.6,0,0.3,1)、连续型 `--fl-dur-sweep` 60s / `--fl-dur-tick` 1s。官方四档仍是 83/167/250/333，检索官方规范时不要引用这一行。
-- accent 状态档位（XAML brush Opacity）：`--fl-accent-fill-hover` = Default @0.9、`--fl-accent-fill-pressed` = Default @0.8。状态反馈用档位色过渡，禁用 `filter: brightness()`。
+- accent 状态档位（XAML brush Opacity）：`--fl-accent-fill-hover` = Default @0.9、`--fl-accent-fill-pressed` = Default @0.8。状态反馈用档位色过渡，禁用 `filter: brightness()`。**例外：滑块**的轨道填充与 thumb 不许用这两个 alpha 档（会透出底层，见规则 20）。
 - 字阶：Caption 12/16、Body 14/20、Body Strong 14/20 Semibold、Body Large 18/24、Subtitle 20/28、Title 28/36、Title Large 40/52、Display 68/92。
 - 控件：高 32px；Button padding 11,5,11,6；TextBox padding 10,5,6,6；列表项 min-height 40；ContentDialog padding 24 / max-width 548 / min-height 184；Switch 轨道 40×20、旋钮 12（hover 14 / pressed 17）、开态位移 **20px**（XAML `KnobTranslateTransform X=20`）；Slider 轨道 4 / 内圆 12 / 圆角 10（hover 1.167、pressed 0.833，250ms）；轨道**左段为 accent 已填充段**（`SliderTrackValueFill`，宽 = 半 thumb + 比例×(轨道宽-12)，由 `M.slider.auto()` 写 `--fl-slider-pct`），填充与 thumb 同步四档变色（Default→Secondary 0.9→Tertiary 0.8→Disabled）。
 - 列表：行高单行 40 / 两行 64（后者 KIT 自定）；圆角 4；选中条 3×16 圆角 1.5；多选列宽 40.5；禁用透明度 0.3；图标 20；行内间距 12。

@@ -30,7 +30,7 @@
 ### D 设置型
 保留：`titlebar` + `settings-panel`（或 `topnav` 分组）。
 删除：nav、toolbar、list-detail、grid。
-动效：分组卡片 `.fl-entrance`；控件均带官方微动效：开关旋钮 12→hover 14→pressed 17、开态位移 20px、83ms FastOutSlowIn；滑块 hover 1.167 / pressed 0.833、250ms，左段 accent 已填充段随值伸缩（`M.slider.auto()` 自动接）；勾选框为 SVG 勾号描画 167ms（含半选/禁用）；下拉用自绘 `.fl-combo`（83ms 开合 + 上下翻转）；有实时数值（进度/秒表）时用 `.fl-dial` + `.fl-tick` / `.fl-continuous`。
+动效：分组卡片 `.fl-entrance`；控件均带官方微动效：开关旋钮 12→hover 14→pressed 17、开态位移 20px、83ms FastOutSlowIn；滑块 hover 1.167 / pressed 0.833、250ms，左段 accent 已填充段随值伸缩（`M.slider.auto()` 自动接，档位色用不透明混色，悬停不会透出底层）；勾选框为 SVG 勾号描画 167ms（含半选/禁用）；下拉用自绘 `.fl-combo`（83ms 开合 + 上下翻转）；有实时数值（进度/秒表）时用 `.fl-dial` + `.fl-tick` / `.fl-continuous`。
 
 ## 官方结构规则依据
 

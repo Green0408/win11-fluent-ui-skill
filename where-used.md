@@ -25,7 +25,7 @@
 | 对话框 | `.fl-dialog.fl-overlay` + `M.dialog`（Smoke 遮罩、圆角 8、阴影 e128、padding 24、max-width 548） | XAML ContentDialogPadding/MaxWidth/MinHeight + materials Smoke |
 | tooltip | 圆角 4（小尺寸例外）、阴影 e16 | geometry ToolTip 例外 + layering Tooltip=16 |
 | 元素入场 | `.fl-entrance` + `M.stagger`（167ms standard，位移 8px；83ms 步进上限 333，延迟走 `--fl-stagger-delay`） | motion Direct Entrance + Fade 档；位移量实测自录屏 |
-| 页面切换（一级导航） | `M.transitionTo(id)`（默认 `kind:'nav'`，垂直 72px + 交叉淡化，283ms；**方向按导航项先后自动定**，也可 `{dir:'up'/'down'}` 覆盖） | 实测派生（见 KIT 规则 15） |
+| 页面切换（一级导航） | `M.transitionTo(id)`（默认 `kind:'nav'`，垂直 72px + 交叉淡化，283ms；**方向恒为自下往上**（不按导航序反向），要反向须显式 `{dir:'up'}`） | 实测派生（见 KIT 规则 15） |
 | 页面切换（二级下钻） | `M.transitionTo(id,{kind:'drill'})`（水平 176px，返回用 `M.back('drill')` 方向取反） | 实测派生（见 KIT 规则 15） |
 | 连续型动效（秒针/进度环） | `.fl-dial` + `.fl-dial-hand.fl-tick`（每秒 6°）/ `.fl-continuous`（linear 倍乘） | 录屏《时钟》秒针；见 KIT 规则 16 |
 | 弹性大入场 | `.fl-strong-entrance`（三关键帧 167+167+333） | motion Strong Entrance |

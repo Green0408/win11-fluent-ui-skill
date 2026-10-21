@@ -43,6 +43,8 @@ R32 reduced-motion 必须覆盖 .fl-check-glyph / .fl-combo-popup / .fl-listitem
 R33 ComboBox 可达性：combobox/listbox/option 三个 role + aria-expanded/controls + 键盘 Escape/方向键/activedescendant
 R34 弹层不得被裁：.fl-combo-popup 必须 position: fixed，且 JS 有 portal 到 body 的证据
 R35 滑块必须有填充段且做半 thumb 补偿：轨道双段渐变 + --fl-slider-fill 走 calc(inner/2 + (100%-inner)×pct) + 禁 background 过渡
+R36 滑块档位色不得用 alpha：--fl-slider-accent 不许直接引用 --fl-accent-fill-hover/-pressed，须用 color-mix 不透明混色
+R37 按钮纵向内边距必须对称：.fl-btn 的 padding 四值里 top 必须等于 bottom（否则 flex 居中下文字整体偏移）
 """
 import re
 import sys
@@ -515,6 +517,25 @@ def main():
         if slider_body and re.search(r"transition\s*:[^;]*\bbackground", slider_body.group(1)):
             fails.append("R35 fluent2-controls.css: 滑块填充段不得加 background 过渡"
                          "（拖动时会变成拖影，是新的抖动源）")
+        # 档位色不得用 alpha：0.9/0.8 的半透明填充会透出底下的灰环与卡片，观感是"滑块变透明了"
+        if re.search(r"--fl-slider-accent\s*:[^;]*var\(--fl-accent-fill-(hover|pressed)\)", controls_css):
+            fails.append("R36 fluent2-controls.css: 滑块档位色不得直接引用 --fl-accent-fill-hover/-pressed"
+                         "（那是 alpha 0.9/0.8，悬停时填充与 thumb 会透出底层）；"
+                         "改用 color-mix 混向 --fl-text-primary 的不透明档")
+
+    # R37 按钮纵向内边距必须对称
+    #     XAML ButtonPadding=11,5,11,6 是给 ContentPresenter 做字基线补偿的；
+    #     照搬进 align-items:center 的 flex 盒，内容盒中心会整体偏移，文字看着"不居中"。
+    if ".fl-btn" in (controls_css or ""):
+        btn = re.search(r"\.fl-btn\s*\{([^}]*)\}", controls_css)
+        if btn:
+            pad = re.search(r"padding\s*:\s*([^;]+);", btn.group(1))
+            if pad:
+                parts = pad.group(1).split()
+                if len(parts) == 4 and parts[0] != parts[2]:
+                    fails.append(f"R37 fluent2-controls.css: .fl-btn 纵向内边距不对称"
+                                 f"（上={parts[0]} 下={parts[2]}），flex 居中下文字会整体偏移；"
+                                 f"居中交给 align-items:center，上下取同值")
 
     # 输出
     print(f"目标：{target}")

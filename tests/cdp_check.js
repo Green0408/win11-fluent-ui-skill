@@ -123,16 +123,17 @@ async function main() {
 
   await shot("x1-page-settings");
 
-  /* 再点回第 0 项（条目管理，更靠上）→ 应从上方进入（负号） */
+  /* 再点回第 0 项（条目管理，更靠上）→ 仍必须自下方进入（用户口径：竖向只准从下往上） */
   await clickAt(await navBox(0));
   await sleep(110);
-  await shot("x0-transition-up");     // 转场中段：新页偏上
+  await shot("x0-transition-up");     // 转场中段：新页仍偏下
   const up = await evaluate(`(function(){
     var p = document.getElementById("page-main");
     return { fromY: p.style.getPropertyValue("--fl-page-from-y") };
   })()`);
   await sleep(400);
-  check("点上方导航项 → 自上方进入（-shift-y）", /calc\(var\(--fl-page-shift-y\) \* -1\)/.test(up.fromY), JSON.stringify(up));
+  check("点上方导航项 → 仍自下方进入（+shift-y，不允许反向）",
+    /^var\(--fl-page-shift-y\)$/.test(up.fromY), JSON.stringify(up));
 
   /* ---- 2) 列表六档：hover / 选中+hover 的 computed background ---- */
   const rowBox = await evaluate(`(function(){
@@ -210,6 +211,30 @@ async function main() {
   })()`);
   check("勾号是 <svg> 且带 dash 过渡", glyph.tag.toLowerCase() === "svg" && glyph.dash !== "none", JSON.stringify(glyph));
 
+  /* ---- 4.5) 按钮文字必须居中：用 Range 量文本盒，和按钮盒比中心 ----
+     曾经的 padding 是「上 12 / 下 8」（误把 XAML ButtonPadding 11,5,11,6 的语义套进 flex 盒），
+     文字整体下沉 2px。这类偏移肉眼"觉得怪"但说不清，必须用数值锁。 */
+  const btnBox = await evaluate(`(function(){
+    var ids = ["btn-refresh", "btn-open-detail", "btn-dialog-cancel"];
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var b = document.getElementById(ids[i]);
+      if (!b) continue;
+      var r = b.getBoundingClientRect();
+      if (!r.width) continue;                       // 隐藏页里的按钮跳过
+      var rg = document.createRange(); rg.selectNodeContents(b);
+      var t = rg.getBoundingClientRect();
+      out.push({ id: ids[i],
+                 dx: +((t.left + t.width / 2) - (r.left + r.width / 2)).toFixed(2),
+                 dy: +((t.top + t.height / 2) - (r.top + r.height / 2)).toFixed(2),
+                 h: +r.height.toFixed(1) });
+    }
+    return out;
+  })()`);
+  check("按钮文字居（|dx|,|dy| ≤ 0.5px）",
+    btnBox.length > 0 && btnBox.every((b) => Math.abs(b.dx) <= 0.5 && Math.abs(b.dy) <= 0.5),
+    JSON.stringify(btnBox));
+
   /* ---- 5) 滑块已填充段：--fl-slider-pct 跟随值、轨道是双段渐变、hover/pressed/禁用四档配色 ---- */
   await clickAt(await navBox(2));   // 滑块在设置页
   await sleep(420);
@@ -272,19 +297,41 @@ async function main() {
     return { x: r.left + r.width * 0.5, y: r.top + r.height / 2 };
   })()`);
   const accent = () => evaluate(`getComputedStyle(document.getElementById("set-slider")).getPropertyValue("--fl-slider-accent").trim()`);
+  /* 把当前档位色真实解析成 rgb()，用来判断"有没有 alpha" —— 光看变量字符串看不出透不透明 */
+  const accentRGB = () => evaluate(`(function(){
+    var v = getComputedStyle(document.getElementById("set-slider"))
+              .getPropertyValue("--fl-slider-accent").trim();
+    var d = document.createElement("div");
+    d.style.backgroundColor = v;
+    document.body.appendChild(d);
+    var c = getComputedStyle(d).backgroundColor;
+    d.remove();
+    return c;
+  })()`);
+  /* color-mix 解析出来是 color(srgb r g b) 这种无 alpha 形式，不能只看是否以 rgb( 开头 */
+  const opaque = (c) =>
+    !/rgba\([^)]*,\s*0?\.\d+\s*\)/.test(c) && !/\/\s*0?\.\d+\s*\)/.test(c);
   const restAccent = await accent();
+  const restRGB = await accentRGB();
   await mouse("mouseMoved", sb.x, sb.y);
   await sleep(140);
   const hoverAccent = await accent();
+  const hoverRGB = await accentRGB();
   await mouse("mousePressed", sb.x, sb.y, "left");
   await sleep(140);
   const pressAccent = await accent();
+  const pressRGB = await accentRGB();
   await mouse("mouseReleased", sb.x, sb.y, "left");
   await mouse("mouseMoved", 5, 5);
   await sleep(340);
   check("滑块填充段 hover/pressed 逐档变色（Default→Secondary→Tertiary）",
     restAccent !== hoverAccent && hoverAccent !== pressAccent && restAccent !== pressAccent,
     [restAccent, hoverAccent, pressAccent].join(" / "));
+  /* 用户反馈："悬停时滑块变透明了" —— 根因是档位色用了 alpha(0.9/0.8)，透出底下的灰环/卡片。
+     修法改成不透明混色，这里锁死三态都必须 alpha=1。 */
+  check("滑块三态都是不透明色（不靠 alpha 变淡）",
+    opaque(restRGB) && opaque(hoverRGB) && opaque(pressRGB),
+    [restRGB, hoverRGB, pressRGB].join(" / "));
   await shot("x5-slider");
 
   const dis = await evaluate(`(function(){

@@ -57,8 +57,9 @@ R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::be
 R47 指示条拉伸必须"留在按钮内"：峰值来自固定常量，禁止按 |Δ| 派生（会跨过项间隙、跑出按钮）
 R48 滑块 thumb：外框恒定（ring = 外框/scale − 内点，反向补偿）+ 只缩内点 + 尺寸动效走 transform（禁过渡 width/height）
     + 逐状态时长（基态 167ms / hover·active 250ms）
-R49 弹出层动画必须是「淡入 + 垂直 50px 平移」（官方 pop-up 动画没有缩放）：距离走变量、方向按放置关系、
-    入场 250ms/出场 167ms；对话框与 ToolTip 不许平移（只用淡入淡出）
+R49 弹出层：菜单 = 淡入 + 垂直 50px 平移（方向按放置关系、入 250ms/出 167ms、无缩放）；
+    下拉列表 = 压在按钮上（选中项那一行盖住按钮）+ clip-path 从顶边往下揭示，167ms / --fl-ease-popup，
+    关闭瞬变；对话框与 ToolTip 只许淡入淡出（基类不带 transform）
 """
 import re
 import sys
@@ -785,6 +786,29 @@ def main():
                              r"clip-path\s*:\s*inset\(calc\(100%", motion_css):
                 fails.append("R49 fluent2-motion.css: 下拉列表向上翻时必须从底边往上揭示"
                              "（[data-drop=\"up\"] 的 clip-path 要把 100% 放在上边）")
+            # 速率：起手就到 60%，必须用 --fl-ease-popup(0.1,0.9,0.2,1) + --fl-dur-popup(167ms)；
+            # 用 ControlFastOutSlowIn(0,0,0,1) 拟合同一段 RMSE 51px（起手只到 45%，看起来"先顿一下再冲"）
+            reveal_body = reveal[0] if reveal else ""
+            if "var(--fl-ease-popup)" not in reveal_body:
+                fails.append("R49 fluent2-motion.css: 下拉列表的揭示缓动必须是 --fl-ease-popup"
+                             "（cubic-bezier(0.1,0.9,0.2,1)：首帧 60%，与录屏一致）")
+            if "var(--fl-dur-popup)" not in reveal_body:
+                fails.append("R49 fluent2-motion.css: 下拉列表的揭示时长必须是 --fl-dur-popup(167ms)")
+
+        # —— 位置（JS）：弹层要"压在"按钮上，选中项那一行盖住按钮 ——
+        #     录屏：按钮 y 543..602、选中行 543..605、弹层顶边 526（露出 17 设备px ≈ 6 CSS）。
+        #     旧实现是 r.bottom + 4（挂在按钮下方一条缝），位置完全是另一回事。
+        if motion_js and "function place()" in motion_js:
+            place_seg = motion_js[motion_js.index("function place()"):]
+            place_seg = place_seg[:place_seg.index("function reflowOnScroll")] if "function reflowOnScroll" in place_seg else place_seg[:4000]
+            if "r.bottom + 4" in place_seg or "r.bottom + 8" in place_seg:
+                fails.append("R49 fluent2-motion.js place(): 下拉列表不许挂在按钮下方（r.bottom + 4）"
+                             "—— 录屏里弹层是压在按钮上、选中项那一行盖住按钮")
+            if not re.search(r"selectedIndex\(\)|aria-selected", place_seg):
+                fails.append("R49 fluent2-motion.js place(): 必须先量出选中项相对弹层的偏移，"
+                             "再回推 top = 按钮顶 − 偏移（否则选中项不在按钮上）")
+            if "r.top - off" not in place_seg.replace(" ", " "):
+                fails.append("R49 fluent2-motion.js place(): top 必须是 r.top - off（选中项对齐按钮顶边）")
         # —— 基类不许带位移（对话框/ToolTip 只淡入淡出）——
         base = re.search(r"\n\.fl-overlay\s*\{([^}]*)\}", motion_css)
         if base and "transform" in base.group(1):

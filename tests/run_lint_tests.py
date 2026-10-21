@@ -136,8 +136,16 @@ BAD_CASES = {
              "    box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);"),
     # 下拉列表改回位移 → 应该是「揭示」
     "R49d": ("fluent2-motion.css",
-             "  clip-path: inset(-24px);\n  transition: clip-path var(--fl-dur-control-fast) var(--fl-ease-standard),",
-             "  transform: translateY(0);\n  transition: transform var(--fl-dur-control-fast) var(--fl-ease-standard),"),
+             "  clip-path: inset(-24px);\n  transition: clip-path var(--fl-dur-popup) var(--fl-ease-popup),",
+             "  transform: translateY(0);\n  transition: transform var(--fl-dur-popup) var(--fl-ease-popup),"),
+    # 下拉列表缓动退回 ControlFastOutSlowIn(0,0,0,1) → 起手只到 45%，看起来"先顿一下再冲"
+    "R49f": ("fluent2-motion.css",
+             "  transition: clip-path var(--fl-dur-popup) var(--fl-ease-popup),",
+             "  transition: clip-path var(--fl-dur-popup) var(--fl-ease-standard),"),
+    # 位置退回"挂在按钮下方一条缝" → 选中项不在按钮上
+    "R49g": ("fluent2-motion.js",
+             "      var top = Math.round(r.top - off);",
+             "      var top = Math.round(r.bottom + 4);"),
     # 下拉列表关闭加了退场动画 → 录屏里是单帧瞬变
     "R49e": ("fluent2-motion.css",
              "  /* 关闭瞬变：录屏里没有退场动画，硬切 */\n  transition: none;",

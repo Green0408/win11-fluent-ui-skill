@@ -166,46 +166,118 @@ class CDP {
     closeM.dur >= 100 && closeM.dur <= 240 && closeM.dur < openM.dur - 25,
     `${closeM.dur}ms（开 ${openM.dur}ms）`);
 
-  /* 下拉列表：**另一套动画** —— 从顶边向下"揭示"（clip-path），不淡入、不位移，关闭瞬变。
-     依据 2026-10-21 23-13-35.mp4：顶边固定、底边 8 帧扫下去、首帧文字已 97% 对比度、关闭单帧。 */
+  /* ================= 下拉列表（ComboBox 弹层）：另一套动画 =================
+     ① 位置：**选中项那一行正好盖住按钮**（弹层压在按钮上、顶边露一小条），
+        依据 2026-10-21 23-13-35.mp4：按钮 y 543..602，选中行 543..605，弹层顶边 526；
+     ② 揭示：clip-path 从顶边往下扫（不淡入、不位移、关闭瞬变）；
+     ③ 速率：首帧就到 60%，之后 167ms 收尾（cubic-bezier(0.1,0.9,0.2,1)）——
+        录屏逐帧 0.60/0.80/0.87/0.90/0.94/0.97/1.00。 */
   const comboState = () => evalJs(`(function(){
     var el = document.getElementById("combo-view-list");
     var cs = getComputedStyle(el);
     var r = el.getBoundingClientRect();
     return { clip: cs.clipPath, op: +cs.opacity, h: +r.height.toFixed(1),
-             top: +r.top.toFixed(1), drop: el.dataset.drop || "", open: el.classList.contains("fl-open") };
+             top: +r.top.toFixed(1), left: +r.left.toFixed(1), w: +r.width.toFixed(1),
+             bottom: +r.bottom.toFixed(1),
+             drop: el.dataset.drop || "", open: el.classList.contains("fl-open") };
+  })()`);
+
+  /* 逐 rAF 采样 clip-path + 顶边/高度/透明度，换算成"已揭示高度比例" */
+  await evalJs(`(function(){
+    window.__c = [];
+    var el = document.getElementById("combo-view-list");
+    var t0 = 0;
+    window.__startC = function(){ t0 = performance.now(); step(); };
+    function step(){
+      var cs = getComputedStyle(el), r = el.getBoundingClientRect();
+      window.__c.push([+(performance.now() - t0).toFixed(1), cs.clipPath,
+                       +r.top.toFixed(1), +r.height.toFixed(1), +cs.opacity]);
+      if (performance.now() - t0 < 400) requestAnimationFrame(step);
+    }
+    return 1;
   })()`);
   await clickSel("#combo-view-btn");
-  const comboOpen = [];
-  for (let i = 0; i < 14; i++) { comboOpen.push(await comboState()); await sleep(24); }
-  const last = comboOpen[comboOpen.length - 1];
-  const px = (clip) => {
-    const m = /inset\(([^)]+)\)/.exec(clip || "");
+  await evalJs("window.__startC()");
+  await sleep(450);
+  const comboOpen = await evalJs("window.__c");
+  const geo = await evalJs(`(function(){
+    var p = document.getElementById("combo-view-list");
+    var b = document.getElementById("combo-view-btn");
+    var pr = p.getBoundingClientRect(), br = b.getBoundingClientRect();
+    var sel = p.querySelector('.fl-combo-item[aria-selected="true"]');
+    var sr = sel ? sel.getBoundingClientRect() : null;
+    return { popupTop: +pr.top.toFixed(1), popupBottom: +pr.bottom.toFixed(1),
+             popupLeft: +pr.left.toFixed(1), popupW: +pr.width.toFixed(1), popupH: +pr.height.toFixed(1),
+             btnTop: +br.top.toFixed(1), btnBottom: +br.bottom.toFixed(1),
+             btnLeft: +br.left.toFixed(1), btnW: +br.width.toFixed(1), btnH: +br.height.toFixed(1),
+             selTop: sr ? +sr.top.toFixed(1) : null, selH: sr ? +sr.height.toFixed(1) : null };
+  })()`);
+
+  check("下拉列表：弹层压在按钮上（顶边在按钮顶边上方 2~12px）",
+    geo.btnTop - geo.popupTop >= 2 && geo.btnTop - geo.popupTop <= 12,
+    `弹层 ${geo.popupTop} / 按钮 ${geo.btnTop} → 露出 ${(geo.btnTop - geo.popupTop).toFixed(1)}px`);
+  check("下拉列表：选中项那一行正好盖住按钮（行顶 = 按钮顶 ±1.5px）",
+    geo.selTop !== null && Math.abs(geo.selTop - geo.btnTop) <= 1.5,
+    `选中行 ${geo.selTop} vs 按钮 ${geo.btnTop}`);
+  check("下拉列表：弹层左对齐按钮、宽度不小于按钮、且盖过按钮底部",
+    Math.abs(geo.popupLeft - geo.btnLeft) <= 0.5 && geo.popupW >= geo.btnW - 0.5 &&
+    geo.popupBottom > geo.btnBottom + 4,
+    `left ${geo.popupLeft}/${geo.btnLeft}  w ${geo.popupW}/${geo.btnW}  bottom ${geo.popupBottom}/${geo.btnBottom}`);
+
+  /* clip-path → 已揭示比例 */
+  const H0 = geo.popupH;
+  const insetBottom = (clip) => {
+    const m = /inset\(([\s\S]*)\)/.exec(clip || "");
     if (!m) return null;
-    return m[1].trim().split(/\s+/).map((v) => v);
+    const toks = m[1].match(/calc\([^)]*\)|[-+]?[\d.]+(?:e[-+]?\d+)?(?:px|%)/gi) || [];
+    const v = toks.length >= 3 ? toks[2] : toks[0];
+    if (!v) return null;
+    let val = 0;
+    const pct = /(-?[\d.]+(?:e[-+]?\d+)?)%/i.exec(v);
+    if (pct) val += parseFloat(pct[1]) / 100 * H0;
+    const pxs = /[-+]\s*[\d.]+(?:e[-+]?\d+)?px|^[-+]?[\d.]+(?:e[-+]?\d+)?px/i.exec(v);
+    if (pxs) val += parseFloat(pxs[0].replace(/\s+/g, ""));
+    return val;
   };
-  const firstBottom = px(comboOpen[0].clip);
+  const series = comboOpen
+    .map(([t, clip, top, h, op]) => ({ t, top, h, op, b: insetBottom(clip) }))
+    .filter((r) => r.b !== null)
+    .map((r) => ({ t: r.t, top: r.top, h: r.h, op: r.op,
+                   p: +Math.max(0, Math.min(1, (H0 - r.b + 24) / (H0 + 48))).toFixed(3) }));
+  const last = series[series.length - 1];
+  const firstMove = series.find((r) => r.p > 0.02) || series[0];
+  const done = series.find((r) => r.p >= 0.995) || last;
+
   check("下拉列表：开合走 clip-path 揭示（不是位移/缩放）",
-    !!firstBottom && Math.abs(last.h - comboOpen[0].h) < 0.5,
-    `clip=${comboOpen[0].clip} → ${last.clip}；height 恒 ${comboOpen[0].h}`);
-  const clips = [...new Set(comboOpen.map(r => r.clip))];
-  check("下拉列表：揭示是逐帧推进的（clip 至少 3 个不同取值，末帧完整）",
-    clips.length >= 3 && last.clip.indexOf("-24px)") >= 0,
-    `${clips.length} 个取值：${clips.slice(0, 4).join(" | ")}`);
+    series.length > 3 && Math.abs(last.p - 1) < 0.01,
+    `${series.length} 个采样，末帧 ${last.p}`);
+  check("下拉列表：首帧就到 45% 以上（起手极快，不是先顿一下再冲）",
+    firstMove.p >= 0.45, `首帧 ${firstMove.p}（录屏 0.60）`);
+  check("下拉列表：整段 100~210ms 收尾（ControlFast 档）",
+    done.t - firstMove.t >= 90 && done.t - firstMove.t <= 210,
+    `${(done.t - firstMove.t).toFixed(0)}ms（录屏 ≈167ms）`);
+  const mid = series.find((r) => r.t >= (firstMove.t + done.t) / 2);
+  check("下拉列表：半程进度 ≥ 0.90（快起慢收，不是线性）",
+    mid && mid.p >= 0.90, `半程 ${mid ? mid.p : "-"}`);
+  check("下拉列表：进度单调不回退",
+    series.every((r, i) => i === 0 || r.p >= series[i - 1].p - 0.001),
+    series.slice(0, 8).map((r) => r.p).join(","));
   check("下拉列表：不淡入（opacity 全程 1）",
-    comboOpen.every(r => r.op === 1), comboOpen.map(r => r.op).join(","));
-  check("下拉列表：顶边固定（揭示只往下长）",
-    Math.abs(comboOpen[comboOpen.length - 1].top - comboOpen[0].top) < 0.5,
-    `${comboOpen[0].top} → ${comboOpen[comboOpen.length - 1].top}`);
+    series.every((r) => r.op === 1), [...new Set(series.map((r) => r.op))].join(","));
+  check("下拉列表：揭示期间顶边与盒高都不动（只裁、不长高，避免重排）",
+    series.every((r) => Math.abs(r.top - series[0].top) < 0.6 && Math.abs(r.h - series[0].h) < 0.6),
+    `top ${Math.min(...series.map((r) => r.top))}~${Math.max(...series.map((r) => r.top))}，` +
+    `h ${Math.min(...series.map((r) => r.h))}~${Math.max(...series.map((r) => r.h))}`);
 
   /* 关闭：瞬变（录屏里没有退场动画） */
+  const beforeClose = await comboState();
   await clickSel("#combo-view-btn");
-  await sleep(0);
   const afterClose = [];
   for (let i = 0; i < 4; i++) { afterClose.push(await comboState()); await sleep(20); }
   check("下拉列表：关闭是瞬变（一帧内消失，不做退场动画）",
-    afterClose.every(r => !r.open && r.op === 1) && Math.abs(afterClose[0].h - last.h) < 0.5,
-    JSON.stringify(afterClose[0]));
+    afterClose.every((r) => !r.open) &&
+    Math.abs(parseFloat(afterClose[0].h) - parseFloat(beforeClose.h)) < 0.5,
+    JSON.stringify({ open: afterClose[0].open, h: afterClose[0].h }));
 
   console.log(`\n结果：${pass}/${pass + fail} 通过`);
   ws.close();

@@ -140,8 +140,8 @@
      · ToolTip / 对话框**只用淡入淡出**，不许用弹出动画。
    两类弹出层**动画不同**（实测两段不同的录屏得出，别混用）：
      .fl-combo-popup（下拉列表）= **从顶边向下揭示**（内容不拉伸、不淡入），关闭是**瞬变**
-       —— 依据 `2026-10-21 23-13-35.mp4`：顶边固定在 y=527，底边 8 帧内 667→770，
-          首帧文字对比度已 97%（没有可见淡入），关闭单帧完成；
+       —— 依据 `2026-10-21 23-13-35.mp4`：顶边 y≈527 全程不动、底边一路扫到 766，
+          首帧就走完 60%（曲线见下方"速率"段），关闭单帧完成；
      .fl-flyout（更多选项 / 上下文菜单）= 淡入 + 垂直 50px 平移
    入场用 FastOutSlowIn（0,0,0,1），出场用 SlowOutFastIn（1,0,1,1）= --fl-ease-soft；
    位移 50px 属于"较大的位移"，用时长的 Normal 档 250ms，出场收紧到 Fast 档 167ms。
@@ -179,18 +179,22 @@
 }
 
 /* ---- 下拉列表（ComboBox 弹层）：从顶边向下"揭示" ----
-   录屏实测（2026-10-21 23-13-35.mp4，Win11 设置页 专注周期 下拉）：
-     · 弹层**顶边固定**（y=527 全程不动），底边 667 → 770 在 8 帧（≈133ms）内扫下去；
+   录屏实测（2026-10-21 23-13-35.mp4，Win11 设置页 专注周期 下拉，60fps）：
+     · 弹层**顶边固定**（y≈527 全程不动），只有**底边**往下扫；
      · 揭示的是**内容**：首帧里"5 分钟/10 分钟"就是正常字号，没有被拉伸 —— 所以不是 scaleY；
      · 首帧文字对比度已达 97%，**没有可见的淡入**；整段几乎没有中间透明度；
      · 关闭是**单帧**（f275 还在 → f276 全没了），没有退场动画。
+   **速率**（这一版返修点）：底边逐帧位置 → 归一化进度 0.60 / 0.80 / 0.87 / 0.90 / 0.94 / 0.97 / 1.00，
+   即**第一帧就走完 60%**，之后 10 帧（167ms）收尾。用 ControlFastOutSlowIn(0,0,0,1) 拟合同一段
+   RMSE 51px（起手只到 45%，看起来"先顿一下再冲"）；换成 cubic-bezier(0.1,0.9,0.2,1) RMSE 3px。
+   所以时长仍取控件档 167ms，**曲线换 --fl-ease-popup**（= 0.1,0.9,0.2,1）。
    实现：`clip-path: inset()` 从"只剩顶边"到"完整"，内容不参与布局（不重排、不拉伸）；
    四周留 -24px 让阴影不被裁掉。向上翻（data-drop=up）时改成从底边往上揭示。 */
 .fl-overlay.fl-combo-popup,
 .fl-overlay.fl-combo-popup:not(.fl-open) { opacity: 1; }   /* 不淡入，只揭示 */
 .fl-overlay.fl-combo-popup {
   clip-path: inset(-24px);
-  transition: clip-path var(--fl-dur-control-fast) var(--fl-ease-standard),
+  transition: clip-path var(--fl-dur-popup) var(--fl-ease-popup),
               visibility 0s var(--fl-ease-linear);
 }
 .fl-overlay.fl-combo-popup:not(.fl-open) {

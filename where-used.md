@@ -10,7 +10,7 @@
 | 按钮 hover / pressed | 内置：`--fl-control-fill-secondary/tertiary` | XAML ControlFillColor* |
 | 文本框 | `.fl-input`（高 32、padding 10,5,6,6、底边加重、焦点 accent 底边） | XAML TextControlThemePadding + MinHeight 32 |
 | 设置页列表 | `.fl-settings` + `.fl-settings-group` + `.fl-settings-row`（组标题/说明 + 行：图标 20 + 主副标题 + 右控件；行高 56；组默认不套卡片；`data-divided` 出左缩进分隔线；`data-card` 变卡片分组） | 实测派生（2026-10-21 录屏：语音包列表）+ ListViewItemMinHeight/IconSize |
-| 下拉（首选） | `.fl-combo`（闭合态 32/箭头 12、Acrylic 弹层 radius 8/描边 2/最大高 504、项 32+胶囊 1.5、`M.combo.auto()` 接键盘；**弹层必须带 `.fl-scroll`**） | XAML ComboBox_themeresources（ComboBoxThemeMinWidth / PopupBorderThemeThickness / ItemCornerRadius / MaxDropDownHeight） |
+| 下拉（首选） | `.fl-combo`（闭合态 32/箭头 12、Acrylic 弹层 radius 8/描边 2/最大高 504、项 32+胶囊 1.5、`M.combo.auto()` 接键盘；**弹层必须带 `.fl-scroll`**；弹层**压在按钮上**（选中项那一行盖住按钮）、从顶边往下 `clip-path` 揭示 167ms / `--fl-ease-popup`，关闭瞬变） | XAML ComboBox_themeresources（ComboBoxThemeMinWidth / PopupBorderThemeThickness / ItemCornerRadius / MaxDropDownHeight） |
 | 细滚动条 | `.fl-scroll`（12 命中区 / 4 视觉 / hover 8 / 圆角 999 / 无箭头；Firefox 走标准属性 + `@supports` 互斥） | KIT 自定（Win11 滚动条形态；浏览器默认 17px 方块） |
 | 下拉（无 JS 回退） | `.fl-select`（原生 `<select>` 套 TextBox 外观；面板由 OS 绘制，暗色会漏白） | 同上 |
 | 开关 | `.fl-switch`（轨道 40×20、旋钮 12、开态位移 20px、hover 14 / pressed 17） | XAML ToggleSwitch（KnobTranslateTransform X=20、SplineDoubleKeyFrame 14/17） |

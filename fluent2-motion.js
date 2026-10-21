@@ -505,41 +505,63 @@
       else if (bot > popup.scrollTop + popup.clientHeight) popup.scrollTop = bot - popup.clientHeight;
     }
 
-    /* 定位：优先向下展开，下方不够且上方更宽裕则翻转；只赋值 left/top（不做 transition） */
+    /* 定位（录屏实测的 Win11 行为）：让**选中项那一行正好盖住按钮** ——
+         弹层顶边 = 按钮顶边 − 选中项相对弹层顶边的偏移（= padding + 边框 + 选中项之前的行）
+       所以弹层是"压在"按钮上、顶边露一小条，而不是挂在按钮下方留 4px 缝；
+       选中项在第几项都不影响：先量偏移再回推，索引 2 时弹层自然往上顶。
+       水平：与按钮左对齐、宽度不小于按钮宽度，左右各留 8px 视口钳制。
+       只赋值 left/top（不做 transition）。 */
     function place() {
       var r = btn.getBoundingClientRect();
       /* 先清掉上一轮写进 style 的 maxHeight：否则量到的尺寸是「被钳过的值」，
          钳制会自我维持 —— 4 项短列表被永久压出 4px 溢出，凭空多一条滚动条 */
       popup.style.maxHeight = "";
+      popup.style.bottom = "auto";
+      popup.scrollTop = 0;
+      /* 量偏移要一个稳定基准：先落到 top=0（此时还没 .fl-open，clip-path 不影响布局） */
+      popup.style.top = "0px";
+
+      popup.style.minWidth = Math.max(parseFloat(global.getComputedStyle(root).minWidth) || 0, r.width) + "px";
+      /* 水平钳制：按钮贴着右边缘时，弹层比按钮宽就会伸到视口外，右侧滚动条直接被窗口裁掉
+         （表现是"看不到滚动条 / 内容像溢出了"）。左右各留 8px。 */
+      var w = popup.offsetWidth;
+      var margin = 8;
+      var left = Math.min(r.left, global.innerWidth - margin - w);
+      popup.style.left = Math.max(margin, left) + "px";
+
       /* maxHeight 是 border-box 语义，而 scrollHeight 只含 padding —— 两者直接比会差一圈边框，
          短列表因此刚好溢出 4px（= 上下各 2px 边框）。所以量自然高度用 offsetHeight。 */
       var naturalH = popup.offsetHeight;
       var maxH = parseFloat(global.getComputedStyle(popup).maxHeight) || 504;
       var wantH = Math.min(naturalH, maxH);
 
-      popup.style.minWidth = Math.max(parseFloat(global.getComputedStyle(root).minWidth) || 0, r.width) + "px";
-      /* 水平钳制：按钮贴着右边缘时，弹层比按钮宽就会伸到视口外，右侧滚动条直接被窗口裁掉
-         （表现是"看不到滚动条 / 内容像溢出了"）。左右各留 8px。
-         量宽度必须用 offsetWidth：此时还没加 .fl-open，入场态带位移变换，
-         getBoundingClientRect 拿到的是"动画起点"的位置/尺寸，钳制会算偏。 */
-      var w = popup.offsetWidth;
-      var margin = 8;
-      var left = Math.min(r.left, global.innerWidth - margin - w);
-      popup.style.left = Math.max(margin, left) + "px";
-
-      var below = global.innerHeight - r.bottom - 8;
-      var above = r.top - 8;
-      var up = below < wantH && above > below;
-      popup.dataset.drop = up ? "up" : "down";
-      /* 可用高度不足时也要给个下限，否则 maxHeight 变成负数、弹层整个塌掉 */
-      popup.style.maxHeight = Math.max(96, Math.min(wantH, up ? above : below)) + "px";
-      if (up) {
-        popup.style.top = "auto";
-        popup.style.bottom = (global.innerHeight - r.top + 4) + "px";
-      } else {
-        popup.style.bottom = "auto";
-        popup.style.top = (r.bottom + 4) + "px";
+      /* 选中项相对弹层顶边的偏移：用 rect 差 + scrollTop 还原"未滚动"的位置，
+         不要自己算 padding / 行高（改了 padding 就会偏）*/
+      var sel = items[selectedIndex()];
+      var off = 0;
+      if (sel) {
+        off = (sel.getBoundingClientRect().top - popup.getBoundingClientRect().top) + popup.scrollTop;
       }
+      var top = Math.round(r.top - off);
+
+      /* 视口钳制，三步：
+         ① 首选"选中行盖住按钮"（top = 按钮顶 − 偏移）；
+         ② 下方放不下整份列表 → 整体上移到刚好装下（丢掉对齐，但不出滚动条）；
+         ③ 列表比视口还高 → 贴顶 + 内部滚动。
+         只判"下方"是因为弹层永远从选中项往下展开（顶边不可能低于按钮顶太多）。 */
+      var minTop = margin;
+      var maxBottom = global.innerHeight - margin;
+      if (top < minTop) top = minTop;
+      if (top + wantH > maxBottom) {
+        var fit = maxBottom - wantH;
+        top = fit >= minTop ? fit : minTop;
+      }
+      popup.style.top = top + "px";
+      var maxH = Math.max(96, Math.min(wantH, maxBottom - top));
+      popup.style.maxHeight = maxH + "px";
+
+      /* 揭示方向：弹层整体落在按钮上方 → 从底边往上揭；否则从顶边往下揭 */
+      popup.dataset.drop = (top + maxH <= r.top) ? "up" : "down";
     }
     function reflowOnScroll() {
       if (!popup.classList.contains("fl-open")) return;

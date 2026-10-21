@@ -223,6 +223,9 @@ DERIVED_MOTION = {
                  "source": "录屏《时钟》10-21：每秒出现一次 83ms、变化面积 0.6% 的位移"},
         "sweep": {"value": "60s", "use": "连续型：秒针整圈（分针/时针用 calc 倍乘）",
                   "source": "连续型动效的物理周期，非测量值"},
+        "popup": {"value": "167ms", "use": "下拉列表（ComboBox 弹层）从顶边向下揭示",
+                  "source": "录屏《2026-10-21 23-13-35》逐帧：首帧到底边 60%，之后 10 帧（167ms）收尾；"
+                            "与控件档 ControlFastAnimationDuration 167ms 一致"},
     },
     "easings": {
         "page": {"css": "cubic-bezier(0.1,0.9,0.2,1)",
@@ -234,6 +237,10 @@ DERIVED_MOTION = {
                                "试过近线性 (0.3,0.3,0.6,1)：退场末尾减速、紧接着进场猛起，速度突变反而更「顿」"},
         "steps-60": {"css": "steps(60, end)", "use": "跳秒：一秒 60 步",
                      "source": "录屏《时钟》秒针每秒一跳"},
+        "popup": {"css": "cubic-bezier(0.1,0.9,0.2,1)",
+                  "use": "下拉列表揭示：起手一帧就走完 60%，剩 40% 用 167ms 收尾",
+                  "source": "拟合自录屏《2026-10-21 23-13-35》弹层底边逐帧 0.60/0.80/0.87/0.90/0.94/0.97/1.00；"
+                            "RMSE 3px（同段用 ControlFastOutSlowIn 0,0,0,1 拟合 RMSE 51px，起手明显偏慢）"},
     },
     "shifts": {
         "drill": {"px": 264, "use": "二级下钻单层行程（水平）",
@@ -480,8 +487,11 @@ def build():
                f'  /* {DERIVED_MOTION["durations"]["page"]["use"]} */')
     css.append(f'  --fl-dur-tick: {DERIVED_MOTION["durations"]["tick"]["value"]};'
                f'  --fl-dur-sweep: {DERIVED_MOTION["durations"]["sweep"]["value"]};')
+    css.append(f'  --fl-dur-popup: {DERIVED_MOTION["durations"]["popup"]["value"]};'
+               f'  /* 下拉列表揭示时长（上层 durations 已校验） */')
     css.append(f'  --fl-ease-page: {DERIVED_MOTION["easings"]["page"]["css"]};'
                f'  --fl-ease-page-out: {DERIVED_MOTION["easings"]["page-out"]["css"]};'
+               f'  --fl-ease-popup: {DERIVED_MOTION["easings"]["popup"]["css"]};'
                f'  --fl-ease-steps-60: {DERIVED_MOTION["easings"]["steps-60"]["css"]};')
     css.append(f'  --fl-page-shift-drill: {DERIVED_MOTION["shifts"]["drill"]["px"]}px;'
                f'  --fl-page-shift-nav: {DERIVED_MOTION["shifts"]["nav"]["px"]}px;')

@@ -22,7 +22,8 @@
   /* 实测派生（非官方档位）：Win11 官方应用 60fps 录屏反解，方法与原始数字见 VIDEO-ALIGN.md §9 */
   --fl-dur-page: 250ms;  /* 页面转场·进场（二级下钻水平 / 一级导航垂直共用同一节奏） */
   --fl-dur-tick: 1s;  --fl-dur-sweep: 60s;
-  --fl-ease-page: cubic-bezier(0.1,0.9,0.2,1);  --fl-ease-page-out: cubic-bezier(0.7,0,1,0.5);  --fl-ease-steps-60: steps(60, end);
+  --fl-dur-popup: 167ms;  /* 下拉列表揭示时长（上层 durations 已校验） */
+  --fl-ease-page: cubic-bezier(0.1,0.9,0.2,1);  --fl-ease-page-out: cubic-bezier(0.7,0,1,0.5);  --fl-ease-popup: cubic-bezier(0.1,0.9,0.2,1);  --fl-ease-steps-60: steps(60, end);
   --fl-page-shift-drill: 264px;  --fl-page-shift-nav: 108px;
   --fl-page-shift-x: var(--fl-page-shift-drill);  --fl-page-shift-y: var(--fl-page-shift-nav);  /* 按轴取行程：drill=水平 264 / nav=垂直 108，供 motion.js 按方向选轴时引用 */
 

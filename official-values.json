@@ -9,11 +9,11 @@
   },
   "accent": {
     "value": "#0078D4",
-    "dark_fill": "#005FB8",
-    "light_fill": "#0067C0",
+    "dark_fill": "#60CDFF",
+    "light_fill": "#005FB8",
     "secondary_opacity": 0.9,
     "tertiary_opacity": 0.8,
-    "note": "XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色，暗色填充用 Dark1 档、亮色填充用 Light2 档，可整体替换"
+    "note": "XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色 #0078D4 的调色板：暗主题填充用 Light2 档 #60CDFF（配黑字）、亮主题填充用 Dark1 档 #005FB8（配白字），可整体替换"
   },
   "colors_selected": {
     "--fl-text-primary": {

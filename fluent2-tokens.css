@@ -2,7 +2,7 @@
    颜色出处：microsoft-ui-xaml Common_themeresources_any.xaml (MIT)；动效/字阶/间距/海拔出处：learn.microsoft.com，详见 official-values.md */
 
 :root {
-  --fl-accent: #0078D4; /* XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色，暗色填充用 Dark1 档、亮色填充用 Light2 档，可整体替换 */
+  --fl-accent: #0078D4; /* XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色 #0078D4 的调色板：暗主题填充用 Light2 档 #60CDFF（配黑字）、亮主题填充用 Dark1 档 #005FB8（配白字），可整体替换 */
   --fl-dur-fast: 83ms;
   --fl-dur-normal: 167ms;
   --fl-dur-gentle: 250ms;
@@ -100,9 +100,9 @@
 }
 
 :root, [data-theme="dark"] { /* dark（XAML Default 主题字典） */
-  --fl-accent-fill: #005FB8; /* AccentFillColorDefault：暗主题=SystemAccentColorDark1 档、亮主题=Light2 档 */
-  --fl-accent-fill-hover: #005FB8E6; /* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity 0.9 */
-  --fl-accent-fill-pressed: #005FB8CC; /* AccentFillColorTertiaryBrush = AccentFillColorDefault @Opacity 0.8 */
+  --fl-accent-fill: #60CDFF; /* AccentFillColorDefault：暗主题=SystemAccentColorLight2 档（浅，配黑字） */
+  --fl-accent-fill-hover: #60CDFFE6; /* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity 0.9 */
+  --fl-accent-fill-pressed: #60CDFFCC; /* AccentFillColorTertiaryBrush = AccentFillColorDefault @Opacity 0.8 */
   --fl-text-primary: #FFFFFF; /* TextFillColorPrimary */
   --fl-text-secondary: #FFFFFFC5; /* TextFillColorSecondary */
   --fl-text-tertiary: #FFFFFF87; /* TextFillColorTertiary */
@@ -149,9 +149,9 @@
 }
 
 [data-theme="light"] { /* light（XAML Light 主题字典） */
-  --fl-accent-fill: #0067C0; /* AccentFillColorDefault：暗主题=SystemAccentColorDark1 档、亮主题=Light2 档 */
-  --fl-accent-fill-hover: #0067C0E6; /* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity 0.9 */
-  --fl-accent-fill-pressed: #0067C0CC; /* AccentFillColorTertiaryBrush = AccentFillColorDefault @Opacity 0.8 */
+  --fl-accent-fill: #005FB8; /* AccentFillColorDefault：亮主题=SystemAccentColorDark1 档（深，配白字） */
+  --fl-accent-fill-hover: #005FB8E6; /* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity 0.9 */
+  --fl-accent-fill-pressed: #005FB8CC; /* AccentFillColorTertiaryBrush = AccentFillColorDefault @Opacity 0.8 */
   --fl-text-primary: #000000E4; /* TextFillColorPrimary */
   --fl-text-secondary: #0000009E; /* TextFillColorSecondary */
   --fl-text-tertiary: #00000072; /* TextFillColorTertiary */

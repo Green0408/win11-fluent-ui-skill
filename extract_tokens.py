@@ -153,13 +153,21 @@ COLOR_MAP = [
 
 # accent 为系统色（用户可选），XAML 引用 SystemAccentColor[Light1-3/Dark1-3]；
 # 网页默认取 Windows 11 默认系统强调色 #0078D4，用户可整体替换。
+#
+# **主题映射以 XAML 为准（raw/xaml_Common_themeresources_any.xaml）**：
+#   暗主题（dark 字典，约 L125）AccentFillColorDefaultBrush = SystemAccentColor**Light2**
+#   亮主题（light 字典，约 L329）AccentFillColorDefaultBrush = SystemAccentColor**Dark1**
+# 即暗色用**浅**蓝、亮色用**深**蓝。这与 TextOnAccentFillColorPrimary 正好互证：
+#   暗主题=#000000（浅底配黑字）、亮主题=#FFFFFF（深底配白字）。
+# 早期版本把两档写反（暗=Dark1 深蓝、亮=Light2 的深色近似），导致暗色主题的强调色发闷。
 ACCENT = {
     "value": "#0078D4",
-    "dark_fill": "#005FB8",    # 对应暗主题 AccentFillColorDefaultBrush=SystemAccentColorDark1 的默认档
-    "light_fill": "#0067C0",   # 对应亮主题 SystemAccentColorLight2 的默认档
+    "dark_fill": "#60CDFF",    # SystemAccentColorLight2 → 暗主题 AccentFillColorDefault
+    "light_fill": "#005FB8",   # SystemAccentColorDark1  → 亮主题 AccentFillColorDefault
     "secondary_opacity": 0.9,  # AccentFillColorSecondaryBrush = Default @Opacity 0.9（hover）
     "tertiary_opacity": 0.8,   # AccentFillColorTertiaryBrush = Default @Opacity 0.8（pressed）
-    "note": "XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色，暗色填充用 Dark1 档、亮色填充用 Light2 档，可整体替换",
+    "note": ("XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色 #0078D4 的调色板："
+             "暗主题填充用 Light2 档 #60CDFF（配黑字）、亮主题填充用 Dark1 档 #005FB8（配白字），可整体替换"),
 }
 
 # 官方几何（XAML 提取，主题无关）→ css 变量
@@ -549,8 +557,10 @@ def build():
     for theme in ("dark", "light"):
         sel = ':root, [data-theme="dark"]' if theme == "dark" else '[data-theme="light"]'
         css.append(f'{sel} {{ /* {theme}（XAML {("Default" if theme=="dark" else "Light")} 主题字典） */')
+        slot = ("暗主题=SystemAccentColorLight2 档（浅，配黑字）" if theme == "dark"
+                else "亮主题=SystemAccentColorDark1 档（深，配白字）")
         css.append(f'  --fl-accent-fill: {ACCENT["dark_fill"] if theme == "dark" else ACCENT["light_fill"]}; '
-                   f'/* AccentFillColorDefault：暗主题=SystemAccentColorDark1 档、亮主题=Light2 档 */')
+                   f'/* AccentFillColorDefault：{slot} */')
         accent_base = ACCENT["dark_fill"] if theme == "dark" else ACCENT["light_fill"]
         css.append(f'  --fl-accent-fill-hover: {alpha(accent_base, ACCENT["secondary_opacity"])}; '
                    f'/* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity {ACCENT["secondary_opacity"]} */')

@@ -4,7 +4,7 @@
 > 完整颜色库存共 **152** 个 token（暗/亮双主题），精选映射进 `fluent2-tokens.css`；全量见 `official-values.json` 的 `colors_selected` 与 `raw/`。
 
 ## 强调色（系统色）
-- 默认 `#0078D4`（Windows 11 默认系统强调色）。XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色，暗色填充用 Dark1 档、亮色填充用 Light2 档，可整体替换。
+- 默认 `#0078D4`（Windows 11 默认系统强调色）。XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色 #0078D4 的调色板：暗主题填充用 Light2 档 #60CDFF（配黑字）、亮主题填充用 Dark1 档 #005FB8（配白字），可整体替换。
 - 变体规则（XAML）：暗主题填充用 SystemAccentColorDark1，亮主题用 SystemAccentColorLight2；
   文本色 Dark2/Light3；共 Light1-3 / Dark1-3 六档。用户可整体替换 accent。
 - 状态档位（按 XAML brush 的 Opacity 派生，不另取 hex）：`--fl-accent-fill-hover` = Default @Opacity 0.9（AccentFillColorSecondaryBrush）、`--fl-accent-fill-pressed` = Default @Opacity 0.8（AccentFillColorTertiaryBrush）。

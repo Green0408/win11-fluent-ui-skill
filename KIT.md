@@ -55,7 +55,8 @@
 　早期版本按「导航项在侧栏里的先后序」定符号（点上面那条 → 内容从上方压下），**已废弃**：观感过重，且与 Win11 设置类应用不符。要反向只能显式写 `dir:"up"`（保留逃生口）。
 　缺省解析顺序：**显式 `dir` → nav 恒 `down` / drill 按页面栈（目标是上一页=右→左反转）**。非法 `dir` 会 `console.warn` 并回退缺省（**不会**静默当成 forward）。
 　`nav` 的 `isBack` 恒为 false（一级导航没有"返回"概念）：否则 A→B→A 之后页面栈会被截断成 `[A]`，`M.back()` 无路可退。只有 `drill` 或显式 `back` 才截断栈。
-　位移由 JS 写入 `--fl-page-from-x/-y` 与 `--fl-page-to-x/-y` 四个带符号变量（keyframe 内**不写**位移字面量）；淡入淡出单独 83ms linear，两条 animation 并行。快速连点由 `pageGen` 代际 + `settlePages()` 保证无残留。
+　位移由 JS 写入 `--fl-page-from-x/-y` 与 `--fl-page-to-x/-y` 四个带符号变量（keyframe 内**不写**位移字面量）。快速连点由 `pageGen` 代际 + `settlePages()` 保证无残留。
+　**转场期两页必须不透明，入页不能淡入**：两页叠在同一网格格里（靠 `overflow: clip` 裁），页面透明就会看到新旧两页的文字叠在一起（重影）；入页只要有 1% 透明度，底下的旧页就会透上来。所以 `.fl-page-in/.fl-page-leaving` 涂 `--fl-solid-bg-base`、入页 `z-index` 压过离场页，淡出 83ms 只挂离场页。校验器 **R41** + `tests/transition_shots.js`（抓连续帧）两头锁。
 　两轴共用同一节奏（283ms / `--fl-ease-page`）：§9 早期只测到竖向 250ms 的减速尾段，样本不足拆两套曲线，统一后与 drill 实测一致。
 16. **连续型动效**用 `.fl-continuous` / `.fl-tick`（加在指针元素本身，绕自身 `transform-origin: 50% 100%` 旋转），宿主用 `.fl-dial` + `.fl-dial-hand` + `.fl-dial-hub`。必须 linear/steps、`infinite`、`fill: none`；`prefers-reduced-motion` 下直接停住（不要退化成播完一圈就停）。
 17. **列表**必须用 `.fl-list` + `.fl-listitem` + `.fl-list-content` 三层：

@@ -94,6 +94,11 @@ BAD_CASES = {
     "R40": ("fluent2-controls.css",
             "  min-height: var(--fl-settings-row-h);",
             "  min-height: 56px;"),
+    # 入页挂回 fade → 转场期旧页会透上来
+    "R41": ("fluent2-motion.css",
+            "  animation: fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both;",
+            "  animation: fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,"
+            " fl-page-out-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;"),
 }
 
 # 处方：按模块名整块删除（与 FLUENT-COMPOSE.md 的四种处方一致）

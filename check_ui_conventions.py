@@ -48,6 +48,7 @@ R37 按钮纵向内边距必须对称：.fl-btn 的 padding 四值里 top 必须
 R38 强调色主题档位不许写反：暗主题 --fl-accent-fill 的相对亮度必须高于亮主题（XAML：暗=Light2、亮=Dark1）
 R39 自绘弹层必须用细滚动条：.fl-combo-popup 必须带 fl-scroll，且 CSS 要有 @supports selector(::-webkit-scrollbar) 互斥块
 R40 设置行造型：行高走 --fl-settings-row-h、hover 底色带圆角、分隔线左缩进对齐文字、行内必须有 .fl-settings-text
+R41 转场页必须不透明且入页不许淡入：.fl-page-in/.fl-page-leaving 要有 background，.fl-page-in 不许挂 fade 动画
 """
 import re
 import sys
@@ -594,6 +595,18 @@ def main():
         if not re.search(r'class\s*=\s*"[^"]*fl-settings-(text|title)"', html_code):
             fails.append("R40: 用了 .fl-settings 但行内没有 .fl-settings-text / .fl-settings-title"
                          "（设置行必须是「左文本 + 右控件」，纯文本不应直接塞进行里）")
+
+    # R41 转场页必须不透明、且入页不许淡入
+    #     .fl-content-layer 用 overflow:clip 把两页叠在同一网格格子里；页面透明时滑动过程中
+    #     新旧两页的文字会直接叠在一起（重影）。入页哪怕 1% 透明度，底下的旧页也会透上来。
+    if ".fl-page-in" in (motion_css or ""):
+        if not re.search(r"\.fl-page-(in|leaving)[^{]*\{[^}]*background\s*:", motion_css + "\n" + controls_css):
+            fails.append("R41: 转场页必须涂不透明背景（.fl-page-in/.fl-page-leaving 的 background），"
+                         "否则两页文字在滑动中会叠在一起")
+        in_rule = re.search(r"\.fl-page-in\s*\{([^}]*)\}", motion_css or "")
+        if in_rule and re.search(r"animation\s*:[^;]*fade", in_rule.group(1)):
+            fails.append("R41 fluent2-motion.css: .fl-page-in 不许挂 fade 动画"
+                         "（入页半透明会把底下的旧页透上来）")
 
     # 输出
     print(f"目标：{target}")

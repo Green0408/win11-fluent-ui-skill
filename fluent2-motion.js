@@ -573,6 +573,10 @@
       if (popup.classList.contains("fl-open")) return;
       if (!portalDone) { document.body.appendChild(popup); portalDone = true; }
       place();
+      /* 必须在加 .fl-open **之前**把"关闭态"刷成已解析样式，否则浏览器认为元素出生就是开着的，
+         一条过渡都不会创建 —— 表现就是「动画没了」（首开尤其容易踩）。
+         place() 里已经在读 offsetWidth/offsetHeight，这里再显式读一次，把这个前提写死。 */
+      void popup.offsetHeight;
       popup.classList.add("fl-open");
       btn.setAttribute("aria-expanded", "true");
       root.setAttribute("data-open", "true");

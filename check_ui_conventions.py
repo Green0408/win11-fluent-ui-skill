@@ -110,6 +110,61 @@ def defined_vars(css_text):
     return set(re.findall(r"(--fl-[a-z0-9-]+)\s*:", css_text))
 
 
+def _css_var(css_text, name):
+    m = re.search(re.escape(name) + r"\s*:\s*([^;]+);", css_text)
+    return m.group(1).strip() if m else None
+
+
+def _bezier_progress(points, t):
+    """CSS cubic-bezier 在时间比例 t 处的进度（先解 x(s)=t，再取 y(s)）"""
+    if t <= 0:
+        return 0.0
+    if t >= 1:
+        return 1.0
+    p1x, p1y, p2x, p2y = points
+
+    def x(s): return 3 * (1 - s) ** 2 * s * p1x + 3 * (1 - s) * s * s * p2x + s ** 3
+    def y(s): return 3 * (1 - s) ** 2 * s * p1y + 3 * (1 - s) * s * s * p2y + s ** 3
+
+    lo, hi = 0.0, 1.0
+    for _ in range(50):
+        mid = (lo + hi) / 2
+        if x(mid) < t:
+            lo = mid
+        else:
+            hi = mid
+    return y((lo + hi) / 2)
+
+
+def _reveal_first_frame_progress(tokens_css, frame_ms=16.7):
+    """揭示类动画在真机第一个渲染帧处的进度（0~1）；取不到返回 None。
+
+    为什么要有这条：录屏逐帧进度只能证明"首帧已 60%"，但那可能是采样相位（59.73fps，
+    弹层出现的那一帧落在两个采样点中间），照抄成曲线形状会让真机第一帧就近乎全开 ——
+    用户看到的就是「动画没了」。
+    """
+    dur_raw = _css_var(tokens_css, "--fl-dur-popup")
+    ease_raw = _css_var(tokens_css, "--fl-ease-popup")
+    if not dur_raw or not ease_raw:
+        return None
+    m = re.match(r"([\d.]+)\s*ms", dur_raw)
+    if not m:
+        return None
+    dur = float(m.group(1))
+    m = re.match(r"cubic-bezier\(\s*([\d.\-]+)\s*,\s*([\d.\-]+)\s*,\s*([\d.\-]+)\s*,\s*([\d.\-]+)\s*\)",
+                 ease_raw)
+    if m:
+        pts = tuple(float(g) for g in m.groups())
+    elif ease_raw.strip() in ("linear",):
+        pts = (0.0, 0.0, 1.0, 1.0)
+    else:
+        return None
+    if dur <= 0:
+        return 1.0
+    return _bezier_progress(pts, frame_ms / dur)
+
+
+
 def main():
     if len(sys.argv) < 2:
         print("用法：python check_ui_conventions.py <文件.html>")
@@ -786,14 +841,25 @@ def main():
                              r"clip-path\s*:\s*inset\(calc\(100%", motion_css):
                 fails.append("R49 fluent2-motion.css: 下拉列表向上翻时必须从底边往上揭示"
                              "（[data-drop=\"up\"] 的 clip-path 要把 100% 放在上边）")
-            # 速率：起手就到 60%，必须用 --fl-ease-popup(0.1,0.9,0.2,1) + --fl-dur-popup(167ms)；
-            # 用 ControlFastOutSlowIn(0,0,0,1) 拟合同一段 RMSE 51px（起手只到 45%，看起来"先顿一下再冲"）
+            # 速率：--fl-ease-popup + --fl-dur-popup(167ms)；
+            # 且**任何揭示动画在真机第一个渲染帧（16.7ms）处进度不得超过 40%** ——
+            # 上一版为了凑录屏的"首帧 60%"套了 (0.1,0.9,0.2,1)，16.7ms 就到 58%，
+            # 用户看到的第一帧近乎全开，反馈「动画没了」。录屏首帧 60% 是采样相位造成的假象
+            # （59.73fps，弹层首帧落在帧间隔中间），不是曲线形状。
             reveal_body = reveal[0] if reveal else ""
             if "var(--fl-ease-popup)" not in reveal_body:
                 fails.append("R49 fluent2-motion.css: 下拉列表的揭示缓动必须是 --fl-ease-popup"
-                             "（cubic-bezier(0.1,0.9,0.2,1)：首帧 60%，与录屏一致）")
+                             "（ControlFastOutSlowIn 0,0,0,1；起手要有可见加速段）")
             if "var(--fl-dur-popup)" not in reveal_body:
                 fails.append("R49 fluent2-motion.css: 下拉列表的揭示时长必须是 --fl-dur-popup(167ms)")
+            first = _reveal_first_frame_progress(tokens_css)
+            if first is None:
+                fails.append("R49 fluent2-tokens.css: 取不到 --fl-ease-popup / --fl-dur-popup，无法校验揭示速率")
+            elif first > 0.50:
+                fails.append("R49 fluent2-tokens.css: 揭示曲线在第一个渲染帧（16.7ms）已到 "
+                             f"{first * 100:.0f}%，第一帧就过半 —— 真机观感等于「没有动画」。"
+                             "起手太陡的曲线（如 0.1,0.9,0.2,1 = 58%）不要用来拟合录屏的首帧进度"
+                             "（那是 59.73fps 采样相位造成的假象）")
 
         # —— 位置（JS）：弹层要"压在"按钮上，选中项那一行盖住按钮 ——
         #     录屏：按钮 y 543..602、选中行 543..605、弹层顶边 526（露出 17 设备px ≈ 6 CSS）。

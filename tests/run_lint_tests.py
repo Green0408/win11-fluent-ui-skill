@@ -138,10 +138,14 @@ BAD_CASES = {
     "R49d": ("fluent2-motion.css",
              "  clip-path: inset(-24px);\n  transition: clip-path var(--fl-dur-popup) var(--fl-ease-popup),",
              "  transform: translateY(0);\n  transition: transform var(--fl-dur-popup) var(--fl-ease-popup),"),
-    # 下拉列表缓动退回 ControlFastOutSlowIn(0,0,0,1) → 起手只到 45%，看起来"先顿一下再冲"
+    # 下拉列表缓动不引用 --fl-ease-popup（换成别的变量）→ 揭示速率失去约束
     "R49f": ("fluent2-motion.css",
              "  transition: clip-path var(--fl-dur-popup) var(--fl-ease-popup),",
              "  transition: clip-path var(--fl-dur-popup) var(--fl-ease-standard),"),
+    # 揭示曲线起手过陡（16.7ms 就到 58%）→ 真机第一帧近乎全开，用户看到的等于「动画没了」
+    "R49h": ("fluent2-tokens.css",
+             "--fl-ease-popup: cubic-bezier(0,0,0,1);",
+             "--fl-ease-popup: cubic-bezier(0.1,0.9,0.2,1);"),
     # 位置退回"挂在按钮下方一条缝" → 选中项不在按钮上
     "R49g": ("fluent2-motion.js",
              "      var top = Math.round(r.top - off);",

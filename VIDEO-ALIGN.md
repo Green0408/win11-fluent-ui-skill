@@ -452,7 +452,7 @@ t=178ms  旧页消失                            新页 opacity 0.40，已走 64
   所以 CSS 侧只需要 4px 列表内边距 + 1~2px 描边就够，不需要加大 padding；
 - 水平：左边缘对齐按钮左侧（1165 vs 1163，差 2 = 描边/取整），宽度取 max(按钮宽, 内容宽)。
 
-### 13.2 速率：首帧 60%，167ms 收尾
+### 13.2 速率：为什么最终用官方的 `0,0,0,1`（而不是"首帧 60%"）
 
 同一列逐帧读"弹层底边"（543 → 766，共 223 设备 px 行程），归一化：
 
@@ -462,21 +462,35 @@ t=178ms  旧页消失                            新页 opacity 0.40，已走 64
 | 进度 | **0.60** | 0.80 | 0.81 | 0.87 | 0.90 | 0.94 | 0.97 | 0.98 | 0.99 | 1.00 |
 | 时间(ms) | 0 | 17 | 33 | 50 | 67 | 100 | 117 | 133 | 150 | 167 |
 
-拟合（对 0/17/33/50/67/84/100 的进度做最小二乘，允许一个帧偏移）：
+**踩过的坑**：第一版直接把这一列当成曲线形状来拟合，得到 `cubic-bezier(0.1,0.9,0.2,1)`（RMSE 3px）。
+但那条曲线在 16.7ms 处就到 **58%** —— 也就是说真机上用户能看到的**第一帧**就近乎全开，实测反馈是「动画没了」。
 
-| 曲线 | 最佳时长 | RMSE |
-|---|---|---|
-| `cubic-bezier(0.1,0.9,0.2,1)`（= `--fl-ease-popup`） | 167ms | **3px** |
-| `cubic-bezier(0,0,0,1)`（ControlFastOutSlowIn / `--fl-ease-standard`） | 167ms | 51px（起手只到 45%，"先顿一下再冲"） |
-| `cubic-bezier(0.05,0.7,0.1,1)` | 200ms | 6px（等价，但时长不在官方档位上） |
+错在哪：录屏是 **59.73fps**，弹层出现的那一帧本来就落在两个采样点中间（点击时刻与拍摄帧不对齐），
+"首帧 60%"是**采样相位**，不是曲线形状。把相位 τ 也当自由参数重新拟合（`video-analysis/refit_popup.py`）：
 
-结论：**时长照旧取 ControlFast 167ms，换曲线**。旧的 `--fl-ease-standard` 让第一帧只走 45%，
-比录屏"慢半拍"—— 用户说的"速率不对"就是这一条。
+| 曲线 | 最佳时长 | 相位 τ | RMSE |
+|---|---|---|---|
+| `cubic-bezier(0,0,0,1)`（ControlFastOutSlowIn，官方） | 167ms（官方档） | ≈25ms | **0.022** |
+| `cubic-bezier(0.1,0.9,0.2,1)`（上一版） | 195ms | ≈20ms | 0.014 |
+| `cubic-bezier(0,0,0.58,1)`（ease-out cubic） | 165ms | 75ms | 0.032 |
+| `linear` | 170ms | 110ms | 0.042 |
+
+0.022 与 0.014 的差别在 ±1px 测量噪声以内 —— **录屏根本分辨不出这两条曲线**，所以按"官方优先"取
+ControlFastOutSlowIn，而不是为了 0.008 的 RMSE 去用一条让真机第一帧跳跃的非官方曲线。
+
+真机帧序列（`tests/combo-reveal-60fps.png`，Chrome 155 / 暂停过渡后逐时刻取帧）：
+`0ms 0 → 17ms 45% → 33ms 62% → 50ms 74% → 67ms 83% → 83ms 89% → 167ms 100%`
+—— 60fps 下 5 帧可辨变化；上一版是 `58% → 82% → 90% → 96%`（3 帧就结束，眼睛只看到"啪"一下）。
+XAML 侧对应 `SplitOpenThemeAnimation`（预置时长，改 `Duration` 无效）。
 
 ### 13.3 校验
 
 - `tests/popup_motion.js`：位置（弹层压在按钮上 / 选中行对齐 ±1.5px / 左对齐 + 盖过按钮底）、
-  速率（首帧 ≥45%、整段 90~210ms、半程 ≥0.90、单调不回退、opacity 恒 1、顶边与盒高不动）、关闭瞬变，18 条；
-- `check_ui_conventions.py` R49：CSS 必须 `--fl-dur-popup` + `--fl-ease-popup`；JS `place()` 不许 `r.bottom + 4`，
-  必须是 `r.top - off`（`off` 由选中项 rect 差算出）；坏例 R49f/g；
-- `tests/combo-position-compare.png`（录屏 vs kit，按钮同高）、`tests/combo-reveal-compare.png`（逐帧形态）。
+  速率（第一帧 20%~50%、60fps 下 ≥4 帧可辨变化、整段 90~210ms、半程 ≥0.80、单调不回退、
+  opacity 恒 1、顶边与盒高不动）、关闭瞬变，19 条；
+- `check_ui_conventions.py` R49：CSS 必须 `--fl-dur-popup` + `--fl-ease-popup`，且**揭示曲线在 16.7ms 处
+  不许超过 50%**（可计算判据，直接锁住"第一帧就跑完"这类回归）；JS `place()` 不许 `r.bottom + 4`，
+  必须是 `r.top - off`；加 `.fl-open` 前必须先把关闭态刷成已解析样式（`void popup.offsetHeight`），
+  否则首开可能一条过渡都不创建；坏例 R49f/g；
+- `tests/combo-position-compare.png`（录屏 vs kit，按钮同高）、`tests/combo-reveal-compare.png`（逐帧形态）、
+  `tests/combo-reveal-60fps.png`（真浏览器 60fps 等效帧序列）。

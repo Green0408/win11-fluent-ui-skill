@@ -170,8 +170,10 @@ class CDP {
      ① 位置：**选中项那一行正好盖住按钮**（弹层压在按钮上、顶边露一小条），
         依据 2026-10-21 23-13-35.mp4：按钮 y 543..602，选中行 543..605，弹层顶边 526；
      ② 揭示：clip-path 从顶边往下扫（不淡入、不位移、关闭瞬变）；
-     ③ 速率：首帧就到 60%，之后 167ms 收尾（cubic-bezier(0.1,0.9,0.2,1)）——
-        录屏逐帧 0.60/0.80/0.87/0.90/0.94/0.97/1.00。 */
+     ③ 速率：官方 ControlFastOutSlowIn cubic-bezier(0,0,0,1) @167ms。
+        录屏逐帧 0.60/0.80/0.87/0.90/0.94/0.97/1.00 的"首帧 60%"是**采样相位**（59.73fps）造成的，
+        不能当曲线形状照抄：真机 167ms 里第一帧（16.7ms）不许过半，否则观感就是「没有动画」
+        （用户实测反馈）。 */
   const comboState = () => evalJs(`(function(){
     var el = document.getElementById("combo-view-list");
     var cs = getComputedStyle(el);
@@ -251,14 +253,19 @@ class CDP {
   check("下拉列表：开合走 clip-path 揭示（不是位移/缩放）",
     series.length > 3 && Math.abs(last.p - 1) < 0.01,
     `${series.length} 个采样，末帧 ${last.p}`);
-  check("下拉列表：首帧就到 45% 以上（起手极快，不是先顿一下再冲）",
-    firstMove.p >= 0.45, `首帧 ${firstMove.p}（录屏 0.60）`);
+  /* 第一帧（≈16.7ms）不许过半：上一版 0.58 时真机第一帧就近乎全开，用户反馈「动画没了」 */
+  check("下拉列表：第一个渲染帧只走 20%~50%（起手有可见加速段，不是一帧全开）",
+    firstMove.p >= 0.20 && firstMove.p <= 0.50, `首帧 ${firstMove.p}（ControlFastOutSlowIn@167ms ≈0.45）`);
+  /* 真正决定"看得见动画"的是**能被眼睛分辨的帧数**：60fps 下至少 4 帧揭示高度不同 */
+  const distinct = series.filter((r, i) => i === 0 || Math.abs(r.p - series[i - 1].p) > 0.03).length;
+  check("下拉列表：60fps 下至少 4 帧揭示高度不同（量得出才发现得了）",
+    distinct >= 4, `${distinct} 帧有可辨变化 / 共 ${series.length} 采样`);
   check("下拉列表：整段 100~210ms 收尾（ControlFast 档）",
     done.t - firstMove.t >= 90 && done.t - firstMove.t <= 210,
     `${(done.t - firstMove.t).toFixed(0)}ms（录屏 ≈167ms）`);
   const mid = series.find((r) => r.t >= (firstMove.t + done.t) / 2);
-  check("下拉列表：半程进度 ≥ 0.90（快起慢收，不是线性）",
-    mid && mid.p >= 0.90, `半程 ${mid ? mid.p : "-"}`);
+  check("下拉列表：半程进度 ≥ 0.80（快起慢收，不是线性）",
+    mid && mid.p >= 0.80, `半程 ${mid ? mid.p : "-"}（ControlFastOutSlowIn 半程 ≈0.89）`);
   check("下拉列表：进度单调不回退",
     series.every((r, i) => i === 0 || r.p >= series[i - 1].p - 0.001),
     series.slice(0, 8).map((r) => r.p).join(","));

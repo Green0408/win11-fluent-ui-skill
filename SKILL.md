@@ -1,6 +1,6 @@
 ---
 name: win11-fluent-ui
-description: 用 Windows 11 / WinUI 3 / Fluent 官方规格生成工具界面（HTML/CSS/JS 网页）：官方动效时长与缓动曲线（Direct Entrance/Point to Point/Strong Entrance）、页面转场两轴（一级导航垂直·恒自下方进入 / 二级下钻水平，283ms）、连续型动效（秒针/进度环）、Fluent 颜色 token（暗/亮双主题、Mica/Acrylic/Smoke 网页近似）、Segoe UI Variable 字阶、官方圆角（控件 4px/浮层 8px）与海拔阴影、可拆装界面模块（单页/列表详情/网格详情/设置型）。当用户要求「用 Win11 / Fluent / WinUI 风格做个界面」「Windows 11 风格工具」「照 KIT 做界面」，需要核对 Fluent 官方数值，或发来 Win11 应用录屏要反解整屏动效与控件形态时使用。含组合处方、可复制骨架、录屏动效反解工具与可执行规范检查器。
+description: 用 Windows 11 / WinUI 3 / Fluent 官方规格生成工具界面（HTML/CSS/JS 网页）：官方动效时长与缓动曲线（Direct Entrance/Point to Point/Strong Entrance）、页面转场两轴（一级导航垂直·恒自下方进入 / 二级下钻水平，250ms）、连续型动效（秒针/进度环）、Fluent 颜色 token（暗/亮双主题、Mica/Acrylic/Smoke 网页近似）、Segoe UI Variable 字阶、官方圆角（控件 4px/浮层 8px）与海拔阴影、可拆装界面模块（单页/列表详情/网格详情/设置型）。当用户要求「用 Win11 / Fluent / WinUI 风格做个界面」「Windows 11 风格工具」「照 KIT 做界面」，需要核对 Fluent 官方数值，或发来 Win11 应用录屏要反解整屏动效与控件形态时使用。含组合处方、可复制骨架、录屏动效反解工具与可执行规范检查器。
 ---
 
 # Win11 / Fluent 工具界面 KIT
@@ -46,7 +46,7 @@ learn.microsoft.com 文档快照）。不要凭记忆写颜色、字号、圆角
 ## 硬性规则摘要（完整版见 KIT.md）
 
 - 颜色只用 `var(--fl-*)`；动效只用 `var(--fl-dur-*/--fl-ease-*)` 与 motion 类；页面转场必须走 `M.transitionTo()`。
-- **转场两轴**：点侧栏（一级）用默认 `nav`（垂直 108px），**恒自下往上进入** —— 点任意一项都一样，不按导航序反向；点内容区入口进二级页用 `{kind:'drill'}`（水平 264px），返回用 `M.back('drill')`。要反向只能显式写 `{dir:'up'}`。两者都是 283ms、纯滑动（转场期两页不透明，不做交叉淡化，否则会重影）。
+- **转场两轴**：点侧栏（一级）用默认 `nav`（垂直 108px），**恒自下往上进入** —— 点任意一项都一样，不按导航序反向；点内容区入口进二级页用 `{kind:'drill'}`（水平 264px），返回用 `M.back('drill')`。要反向只能显式写 `{dir:'up'}`。两者都是 250ms、纯滑动（转场期两页不透明，不做交叉淡化，否则会重影）。
 - **布局**：`.fl-shell` 左导航固定、右侧内容区独立滚动（每页各自记滚动位置），整页不出现滚动条；KIT 规则 24。
 - **列表/勾选/下拉**：列表用 `.fl-list` + `.fl-list-content` 三层结构与六档状态；勾号是 SVG 描画（不是字符 ✓）；下拉首选自绘 `.fl-combo`（`.fl-select` 仅作无 JS 回退）。
 - 一次性动效（入场/出场/转场）用 `animation`，状态切换（hover/active/浮层开合）用 `transition`，连续型（秒针/进度环）用 `animation + infinite + linear/steps（禁 both）` —— 三类别混用。

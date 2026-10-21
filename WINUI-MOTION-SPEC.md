@@ -102,12 +102,26 @@
 
 ## 5. 结论与建议（按证据强度排序）
 
-### 强证据、建议改
+### 已实施
 
-1. **进场 283 → 250ms**。250 是官方三档之一，对应"中等距离"；我们的 264px 属中等偏长，250 比 333 更贴。
-   总时长随之 450 → 417ms（退场 167 不动），正好回应用户"稍长"的反馈。
-2. **进场曲线 `(0.1,0.9,0.2,1)` → `(0,0,0,1)`**（当前文档的 Direct Entrance）。
-   语义一致（都是强减速），但官方新值起手更快、尾巴更长。**需要 A/B**，因为观感差异明显。
+1. ~~进场 283 → 250ms~~ **已改（2026-10-21）**：250 是官方三档之一，总时长 450 → 400ms（退场 167 不动）。
+   cdp_check 新增断言：`--fl-dur-page` 必须是 167/250/333 之一。
+
+### 已否决（有实测数据）
+
+2. ~~进场曲线 `(0.1,0.9,0.2,1)` → `(0,0,0,1)`~~ **不采用**。
+   我原以为官方新曲线"起手更快"，实测反了：`(0,0,0,1)` 的 x(u)=u³，**前段比现用曲线慢一倍**。
+   同一行程 264px、同时长 250ms 下的剩余位移（`tests/enter-easing-ab.html` 定格实测）：
+
+   | t (ms) | A 现用 (0.1,0.9,0.2,1) | B 官方 (0,0,0,1) |
+   |---|---|---|
+   | 160 | 103px | **141px** |
+   | 190 | 45px | **89px** |
+   | 230 | 17px | **47px** |
+   | 280 | 5px | **19px** |
+
+   换成 B 会让"感觉更久"，与"嫌稍长"的诉求相反。现用曲线是旧版文档的 decelerate 值，
+   语义同为"进场强减速"，**保留**。
 
 ### 中等证据、可选
 
@@ -132,3 +146,12 @@
 - https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.media.animation.entrancenavigationtransitioninfo
 - https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.media.animation.drillinnavigationtransitioninfo
 - https://fluent2.microsoft.design/motion （Web 层口径，与本 kit 不同层）
+
+---
+
+## 7. A/B 工具
+
+`tests/enter-easing-ab.html`：左右两栏同参数（264px / 250ms / 133ms 起手）只换缓动，
+点击「播放一次」双侧同步；带 1/4 慢放、实时行程读数、以及两条曲线的解析进度表。
+`tests/` 下还有定格脚本思路：用 `document.getAnimations()` 暂停后设 `currentTime`，可抓任意时刻的确定帧。
+

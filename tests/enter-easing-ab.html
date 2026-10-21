@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>进场曲线 A/B · WinUI 里程</title>
+<link rel="stylesheet" href="../fluent2-tokens.css">
+<link rel="stylesheet" href="../fluent2-controls.css">
+<link rel="stylesheet" href="../fluent2-motion.css">
+<style>
+  /* 这是**开发对照页**，不是模板的一部分：只为了把两条进场曲线放在同一帧里比较。
+     两侧共用同一套时长（250ms）、同一延迟（133ms）、同一行程（264px），
+     唯一变量是进场缓动：A = 现用 (0.1,0.9,0.2,1)，B = 官方 Direct Entrance (0,0,0,1)。 */
+  body { margin: 0; padding: var(--fl-space-6); background: var(--fl-solid-bg-base); color: var(--fl-text-primary); }
+
+  .ab-head { display: flex; align-items: baseline; gap: var(--fl-space-4); margin-bottom: var(--fl-space-4); }
+  .ab-head h1 { margin: 0; font: var(--fl-weight-semibold) var(--fl-font-size-subtitle) / var(--fl-line-subtitle) var(--fl-font-family); }
+  .ab-head .fl-caption { color: var(--fl-text-secondary); }
+
+  .ab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--fl-space-4); }
+  .ab-pane { display: flex; flex-direction: column; gap: var(--fl-space-2); }
+  .ab-label { display: flex; align-items: baseline; gap: var(--fl-space-2); }
+  .ab-label strong { font: var(--fl-weight-semibold) var(--fl-font-size-body) / var(--fl-line-body) var(--fl-font-family); }
+  .ab-label code { font-size: 12px; color: var(--fl-text-secondary); }
+
+  /* 舞台：与真实内容层同构 —— 裁切 + 两页同格叠放 */
+  .ab-stage {
+    position: relative; overflow: clip;
+    height: 300px; border-radius: var(--fl-radius-overlay);
+    border: var(--fl-stroke) solid var(--fl-card-stroke);
+    background: var(--fl-solid-bg-base);
+  }
+  .ab-page {
+    position: absolute; inset: 0;
+    padding: var(--fl-space-4);
+    transition: none;
+    will-change: transform, opacity;
+  }
+  .ab-page h2 { margin: 0 0 var(--fl-space-3); font: var(--fl-weight-semibold) var(--fl-font-size-subtitle) / var(--fl-line-subtitle) var(--fl-font-family); }
+  .ab-row { display: flex; align-items: center; gap: var(--fl-space-3); padding: var(--fl-space-2) 0; border-bottom: var(--fl-stroke) solid var(--fl-divider-stroke); }
+  .ab-dot { width: 20px; height: 20px; border-radius: 4px; background: var(--fl-control-fill-default); border: var(--fl-stroke) solid var(--fl-control-stroke); flex: none; }
+  .ab-bar { height: 8px; border-radius: 4px; background: var(--fl-subtle-fill-hover); flex: 1; }
+  .ab-new { background: var(--fl-solid-bg-base); }
+
+  .ab-ctl { display: flex; flex-wrap: wrap; gap: var(--fl-space-3); align-items: center; margin: var(--fl-space-4) 0; }
+  .ab-ctl .fl-caption { color: var(--fl-text-secondary); }
+
+  /* 进度条 + 数字：把"同一时刻谁走得多"直观化 */
+  .ab-meter { height: 6px; border-radius: 3px; background: var(--fl-subtle-fill-hover); overflow: hidden; }
+  .ab-meter > i { display: block; height: 100%; width: 0%; background: var(--fl-accent-fill); border-radius: 3px; }
+  .ab-read { display: flex; justify-content: space-between; font-size: 12px; color: var(--fl-text-secondary); font-variant-numeric: tabular-nums; }
+
+  .ab-legend { margin-top: var(--fl-space-6); color: var(--fl-text-secondary); }
+  .ab-legend table { border-collapse: collapse; margin-top: var(--fl-space-2); font-variant-numeric: tabular-nums; }
+  .ab-legend th, .ab-legend td { text-align: right; padding: 4px 12px; border-bottom: var(--fl-stroke) solid var(--fl-divider-stroke); }
+  .ab-legend th:first-child, .ab-legend td:first-child { text-align: left; }
+</style>
+</head>
+<body>
+
+<div class="ab-head">
+  <h1>进场曲线 A / B</h1>
+  <span class="fl-caption">同一行程 264px · 同一时长 250ms · 同一起手 133ms，唯一变量是缓动</span>
+</div>
+
+<div class="ab-grid">
+  <div class="ab-pane">
+    <div class="ab-label"><strong>A · 现用</strong><code>cubic-bezier(0.1, 0.9, 0.2, 1)</code></div>
+    <div class="ab-stage" id="stage-a">
+      <section class="ab-page" id="a-old">
+        <h2>旧页</h2>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:70%"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:45%"></span></div>
+      </section>
+      <section class="ab-page ab-new" id="a-new" style="transform:translate3d(264px,0,0);opacity:0">
+        <h2>新页</h2>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:85%"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:55%"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:75%"></span></div>
+      </section>
+    </div>
+    <div class="ab-meter"><i id="bar-a"></i></div>
+    <div class="ab-read"><span>行程进度 <b id="pct-a">0%</b></span><span>x = <b id="x-a">264</b>px</span></div>
+  </div>
+
+  <div class="ab-pane">
+    <div class="ab-label"><strong>B · 官方 Direct Entrance</strong><code>cubic-bezier(0, 0, 0, 1)</code></div>
+    <div class="ab-stage" id="stage-b">
+      <section class="ab-page" id="b-old">
+        <h2>旧页</h2>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:70%"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:45%"></span></div>
+      </section>
+      <section class="ab-page ab-new" id="b-new" style="transform:translate3d(264px,0,0);opacity:0">
+        <h2>新页</h2>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:85%"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:55%"></span></div>
+        <div class="ab-row"><span class="ab-dot"></span><span class="ab-bar" style="max-width:75%"></span></div>
+      </section>
+    </div>
+    <div class="ab-meter"><i id="bar-b"></i></div>
+    <div class="ab-read"><span>行程进度 <b id="pct-b">0%</b></span><span>x = <b id="x-b">264</b>px</span></div>
+  </div>
+</div>
+
+<div class="ab-ctl">
+  <button class="fl-btn fl-btn-accent" id="play" type="button">播放一次（双侧同步）</button>
+  <button class="fl-btn" id="slow" type="button" aria-pressed="false">1/4 慢放</button>
+  <span class="fl-caption">慢放只影响观感倍数，曲线形状不变；右侧数字是实时行程进度。</span>
+</div>
+
+<div class="ab-legend">
+  <strong>同一时刻的行程完成度（解析值，非采样）</strong>
+  <table>
+    <thead><tr><th>t (ms)</th><th>A 现用</th><th>B 官方</th><th>差值</th></tr></thead>
+    <tbody id="tbl"></tbody>
+  </table>
+  <p>两列都是 <code>cubic-bezier</code> 在 t/250 处的解析解。B 在前 60ms 就把大半行程走完，
+     剩下的时间几乎只是在「贴地滑行」——这就是它看起来更利落、也更急的原因。</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var SHIFT = 264, DUR = 250, GAP = 133;
+  var CURVE = {
+    a: [0.1, 0.9, 0.2, 1],
+    b: [0, 0, 0, 1]
+  };
+
+  /* ---- cubic-bezier 求值：对 x(u)=t 做 24 次二分，再取 y(u)。够精确且零依赖 ---- */
+  function curveFor(c) {
+    var ax = c[0], ay = c[1], bx = c[2], by = c[3];
+    function bez(a, b, t) { return 3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t; }
+    return function (t) {
+      if (t <= 0) return 0;
+      if (t >= 1) return 1;
+      var lo = 0, hi = 1, mid, i;
+      for (i = 0; i < 24; i++) {
+        mid = (lo + hi) / 2;
+        if (bez(ax, bx, mid) < t) lo = mid; else hi = mid;
+      }
+      return bez(ay, by, mid);
+    };
+  }
+
+  var easeA = curveFor(CURVE.a), easeB = curveFor(CURVE.b);
+
+  /* ---- 解析表：让"谁在前 60ms 走得多"变成可读数字 ---- */
+  var tbody = document.getElementById("tbl");
+  [0, 30, 60, 100, 150, 200, 250].forEach(function (ms) {
+    var pa = easeA(ms / DUR), pb = easeB(ms / DUR);
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + ms + "</td><td>" + (pa * 100).toFixed(1) + "%</td><td>" +
+      (pb * 100).toFixed(1) + "%</td><td>" + ((pb - pa) * 100 >= 0 ? "+" : "") +
+      ((pb - pa) * 100).toFixed(1) + "%</td>";
+    tbody.appendChild(tr);
+  });
+
+  /* ---- 播放：两侧同时起跑，用 rAF 读真实矩阵，读数与画面永远一致 ---- */
+  var playing = false, slow = false;
+  var el = {
+    aOld: document.getElementById("a-old"), aNew: document.getElementById("a-new"),
+    bOld: document.getElementById("b-old"), bNew: document.getElementById("b-new"),
+    barA: document.getElementById("bar-a"), barB: document.getElementById("bar-b"),
+    pctA: document.getElementById("pct-a"), pctB: document.getElementById("pct-b"),
+    xA: document.getElementById("x-a"), xB: document.getElementById("x-b")
+  };
+
+  function reset() {
+    el.aNew.style.animation = el.bNew.style.animation = "none";
+    el.aOld.style.animation = el.bOld.style.animation = "none";
+    el.aNew.style.opacity = el.bNew.style.opacity = "0";
+    el.aNew.style.transform = el.bNew.style.transform = "translate3d(" + SHIFT + "px,0,0)";
+    el.aOld.style.opacity = el.bOld.style.opacity = "1";
+    el.aOld.style.transform = el.bOld.style.transform = "none";
+    el.barA.style.width = el.barB.style.width = "0%";
+    el.pctA.textContent = el.pctB.textContent = "0%";
+    el.xA.textContent = el.xB.textContent = String(SHIFT);
+  }
+
+  function readX(node) {
+    var m = new DOMMatrixReadOnly(getComputedStyle(node).transform);
+    return m.m41;
+  }
+
+  function tick() {
+    var xa = readX(el.aNew), xb = readX(el.bNew);
+    var pa = Math.min(Math.max((SHIFT - xa) / SHIFT, 0), 1);
+    var pb = Math.min(Math.max((SHIFT - xb) / SHIFT, 0), 1);
+    el.barA.style.width = (pa * 100).toFixed(1) + "%";
+    el.barB.style.width = (pb * 100).toFixed(1) + "%";
+    el.pctA.textContent = (pa * 100).toFixed(0) + "%";
+    el.pctB.textContent = (pb * 100).toFixed(0) + "%";
+    el.xA.textContent = xa.toFixed(0);
+    el.xB.textContent = xb.toFixed(0);
+    if (playing) requestAnimationFrame(tick);
+  }
+
+  function play() {
+    if (playing) { playing = false; reset(); }
+    reset();
+    var scale = slow ? 4 : 1;
+    var dur = DUR * scale, gap = GAP * scale;
+
+    /* 旧页：滑动 + 淡出（与模板一致：167ms 加速离场） */
+    [el.aOld, el.bOld].forEach(function (node) {
+      node.style.animation = "fl-ab-out " + (167 * scale) + "ms cubic-bezier(0.7,0,1,0.5) both";
+    });
+    /* 新页：唯一变量是缓动 */
+    el.aNew.style.animation = "fl-ab-in " + dur + "ms cubic-bezier(" + CURVE.a.join(",") + ") " + gap + "ms both";
+    el.bNew.style.animation = "fl-ab-in " + dur + "ms cubic-bezier(" + CURVE.b.join(",") + ") " + gap + "ms both";
+
+    playing = true;
+    requestAnimationFrame(tick);
+    setTimeout(function () { playing = false; }, gap + dur + 40);
+  }
+
+  /* 关键帧就地注入：位移量走变量，避免和模板的转场 keyframes 互相干扰 */
+  var st = document.createElement("style");
+  st.textContent =
+    "@keyframes fl-ab-in { from { transform: translate3d(" + SHIFT + "px,0,0); opacity: 0 }" +
+    " 12% { opacity: 1 } to { transform: translate3d(0,0,0); opacity: 1 } }" +
+    "@keyframes fl-ab-out { from { transform: none; opacity: 1 } to { transform: translate3d(-" + SHIFT + "px,0,0); opacity: 0 } }";
+  document.head.appendChild(st);
+
+  document.getElementById("play").addEventListener("click", play);
+  document.getElementById("slow").addEventListener("click", function () {
+    slow = !slow;
+    this.setAttribute("aria-pressed", String(slow));
+    this.textContent = slow ? "恢复 1× 速度" : "1/4 慢放";
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>

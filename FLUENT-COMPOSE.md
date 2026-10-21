@@ -20,7 +20,7 @@
 保留：`titlebar` + `nav` + `toolbar` + `list-detail` + `dialog`（删除确认，仅当不可撤销）+ `contextmenu`。
 删除：grid、settings（或并入详情卡片）。
 动效：列表 `M.stagger`；选择详情用 `.fl-fade`（83ms，轻量切换）；页面切换走 `M.transitionTo()` ——
-点侧栏用默认（垂直 108px），点内容区里的入口进二级页用 `M.transitionTo(id,{kind:'drill'})`（水平 264px），返回用 `M.back('drill')`。
+点侧栏用默认（垂直 108px），点内容区里的入口进二级页用 `M.transitionTo(id,{kind:'drill'})`（水平 264px，250ms），返回用 `M.back('drill')`。
 
 ### C 网格 + 详情（图库型）
 保留：`titlebar` + `nav` + `grid`。

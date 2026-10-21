@@ -38,8 +38,8 @@
 
 | 触发 | kind | 轴向 | 单层行程 | 时长 | 曲线 |
 |---|---|---|---|---|---|
-| 点左侧栏一级导航 | `nav`（默认） | 垂直 | `--fl-page-shift-y` 108px | `--fl-dur-page` 283ms | `--fl-ease-page` |
-| 点内容区入口进入二级页 | `drill` | 水平 | `--fl-page-shift-x` 264px | `--fl-dur-page` 283ms | `--fl-ease-page` |
+| 点左侧栏一级导航 | `nav`（默认） | 垂直 | `--fl-page-shift-y` 108px | `--fl-dur-page` 250ms | `--fl-ease-page` |
+| 点内容区入口进入二级页 | `drill` | 水平 | `--fl-page-shift-x` 264px | `--fl-dur-page` 250ms | `--fl-ease-page` |
 | 返回上一级 | `M.back(kind)` | 同上 | 同上，方向取反 | 同 | 同 |
 
 　**方向（`dir`）= 新页的入场起点方位**，六个取值：
@@ -71,7 +71,7 @@
 
 　为什么不能同时：两页叠在同一网格格里（靠 `overflow: clip` 裁），同时淡入淡出会让新旧文字在中途各半透明地叠在一起（重影）；而给离场页涂不透明底又变成「整块面板压过去」的硬边擦除 —— 录屏里两种情况都不是。
 　实现：`.fl-page-in { animation-delay: calc(var(--fl-dur-normal) * 0.8) }`、`.fl-page-out` 用 `--fl-dur-normal` 而非 `--fl-dur-page`，页面**保持透明**；`M.stagger` 同样延后 167ms，否则入场元素会在页面还不可见时播完。校验器 **R41** 锁结构，`tests/transition_shots.js`（截图）与 `tests/motion_trace.js`（rAF 采 60fps 轨迹）锁观感。
-　两轴共用同一节奏（167ms 退场 + 283ms 进场、搭接 34ms = 约 450ms 全程）：§9 早期只测到竖向 250ms 的减速尾段，样本不足拆两套曲线，统一后与 drill 实测一致。
+　两轴共用同一节奏（167ms 退场 + 250ms 进场、搭接 34ms = 约 400ms 全程）：§9 早期只测到竖向 250ms 的减速尾段，样本不足拆两套曲线，统一后与 drill 实测一致。
 16. **连续型动效**用 `.fl-continuous` / `.fl-tick`（加在指针元素本身，绕自身 `transform-origin: 50% 100%` 旋转），宿主用 `.fl-dial` + `.fl-dial-hand` + `.fl-dial-hub`。必须 linear/steps、`infinite`、`fill: none`；`prefers-reduced-motion` 下直接停住（不要退化成播完一圈就停）。
 17. **列表**必须用 `.fl-list` + `.fl-listitem` + `.fl-list-content` 三层：
     - `.fl-listitem` 只有两列（勾选列 / 内容），行内容一律放在 `.fl-list-content` 里，否则多选时内容无法整体右移；
@@ -176,7 +176,7 @@
 ## 官方关键数值速查（详见 official-values.md）
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。
-- **实测派生（非官方档，来自 60fps 录屏反解）**：页面转场 = 退场 167ms + 进场 283ms（全程 450ms）、drill 264px、nav 108px（= 录屏实测 176/72 的 1.5 倍，观感校准）、`--fl-ease-page` = cubic-bezier(0.1,0.9,0.2,1)（进场强减速）、`--fl-ease-page-out` = cubic-bezier(0.7,0,1,0.5)（退场加速）、连续型 `--fl-dur-sweep` 60s / `--fl-dur-tick` 1s。官方四档仍是 83/167/250/333，检索官方规范时不要引用这一行。
+- **实测派生（非官方档，来自 60fps 录屏反解）**：页面转场 = 退场 167ms + 进场 250ms（全程 400ms；250 取官方 ControlNormal 档，见 WINUI-MOTION-SPEC.md）、drill 264px、nav 108px（= 录屏实测 176/72 的 1.5 倍，观感校准）、`--fl-ease-page` = cubic-bezier(0.1,0.9,0.2,1)（进场强减速）、`--fl-ease-page-out` = cubic-bezier(0.7,0,1,0.5)（退场加速）、连续型 `--fl-dur-sweep` 60s / `--fl-dur-tick` 1s。官方四档仍是 83/167/250/333，检索官方规范时不要引用这一行。
 - 强调色（系统色，可整体替换）：`--fl-accent-fill` **暗主题 `#60CDFF`（SystemAccentColorLight2，配黑字）/ 亮主题 `#005FB8`（SystemAccentColorDark1，配白字）** —— 暗色用浅蓝、亮色用深蓝，由 `TextOnAccentFillColorPrimary`（暗=#000000 / 亮=#FFFFFF）反证。改色只动 `extract_tokens.py` 的 `ACCENT`，不要手改 `fluent2-tokens.css`。
 - accent 状态档位（XAML brush Opacity）：`--fl-accent-fill-hover` = Default @0.9、`--fl-accent-fill-pressed` = Default @0.8。状态反馈用档位色过渡，禁用 `filter: brightness()`。**例外：滑块**的轨道填充与 thumb 不许用这两个 alpha 档（会透出底层，见规则 20）。
 - 字阶：Caption 12/16、Body 14/20、Body Strong 14/20 Semibold、Body Large 18/24、Subtitle 20/28、Title 28/36、Title Large 40/52、Display 68/92。

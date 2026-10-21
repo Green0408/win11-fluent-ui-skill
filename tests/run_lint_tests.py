@@ -96,8 +96,13 @@ BAD_CASES = {
             "  min-height: 56px;"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     "R43": ("fluent2-controls.css",
-             "    background: var(--fl-control-strong-fill);\n    border-width: 3px;",
-             "    background: var(--fl-control-strong-fill);\n    border-width: 0;"),
+             "border-width: 2px;                      /* 视觉 8px */",
+             "border-width: 0;"),
+    # 变粗条件挂到容器上 → .fl-page:hover 恒真，整页滚动条永远粗着
+    "R45": ("fluent2-controls.css",
+            "  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:hover,\n"
+            "  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:active {",
+            "  :is(.fl-scroll, .fl-page, .fl-nav):hover::-webkit-scrollbar-thumb {"),
     # 弹层去掉 max-width → nowrap 长选项把弹层撑到视口外，右侧滚动条被窗口裁掉
     "R44a": ("fluent2-controls.css",
              "  max-width: calc(100vw - var(--fl-space-4));\n",

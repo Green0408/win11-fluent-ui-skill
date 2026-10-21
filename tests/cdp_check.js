@@ -378,8 +378,11 @@ async function main() {
           out.thumbBorder = out.thumbBorder || r.style.borderWidth || r.style.border;
           if (/:hover|:active/.test(r.selectorText)) {
             var bw = r.style.borderWidth;
-            if (/:hover/.test(r.selectorText)) out.hoverBorder = bw;
-            else out.activeBorder = bw;
+            /* 记下选择器原文：必须挂在 thumb 上（thumb:hover），
+               挂在容器上（.fl-page:hover::-webkit-scrollbar-thumb）会永远命中 */
+            /* hover 与 active 常写在同一条逗号选择器里，两个都要取（不能用 else） */
+            if (/:hover/.test(r.selectorText)) { out.hoverBorder = bw; out.hoverSel = r.selectorText; }
+            if (/:active/.test(r.selectorText)) { out.activeBorder = bw; out.activeSel = r.selectorText; }
           }
         }
         if (/::-webkit-scrollbar-button/.test(r.selectorText)) out.buttons = true;
@@ -405,6 +408,11 @@ async function main() {
   check("滚动条 hover/拖动态不变粗（透明边框仍 ≥2px，视觉 ≤8px）",
     bwNum(sbRules.hoverBorder) >= 2 && bwNum(sbRules.activeBorder) >= 2,
     `hover:${sbRules.hoverBorder} active:${sbRules.activeBorder}`);
+  /* 变粗只能由 thumb 自身 hover 触发；挂在容器上时 .fl-page:hover 恒真，
+     整页滚动条会一直粗着 —— 用户报的「鼠标一进页面就变粗」就是这条 */
+  check("变粗条件挂在 thumb 上，不是容器 hover",
+    /thumb:hover/.test(sbRules.hoverSel || "") && !/:hover\s*::/.test(sbRules.hoverSel || ""),
+    String(sbRules.hoverSel));
   check("弹层带 fl-scroll 类且设了 Firefox 的 scrollbar-color", /fl-scroll/.test(comboScroll.cls) && !!comboScroll.ff,
     `${comboScroll.cls} | scrollbar-color: ${comboScroll.ff}`);
   /* Chromium 116+ 里标准属性（scrollbar-width/color 非 auto）会让 ::-webkit-scrollbar 全部失效。

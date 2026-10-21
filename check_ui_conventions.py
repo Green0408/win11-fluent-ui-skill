@@ -52,6 +52,7 @@ R41 转场必须两拍：.fl-page-in 要有 animation-delay、离场页不许与
 R42 应用外壳：body 锁高度、.fl-shell 有 min-height:0、内容层固定 1fr 行、.fl-page 是滚动容器
 R43 滚动条悬停/拖动态不许变粗：thumb 的 border-width 不得 <2px（否则画满 12px 命中区）
 R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走省略号、JS 量宽用 offsetWidth 且做水平钳制
+R45 滚动条变粗只许 thumb 自身 hover：禁止把 :hover/:focus-within 挂在容器上（.fl-page:hover 恒真）
 """
 import re
 import sys
@@ -600,6 +601,17 @@ def main():
                 fails.append(f"R43 fluent2-controls.css: 滚动条 :{state.group(1)} 态 border-width={bw.group(1)}px 太小"
                              f"（视觉会占 {12 - 2 * float(bw.group(1)):.0f}px，看起来太粗）；"
                              f"hover 与拖动都保持 3px（视觉 6px）")
+
+    # R45 滚动条变粗只能由 thumb 自身的 hover / active 触发
+    #     挂在容器上一定错：`.fl-page:hover` 在指针位于页面任意位置时都成立 → 整页滚动条永远变粗；
+    #     `:focus-within` 则会让下拉一展开（焦点进 listbox）就变粗。两种都被用户当 bug 报过。
+    if controls_css and "::-webkit-scrollbar-thumb" in controls_css:
+        for m in re.finditer(r"([^{}]*::-webkit-scrollbar-thumb[^{]*)\{", controls_css):
+            sel = m.group(1)
+            if re.search(r":(hover|focus-within)\s*::", sel):
+                fails.append("R45 fluent2-controls.css: 滚动条变粗写成了容器 hover（" + sel.strip()[:60] + "），"
+                             "应立即命中整个容器（.fl-page:hover 恒真）；要写在 thumb 上："
+                             "::-webkit-scrollbar-thumb:hover")
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

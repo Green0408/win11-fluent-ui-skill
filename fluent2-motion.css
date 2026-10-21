@@ -82,14 +82,15 @@
   animation:
     fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,
     fl-page-in-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
-  animation-delay: var(--fl-dur-fast);
+  /* 延迟 = 旧页退场时长：两拍首尾相接，中途没有「什么都不动」的空档（那会被看成卡顿） */
+  animation-delay: var(--fl-dur-normal);
 }
 .fl-page-out {
   will-change: transform, opacity;
   pointer-events: none; /* 离场页不再接收交互 */
   animation:
-    fl-page-out-slide-kf var(--fl-dur-fast) var(--fl-ease-standard) both,
-    fl-page-out-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
+    fl-page-out-slide-kf var(--fl-dur-normal) var(--fl-ease-page-out) both,
+    fl-page-out-fade-kf var(--fl-dur-normal) var(--fl-ease-linear) both;
 }
 @keyframes fl-page-in-slide-kf {
   from { transform: translate3d(var(--fl-page-from-x, 0px), var(--fl-page-from-y, 0px), 0); }

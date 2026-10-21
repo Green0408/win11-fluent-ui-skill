@@ -224,9 +224,13 @@ DERIVED_MOTION = {
                   "source": "连续型动效的物理周期，非测量值"},
     },
     "easings": {
-        "page": {"css": "cubic-bezier(0.6,0,0.3,1)",
-                 "use": "页面转场：对称加减速（逐帧增量先增后减，峰在中段）",
-                 "source": "拟合自录屏《设置》下钻的逐帧位移序列"},
+        "page": {"css": "cubic-bezier(0.1,0.9,0.2,1)",
+                 "use": "页面转场·进场：强减速（起手就快、一路收尾；前 3 帧走完约 60%）",
+                 "source": "拟合自录屏《设置》10-21 下钻逐帧进度 0.36/0.57/0.70/0.78/0.84/0.89/0.92…"},
+        "page-out": {"css": "cubic-bezier(0.3,0.3,0.6,1)",
+                     "use": "页面转场·退场：轻微减速离开（起手就必须动，不能先「顿」一下再走）",
+                     "source": "同段录屏：旧页 67ms 走完 35% 行程（≈ 近线性、微微减速）；"
+                               "试过 ease-in（0.7,0,1,0.5）会让前 100ms 只挪 6px，观感是卡顿"},
         "steps-60": {"css": "steps(60, end)", "use": "跳秒：一秒 60 步",
                      "source": "录屏《时钟》秒针每秒一跳"},
     },
@@ -475,6 +479,7 @@ def build():
     css.append(f'  --fl-dur-tick: {DERIVED_MOTION["durations"]["tick"]["value"]};'
                f'  --fl-dur-sweep: {DERIVED_MOTION["durations"]["sweep"]["value"]};')
     css.append(f'  --fl-ease-page: {DERIVED_MOTION["easings"]["page"]["css"]};'
+               f'  --fl-ease-page-out: {DERIVED_MOTION["easings"]["page-out"]["css"]};'
                f'  --fl-ease-steps-60: {DERIVED_MOTION["easings"]["steps-60"]["css"]};')
     css.append(f'  --fl-page-shift-drill: {DERIVED_MOTION["shifts"]["drill"]["px"]}px;'
                f'  --fl-page-shift-nav: {DERIVED_MOTION["shifts"]["nav"]["px"]}px;')

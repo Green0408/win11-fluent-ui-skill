@@ -18,7 +18,7 @@
 
   var STEP = 83;    // 官方 Fade 档（ms），stagger 步进
   var CAP = 333;    // 官方最大时长档（ms），stagger 上限
-  var PAGE_MS = 283; // 页面转场：实测派生档（tokens --fl-dur-page），非官方 83/167/250/333
+  var PAGE_MS = 250; // 页面转场·进场：官方档 ControlNormalAnimationDuration（tokens --fl-dur-page）
   var PAGE_GAP = 133; // 两拍间隔 = −20% 的重叠缓冲：旧页淡出 167ms，新页 133ms 起手（避免衔接处空一帧）
   var PAGE_ANIM = "fl-page-in-slide-kf"; // 结算只认位移那条，不认 83ms 的 fade
   var PAGE_ANIM_OUT = "fl-page-out-slide-kf";

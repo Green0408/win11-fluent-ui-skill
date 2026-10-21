@@ -602,9 +602,9 @@
   "motion_derived": {
     "durations": {
       "page": {
-        "value": "283ms",
-        "use": "页面转场（二级下钻水平 / 一级导航垂直共用同一节奏）",
-        "source": "录屏《设置》10-21：下钻逐帧位移 2,4,6,8,12,16,22,34,70|66,38,24,16,10,8,6，17 帧 ≈283ms"
+        "value": "250ms",
+        "use": "页面转场·进场（二级下钻水平 / 一级导航垂直共用同一节奏）",
+        "source": "官方时长档 ControlNormalAnimationDuration 250ms（Learn: timing-and-easing）；录屏反解 ≈283ms 落在 250 与 333 之间，取官方档位 250（见 WINUI-MOTION-SPEC.md §5）"
       },
       "tick": {
         "value": "1s",

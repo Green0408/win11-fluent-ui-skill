@@ -216,8 +216,9 @@ MOTION = {
 # 与 MOTION 严格分离：official-values.md 的「官方动效表」不引用本字典，避免给实测值伪造官方出处
 DERIVED_MOTION = {
     "durations": {
-        "page": {"value": "283ms", "use": "页面转场（二级下钻水平 / 一级导航垂直共用同一节奏）",
-                 "source": "录屏《设置》10-21：下钻逐帧位移 2,4,6,8,12,16,22,34,70|66,38,24,16,10,8,6，17 帧 ≈283ms"},
+        "page": {"value": "250ms", "use": "页面转场·进场（二级下钻水平 / 一级导航垂直共用同一节奏）",
+                 "source": "官方时长档 ControlNormalAnimationDuration 250ms（Learn: timing-and-easing）；"
+                           "录屏反解 ≈283ms 落在 250 与 333 之间，取官方档位 250（见 WINUI-MOTION-SPEC.md §5）"},
         "tick": {"value": "1s", "use": "连续型：秒针跳秒周期（每秒一次 83ms 小变化）",
                  "source": "录屏《时钟》10-21：每秒出现一次 83ms、变化面积 0.6% 的位移"},
         "sweep": {"value": "60s", "use": "连续型：秒针整圈（分针/时针用 calc 倍乘）",

@@ -183,6 +183,14 @@ async function main() {
   check("水平行程明显长于垂直（两轴的量级关系不能反）",
     shiftPx.x >= shiftPx.y * 1.8, `x=${shiftPx.x} y=${shiftPx.y}`);
 
+  /* 进场时长必须落在官方档位上（83 / 167 / 250 / 333）。
+     283 这种"介于档位之间"的值来自录屏反解，属于修正前的状态；
+     现在取官方 ControlNormal 250ms —— 再被改回非官方值会在这里报错。 */
+  const durMs = await evaluate(
+    `parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fl-dur-page"))`);
+  check("进场时长是官方档位之一（167/250/333）",
+    [167, 250, 333].indexOf(durMs) >= 0, `${durMs}ms`);
+
   /* ---- 1.5) drill 转场是「两拍」：旧页先淡出退场，新页再滑入 ----
      录屏实测（设置应用逐帧）：旧页在 ≈80-170ms 内消失干净，此时新页才开始从行程起点进来。
      两页同时淡入淡出会让新旧文字在中途各半透明地叠在一起，观感是重影。 */

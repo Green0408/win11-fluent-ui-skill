@@ -29,11 +29,19 @@ check_ui_conventions.py —— win11-fluent-ui 规范检查器
  R19 dialog 居中禁用 transform: translate(-50%…)（须用独立 translate 属性，transform 留给开合动效）
  R20 页面转场位移禁写死：@keyframes fl-page-* 内不得出现非零 px 字面量位移（须走 --fl-page-* 变量）
  R21 转场必须两轴通用：有 .fl-page-in 时 CSS 必须定义 x/y 四个位移变量，JS 必须写入 from-x 与 from-y
- R22 drill 必须有方向：HTML 出现 data-kind="drill" 时必须能表达方向（data-dir 或 M.back(）
- R23 连续型动效必须线性非 both：infinite 的规则只能 linear/steps、禁 both/forwards、reduced 里关停
- R24 reduced-motion 必须覆盖页面转场类（.fl-page-in/.fl-page-out）
- R25 --fl-ease-linear 只允许用于 opacity/visibility 过渡（位移/底色用 linear 会「生硬」）
- R26 页面转场容器必须裁剪（.fl-content-layer 需 overflow: clip/hidden，否则横向位移撑出滚动条）
+R22 drill 必须有方向：出现 data-kind="drill" 时需 data-dir 属性或 M.back(；且 data-dir 取值必须在六向枚举内
+R23 连续型动效必须线性非 both：infinite 的规则只能 linear/steps、禁 both/forwards、reduced 里关停
+R24 reduced-motion 必须覆盖页面转场类（.fl-page-in/.fl-page-out）
+R25 --fl-ease-linear 只允许用于 opacity/visibility 过渡（位移/底色用 linear 会「生硬」）
+R26 页面转场容器必须裁剪（.fl-content-layer 需 overflow: clip/hidden，否则横向位移撑出滚动条）
+R27 方向枚举必须齐全：DIR 表须同时含 forward/back/up/down/left/right（缺 up/down = 竖向只有一个方向）
+R28 竖向必须能取两种符号：up→-1、down→+1；applyShift 必须以 (axis, sign) 为参数
+R29 列表六档不许塌陷：≥6 条含 background 的 .fl-listitem 规则，且必须有 selected+hover / selected+active
+R30 列表行结构：.fl-listitem 必须用 grid-template-columns（只看声明），且两档行高变量齐全
+R31 勾号必须是 SVG 描边：禁止 content:"✓" 文本勾，必须有 .fl-check-glyph 与 stroke-dashoffset
+R32 reduced-motion 必须覆盖 .fl-check-glyph / .fl-combo-popup / .fl-listitem
+R33 ComboBox 可达性：combobox/listbox/option 三个 role + aria-expanded/controls + 键盘 Escape/方向键/activedescendant
+R34 弹层不得被裁：.fl-combo-popup 必须 position: fixed，且 JS 有 portal 到 body 的证据
 """
 import re
 import sys

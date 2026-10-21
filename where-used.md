@@ -9,19 +9,23 @@
 | 按钮（强调） | `.fl-btn.fl-btn-accent`（`--fl-accent-fill`） | XAML AccentFillColorDefaultBrush 规则 |
 | 按钮 hover / pressed | 内置：`--fl-control-fill-secondary/tertiary` | XAML ControlFillColor* |
 | 文本框 | `.fl-input`（高 32、padding 10,5,6,6、底边加重、焦点 accent 底边） | XAML TextControlThemePadding + MinHeight 32 |
-| 下拉 | `.fl-select` | 同上 |
+| 下拉（首选） | `.fl-combo`（闭合态 32/箭头 12、Acrylic 弹层 radius 8/描边 2/最大高 504、项 32+胶囊 1.5、`M.combo.auto()` 接键盘） | XAML ComboBox_themeresources（ComboBoxThemeMinWidth / PopupBorderThemeThickness / ItemCornerRadius / MaxDropDownHeight） |
+| 下拉（无 JS 回退） | `.fl-select`（原生 `<select>` 套 TextBox 外观；面板由 OS 绘制，暗色会漏白） | 同上 |
 | 开关 | `.fl-switch`（轨道 40×20、旋钮 12、开态位移 20px、hover 14 / pressed 17） | XAML ToggleSwitch（KnobTranslateTransform X=20、SplineDoubleKeyFrame 14/17） |
 | 滑块 | `.fl-slider`（轨道 4、内圆 12、圆角 10；hover 1.167 / pressed 0.833，250ms） | XAML Slider（SliderTrackThemeHeight / SliderInnerThumbWidth / SliderThumbCornerRadius） |
-| 复选/单选 | `.fl-check` / `.fl-radio`（20×20、圆角 4） | XAML CheckBox + geometry 4px |
-| 列表项 | `.fl-listitem`（min-height 40、圆角 4、禁用透明 0.3、选中 accent 胶囊） | XAML ListViewItemMinHeight/CornerRadius/DisabledThemeOpacity |
+| 复选/单选 | `.fl-check` / `.fl-radio`（20×20、圆角 4、描边 1；勾号为 SVG 描画 12px/描边 2.5、167ms；单选内点 12 + hover 1.167/pressed 0.833；含半选/禁用） | XAML CheckBoxSize/GlyphSize/BorderThickness + RadioButtonCheckGlyphSize + ListViewItem CheckGlyph StrokeThickness |
+| 列表（结构） | `.fl-list` + `.fl-listitem` + `.fl-list-content`（勾选列 + 图标 20 + 主副标题 + 尾部区域；行高 40/64 两档；`minmax(0,1fr)` 保省略号） | XAML ListViewItemMinHeight/MinWidth/CornerRadius |
+| 列表（状态） | 六档：rest / hover / pressed / selected / selected+hover / selected+pressed（后者比前者更淡，官方反色档）；选中条 3×16 圆角 1.5；禁用 0.3 | XAML ListViewItemPresenter 六组 Background brush + SelectionIndicatorCornerRadius |
+| 列表（多选） | `.fl-list[data-multiselect]`（勾选列 40.5px，列宽过渡；勾选状态由行 aria-selected 驱动） | XAML ListViewItemContentOffsetX / CheckMode=Inline |
+| 列表（分组线） | `.fl-list-sep`（1px，上下各 4px；独立兄弟元素，不被行背景覆盖） | XAML NavigationViewItemSeparatorHeight + DividerStrokeColorDefault |
 | 卡片 | `.fl-card`（圆角 8、elevation 8、`--fl-card-bg/stroke`） | XAML Card* + layering Card=8 |
-| 左导航 | `.fl-nav` + `.fl-nav-item`（选中=subtle 填充+3px accent 胶囊） | navigation-basics + NavigationView XAML |
+| 左导航 | `.fl-nav` + `.fl-nav-item`（项高 36、圆角 2、选中=subtle 填充 + 3×16 accent 胶囊） | XAML NavigationViewItemOnLeftMinHeight / SelectionIndicatorWidth/Height/Radius |
 | 通知条 | `.fl-infobar[data-severity=success/caution/critical]`（`--fl-success/caution/critical`） | XAML SystemFillColor* |
 | flyout / 右键菜单 | `.fl-flyout.fl-overlay`（Acrylic 近似 + 圆角 8 + 阴影 e32） | materials + geometry + layering Flyout=32 |
 | 对话框 | `.fl-dialog.fl-overlay` + `M.dialog`（Smoke 遮罩、圆角 8、阴影 e128、padding 24、max-width 548） | XAML ContentDialogPadding/MaxWidth/MinHeight + materials Smoke |
 | tooltip | 圆角 4（小尺寸例外）、阴影 e16 | geometry ToolTip 例外 + layering Tooltip=16 |
 | 元素入场 | `.fl-entrance` + `M.stagger`（167ms standard，位移 8px；83ms 步进上限 333，延迟走 `--fl-stagger-delay`） | motion Direct Entrance + Fade 档；位移量实测自录屏 |
-| 页面切换（一级导航） | `M.transitionTo(id)`（默认 `kind:'nav'`，垂直 72px + 交叉淡化，283ms） | 实测派生（见 KIT 规则 15） |
+| 页面切换（一级导航） | `M.transitionTo(id)`（默认 `kind:'nav'`，垂直 72px + 交叉淡化，283ms；**方向按导航项先后自动定**，也可 `{dir:'up'/'down'}` 覆盖） | 实测派生（见 KIT 规则 15） |
 | 页面切换（二级下钻） | `M.transitionTo(id,{kind:'drill'})`（水平 176px，返回用 `M.back('drill')` 方向取反） | 实测派生（见 KIT 规则 15） |
 | 连续型动效（秒针/进度环） | `.fl-dial` + `.fl-dial-hand.fl-tick`（每秒 6°）/ `.fl-continuous`（linear 倍乘） | 录屏《时钟》秒针；见 KIT 规则 16 |
 | 弹性大入场 | `.fl-strong-entrance`（三关键帧 167+167+333） | motion Strong Entrance |

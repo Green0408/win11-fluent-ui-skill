@@ -595,9 +595,9 @@ button.fl-settings-row, a.fl-settings-row {
 /* ---- 细滚动条（.fl-scroll）----
    浏览器默认滚动条是 17px 带上下箭头的方块，在 Acrylic 弹层里非常出戏。
    Win11 的做法是「细、圆头、无箭头、hover 才略微变粗」：
-     · 命中区 12px，静止只画 2px（靠 5px 透明 border + content-box 裁出）——弹层通常只有 100 多 px 宽，
-       4px 的条在小弹层里就已经像一根"杠"了
-     · hover / 拖动时 border 收到 4px → 视觉 4px，颜色加深一档
+     · 命中区 12px，静止画 4px（4px 透明 border + content-box 裁出）；颜色用实色而非半透明 ——
+       55% alpha 的灰叠在 Acrylic 上几乎看不见（曾经收到 2px + 半透明，用户直接说"没有滚动条"）
+     · hover / 拖动时 border 收到 3px → 视觉 6px，颜色再深一档
      · **聚焦不触发变粗**：`focus-within` 曾让下拉一展开就变粗（焦点自动进 listbox），
        用户看到的是"一打开就一根粗杠"。只有指针真的移到弹层上才加粗
      · **拖动（:active）不再继续变粗** —— 曾经收到 0 直接画满 12px
@@ -617,21 +617,21 @@ button.fl-settings-row, a.fl-settings-row {
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-corner { background: transparent; }
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-button { display: none; }  /* 去掉上下箭头与双箭头 */
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--fl-control-strong-fill) 55%, transparent);
+    background: color-mix(in srgb, var(--fl-control-strong-fill) 85%, transparent);
     background-clip: content-box;
-    border: 5px solid transparent;      /* 5px 透明边框 → 视觉 2px（细，但不至于抓不住） */
+    border: 4px solid transparent;      /* 4px 透明边框 → 视觉 4px */
     border-radius: 999px;
     min-height: 24px;
   }
   /* 只认指针悬停：不加 :focus-within —— 否则下拉一打开（焦点自动进 listbox）就变成粗条 */
   :is(.fl-scroll, .fl-page, .fl-nav):hover::-webkit-scrollbar-thumb {
     background: var(--fl-control-strong-fill);
-    border-width: 4px;                  /* hover 视觉 4px */
+    border-width: 3px;                  /* hover 视觉 6px */
   }
-  /* 拖动时与 hover 同宽：再收窄就画满命中区，弹层里会显得又粗又重 */
+  /* 拖动时与 hover 同宽：再收窄就画满 12px 命中区，弹层里会显得又粗又重 */
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:active {
     background: var(--fl-control-strong-fill);
-    border-width: 4px;
+    border-width: 3px;
   }
 }
 
@@ -679,8 +679,12 @@ button.fl-settings-row, a.fl-settings-row {
 .fl-combo-popup {
   position: fixed; z-index: 40;
   min-width: var(--fl-combo-popup-min-width);
+  /* 宽度上限：不写的话 nowrap 的长选项会把弹层撑到视口外，右侧滚动条直接被窗口裁掉
+     （看起来就是"没有滚动条"）。左右各留 8px，保证圆角与阴影不被切。 */
+  max-width: calc(100vw - var(--fl-space-4));
   max-height: var(--fl-combo-max-h);
   overflow-y: auto;
+  overscroll-behavior: contain;   /* 滚到弹层尽头不要穿透到页面 */
   padding: var(--fl-space-1);
   background: var(--fl-acrylic-bg);
   -webkit-backdrop-filter: blur(60px) saturate(125%);
@@ -700,8 +704,10 @@ button.fl-settings-row, a.fl-settings-row {
   border-radius: var(--fl-radius-combo-item);
   cursor: pointer;
   /* 不折行：折行会让 4 个选项的弹层也超出高度、凭空长出一条滚动条；
-     弹层宽度可以超过按钮（min-width 由 JS 按按钮宽设下限，靠内容的 max-content 自然撑开） */
+     超长文字走省略号（配合弹层的 max-width），否则 nowrap 会把弹层撑到视口外 */
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background var(--fl-dur-control-faster) var(--fl-ease-standard);
 }
 /* 键盘高亮用 data-active（与鼠标 hover 同档视觉，但两者互不干扰） */

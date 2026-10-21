@@ -306,18 +306,31 @@
     /* 定位：优先向下展开，下方不够且上方更宽裕则翻转；只赋值 left/top（不做 transition） */
     function place() {
       var r = btn.getBoundingClientRect();
-      /* 先清掉上一轮写进 style 的 maxHeight：否则 scrollHeight 读到的是「被钳过的值」，
+      /* 先清掉上一轮写进 style 的 maxHeight：否则量到的尺寸是「被钳过的值」，
          钳制会自我维持 —— 4 项短列表被永久压出 4px 溢出，凭空多一条滚动条 */
       popup.style.maxHeight = "";
+      /* maxHeight 是 border-box 语义，而 scrollHeight 只含 padding —— 两者直接比会差一圈边框，
+         短列表因此刚好溢出 4px（= 上下各 2px 边框）。所以量自然高度用 offsetHeight。 */
+      var naturalH = popup.offsetHeight;
       var maxH = parseFloat(global.getComputedStyle(popup).maxHeight) || 504;
-      var wantH = Math.min(popup.scrollHeight, maxH);
+      var wantH = Math.min(naturalH, maxH);
+
+      popup.style.minWidth = Math.max(parseFloat(global.getComputedStyle(root).minWidth) || 0, r.width) + "px";
+      /* 水平钳制：按钮贴着右边缘时，弹层比按钮宽就会伸到视口外，右侧滚动条直接被窗口裁掉
+         （表现是"看不到滚动条 / 内容像溢出了"）。左右各留 8px。
+         量宽度必须用 offsetWidth：此时还没加 .fl-open，入场态带 scale(0.98)，
+         getBoundingClientRect 会少算 2%（337 → 330），钳制就不会生效。 */
+      var w = popup.offsetWidth;
+      var margin = 8;
+      var left = Math.min(r.left, global.innerWidth - margin - w);
+      popup.style.left = Math.max(margin, left) + "px";
+
       var below = global.innerHeight - r.bottom - 8;
       var above = r.top - 8;
       var up = below < wantH && above > below;
       popup.dataset.drop = up ? "up" : "down";
-      popup.style.minWidth = Math.max(parseFloat(global.getComputedStyle(root).minWidth) || 0, r.width) + "px";
-      popup.style.left = r.left + "px";
-      popup.style.maxHeight = Math.min(wantH, up ? above : below) + "px";
+      /* 可用高度不足时也要给个下限，否则 maxHeight 变成负数、弹层整个塌掉 */
+      popup.style.maxHeight = Math.max(96, Math.min(wantH, up ? above : below)) + "px";
       if (up) {
         popup.style.top = "auto";
         popup.style.bottom = (global.innerHeight - r.top + 4) + "px";

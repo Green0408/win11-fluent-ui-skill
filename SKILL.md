@@ -66,6 +66,7 @@ learn.microsoft.com 文档快照）。不要凭记忆写颜色、字号、圆角
 | 全部官方数值与出处 | `official-values.md`（机读 `official-values.json`） |
 | 完整规则与控件清单 | `KIT.md` |
 | **用户发来录屏要「照着改」** | `VIDEO-ALIGN.md`（整屏动效反解流程、判定阈值、素材要求、已知限制） |
+| **要查「官方对某个动效到底怎么规定」** | `WINUI-MOTION-SPEC.md`（官方三层规范、六类动效数值表、转场类型与适用场景、官方自身不一致处、本 kit 的偏离清单） |
 | 官方原文 | `raw/*.xaml`（XAML 源码）、`raw/doc_*.md`（文档快照） |
 
 ## 用户发来录屏时（先出报告，别直接改）

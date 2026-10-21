@@ -158,7 +158,7 @@ async function main() {
   check("drill 第 1 拍：新页还没出现（opacity 0），旧页仍在",
     beat && beat.inOp === 0 && beat.outBg === "rgba(0, 0, 0, 0)",
     JSON.stringify(beat));
-  check("drill 入页有 167ms 延迟（= 旧页退场时长，两拍首尾相接）",
+  check("drill 入页有 ≈133ms 延迟（0.8×退场时长，两拍略微搭接）",
     beat && parseFloat(beat.inDelay) > 0, beat && beat.inDelay);
 
   /* 第 1 拍内（≈100ms）：旧页必须在动且在淡出 —— 起手就顿住是「卡顿」的直接来源 */

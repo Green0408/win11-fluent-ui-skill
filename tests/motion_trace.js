@@ -90,8 +90,10 @@ async function main() {
         window.__trace.push({
           t: +(now - t0).toFixed(1),
           inX: inn ? +inn.getBoundingClientRect().left.toFixed(1) : null,
+          inY: inn ? +inn.getBoundingClientRect().top.toFixed(1) : null,
           inOp: inn ? +getComputedStyle(inn).opacity : null,
           outX: out ? +out.getBoundingClientRect().left.toFixed(1) : null,
+          outY: out ? +out.getBoundingClientRect().top.toFixed(1) : null,
           outOp: out ? +getComputedStyle(out).opacity : null
         });
         if (running && now - t0 < 700) requestAnimationFrame(tick);
@@ -115,12 +117,12 @@ async function main() {
   const first = trace.find((p) => p.inX !== null || p.outX !== null) || trace[0];
   const baseX = 256;                       // 内容层左缘
   console.log(`${TAG}：采样 ${trace.length} 帧（≈${Math.round(trace[0].t)}–${Math.round(trace[trace.length - 1].t)}ms）`);
-  console.log("t(ms)\t新页x\t进度\t新页不透明\t旧页x\t旧页不透明");
+  console.log("t(ms)\t新页x\t新页y\t新页不透明\t旧页x\t旧页y\t旧页不透明");
   for (const p of trace) {
     if (p.t > 520 && p.t % 1 > 0.5) continue;
     const prog = p.inX === null ? "" : ((p.inX - baseX) / 176).toFixed(3);
     if (p.inX === null && p.outX === null) continue;
-    console.log(`${p.t}\t${p.inX ?? "-"}\t${prog}\t${p.inOp ?? "-"}\t${p.outX ?? "-"}\t${p.outOp ?? "-"}`);
+    console.log(`${p.t}\t${p.inX ?? "-"}\t${p.inY ?? "-"}\t${p.inOp ?? "-"}\t${p.outX ?? "-"}\t${p.outY ?? "-"}\t${p.outOp ?? "-"}`);
   }
   console.log("原始序列：", path.join(OUT, `${TAG}-trace.json`));
   ws.close();

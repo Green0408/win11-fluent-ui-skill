@@ -604,7 +604,7 @@ def main():
         in_rule = re.search(r"\.fl-page-in\s*\{([^}]*)\}", motion_css or "")
         in_body = in_rule.group(1) if in_rule else ""
         if "animation-delay" not in in_body:
-            fails.append("R41 fluent2-motion.css: .fl-page-in 必须设 animation-delay（= 旧页退场时长），"
+            fails.append("R41 fluent2-motion.css: .fl-page-in 必须设 animation-delay（略短于旧页退场时长），"
                          "否则两页同时进出会重影")
         out_rule = re.search(r"\.fl-page-out\s*\{([^}]*)\}", motion_css or "")
         out_body = out_rule.group(1) if out_rule else ""

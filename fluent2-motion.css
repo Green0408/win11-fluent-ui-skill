@@ -82,8 +82,10 @@
   animation:
     fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,
     fl-page-in-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
-  /* 延迟 = 旧页退场时长：两拍首尾相接，中途没有「什么都不动」的空档（那会被看成卡顿） */
-  animation-delay: var(--fl-dur-normal);
+  /* 延迟略短于旧页退场（0.8×167≈133ms）：两拍稍微搭接一点点。
+     若延迟正好等于退场时长，旧页淡到 0 的那一帧新页还是全透明 —— 中间会空出 1 帧背景，
+     快速转场里这 1 帧就是可见的「闪一下」。 */
+  animation-delay: calc(var(--fl-dur-normal) * 0.8);
 }
 .fl-page-out {
   will-change: transform, opacity;

@@ -86,6 +86,14 @@ BAD_CASES = {
     "R38": ("fluent2-tokens.css",
             "  --fl-accent-fill: #60CDFF;",
             "  --fl-accent-fill: #005FB8;"),
+    # 弹层去掉 fl-scroll → 出现原生滚动条
+    "R39": ("fluent2-tool-starter.html",
+            'class="fl-combo-popup fl-overlay fl-scroll"',
+            'class="fl-combo-popup fl-overlay"'),
+    # 设置行行高改成字面量 → 不再走 --fl-settings-row-h
+    "R40": ("fluent2-controls.css",
+            "  min-height: var(--fl-settings-row-h);",
+            "  min-height: 56px;"),
 }
 
 # 处方：按模块名整块删除（与 FLUENT-COMPOSE.md 的四种处方一致）

@@ -9,7 +9,7 @@
 | 文件 | 职责 |
 |---|---|
 | `fluent2-tokens.css` | 全部 `--fl-*` 官方变量（颜色暗/亮双主题、动效时长/缓动、圆角、间距、阴影）。脚本生成，勿手改 |
-| `fluent2-controls.css` | 控件样式：按钮/输入/**列表（六档 + 行结构 + 多选列）**/**勾选·单选（SVG 勾号）**/**自绘 ComboBox**/开关/卡片/导航/浮层/对话框/InfoBar/字阶类 |
+| `fluent2-controls.css` | 控件样式：按钮/输入/**列表（六档 + 行结构 + 多选列）**/**设置页列表（.fl-settings 组+行）**/**勾选·单选（SVG 勾号）**/**自绘 ComboBox**/**细滚动条 .fl-scroll**/开关/卡片/导航/浮层/对话框/InfoBar/字阶类 |
 | `fluent2-motion.css` | 动效类：fl-entrance / fl-point-to-point / fl-exit / **fl-page-in / fl-page-out（页面转场两轴）** / fl-fade / fl-strong-entrance / **fl-continuous / fl-tick（连续型）** / fl-overlay / fl-smoke（一次性动效用 animation，状态切换用 transition） |
 | `fluent2-motion.js` | 编排 API：`M.transitionTo(id,{kind,dir})` / `M.back(kind)` / `M.stack()` / `M.stagger()` / **`M.combo.init/auto`** / **`M.list.multiselect/syncParent`** / **`M.slider.init/auto`** / `M.flyout` / `M.dialog` / `M.toast` / `M.theme` |
 | `fluent2-tool-starter.html` | 可拆装骨架（模块标记 `<!-- 模块：<名> -->`） |
@@ -71,6 +71,35 @@
     - **档位色必须不透明**：`--fl-slider-accent` 不许直接引用 `--fl-accent-fill-hover/-pressed`（那是 alpha 0.9/0.8），必须 `color-mix(in srgb, var(--fl-accent-fill) 90%/80%, var(--fl-text-primary))`。alpha 档位叠在卡片上会透出底下的灰环，观感就是「悬停时滑块变透明」（校验器 R36 会拦）；
     - 填充色与 thumb 同步走四档（Default → hover → pressed → Disabled）；`[dir="rtl"]` 下渐变方向要翻转。
 21. **按钮居中交给 flex，不要抄 XAML 的 `ButtonPadding=11,5,11,6`**：那是 ContentPresenter 做字基线补偿用的 4 值，照搬进 `align-items:center` 的盒子会让内容整体下沉 2px（校验器 R37 会拦上下不对称）。正确写法是 `padding: var(--fl-space-1) var(--fl-btn-pad-h)` + `min-height: var(--fl-control-height)`，再用 CDP 量 `Range` 文本盒中心与按钮盒中心的偏差（应 ≤0.5px）。
+22. **设置页列表用 `.fl-settings`，不要用卡片里堆控件**（这是"设置型工具"最容易做错的地方，堆出来像表单，不像 Windows 设置）：
+
+    ```html
+    <div class="fl-settings">
+      <section>
+        <h3 class="fl-settings-header">显示</h3>
+        <p class="fl-settings-desc">这组设置是干什么的（可选）</p>
+        <div class="fl-settings-group">           <!-- 需要卡片分区时写 data-card -->
+          <div class="fl-settings-row" data-divided>
+            <span class="fl-settings-icon">…20px 图标…</span>
+            <span class="fl-settings-text">
+              <span class="fl-settings-title">标题</span>
+              <span class="fl-settings-sub">副标题</span>
+            </span>
+            <span class="fl-settings-action">…开关 / 下拉 / 数值 / chevron…</span>
+          </div>
+        </div>
+      </section>
+    </div>
+    ```
+
+    - 造型三条硬指标（实测自 2026-10-21 录屏）：**组默认不套卡片**（直接铺页面底色）、**行间默认没有分隔线**（要线才写 `data-divided`，线会自动左缩进对齐文字起点）、**行高 56**（`--fl-settings-row-h`，单行档自动回落到 40）；
+    - hover 是整行浅填充 + 圆角 4，**不要给每行做胶囊**（那是 ListViewItem 的形态）；
+    - 整行可点（跳转）时用 `button.fl-settings-row` + 尾部 `.fl-list-chevron`；只做展示时用 `div`；
+    - 控件放在 `.fl-settings-action` 里，**不要**在行内重复写一遍标题文字（标题已经在左边）。
+23. **任何可滚动的浮层都必须加 `.fl-scroll`**（ComboBox 弹层、长菜单、长对话框）。浏览器默认滚动条是 17px 带上下箭头的方块，在 Acrylic 弹层里非常出戏。
+    - 两套写法**互斥**：Chromium 116+ 里 `scrollbar-width` / `scrollbar-color` 只要是 non-auto，`::-webkit-scrollbar-*` 全部失效。所以默认给 Firefox 写标准属性，再用 `@supports selector(::-webkit-scrollbar)` 块把它们重置回 `auto`，然后写伪元素样式（校验器 R39 会拦缺 `@supports` 块）；
+    - 视觉：命中区 12px、静止画 4px（4px 透明 border + `background-clip: content-box` 裁出）、hover 收到 2px border → 视觉 8px、thumb 圆角 999、**去掉 `::-webkit-scrollbar-button`**；
+    - 这条容易漏：只有"超过 15 项（MaxDropDownHeight 504 ÷ 项高 32）"才看得见滚动条，演示数据通常到不了这个量。
 
 ## 官方关键数值速查（详见 official-values.md）
 
@@ -81,6 +110,8 @@
 - 字阶：Caption 12/16、Body 14/20、Body Strong 14/20 Semibold、Body Large 18/24、Subtitle 20/28、Title 28/36、Title Large 40/52、Display 68/92。
 - 控件：高 32px；Button padding 11,5,11,6；TextBox padding 10,5,6,6；列表项 min-height 40；ContentDialog padding 24 / max-width 548 / min-height 184；Switch 轨道 40×20、旋钮 12（hover 14 / pressed 17）、开态位移 **20px**（XAML `KnobTranslateTransform X=20`）；Slider 轨道 4 / 内圆 12 / 圆角 10（hover 1.167、pressed 0.833，250ms）；轨道**左段为 accent 已填充段**（`SliderTrackValueFill`，宽 = 半 thumb + 比例×(轨道宽-12)，由 `M.slider.auto()` 写 `--fl-slider-pct`），填充与 thumb 同步四档变色（Default→Secondary 0.9→Tertiary 0.8→Disabled）。
 - 列表：行高单行 40 / 两行 64（后者 KIT 自定）；圆角 4；选中条 3×16 圆角 1.5；多选列宽 40.5；禁用透明度 0.3；图标 20；行内间距 12。
+- 设置页列表：行高 **56**（实测派生）；组默认不套卡片；分隔线左缩进 = 行内边距 12 + 图标 20 + 列间距 12 = 44；组间 24。
+- 滚动条（.fl-scroll）：命中区 12 / 静止视觉 4 / hover 视觉 8 / 圆角 999 / 无箭头按钮；Firefox 走 scrollbar-width:thin 回退。
 - 勾选/单选：方框 20×20、圆角 4、描边 1；勾号字形 12 / 描边 2.5；单选内点 12（hover 1.167 / pressed 0.833）；控件行高 32。
 - 下拉（自绘）：闭合态高 32、最小宽 64、箭头 12×12 距右缘 14；弹层最小宽 80、最大高 504（15 项）、圆角 8、描边 2、项高 32、项圆角 3、选中胶囊 3×16 圆角 1.5。
 - 控件级时长：`--fl-dur-control-faster` 83ms（状态色变）/ `-fast` 167ms（勾号描绘）/ `-normal` 250ms（滑块、单选缩放）。

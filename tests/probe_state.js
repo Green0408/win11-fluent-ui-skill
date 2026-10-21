@@ -110,6 +110,9 @@ async function main() {
         rest: cs.getPropertyValue("--fl-slider-rest").trim(),
         pct: cs.getPropertyValue("--fl-slider-pct").trim(),
         opacity: cs.opacity,
+        /* 滚动条占宽：经典滚动条 = offset-client（含边框）；overlay 滚动条恒等于 border */
+        ow: el.offsetWidth, cw: el.clientWidth, sbw: el.offsetWidth - el.clientWidth,
+        sbwCss: cs.scrollbarWidth || "", sbColor: cs.scrollbarColor || "",
       };
       try { o.trackImg = getComputedStyle(el, "::-webkit-slider-runnable-track").backgroundImage; } catch(e) {}
       return o;

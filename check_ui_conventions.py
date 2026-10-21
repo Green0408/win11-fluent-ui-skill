@@ -46,6 +46,8 @@ R35 滑块必须有填充段且做半 thumb 补偿：轨道双段渐变 + --fl-s
 R36 滑块档位色不得用 alpha：--fl-slider-accent 不许直接引用 --fl-accent-fill-hover/-pressed，须用 color-mix 不透明混色
 R37 按钮纵向内边距必须对称：.fl-btn 的 padding 四值里 top 必须等于 bottom（否则 flex 居中下文字整体偏移）
 R38 强调色主题档位不许写反：暗主题 --fl-accent-fill 的相对亮度必须高于亮主题（XAML：暗=Light2、亮=Dark1）
+R39 自绘弹层必须用细滚动条：.fl-combo-popup 必须带 fl-scroll，且 CSS 要有 @supports selector(::-webkit-scrollbar) 互斥块
+R40 设置行造型：行高走 --fl-settings-row-h、hover 底色带圆角、分隔线左缩进对齐文字、行内必须有 .fl-settings-text
 """
 import re
 import sys
@@ -560,6 +562,38 @@ def main():
                     fails.append(f"R37 fluent2-controls.css: .fl-btn 纵向内边距不对称"
                                  f"（上={parts[0]} 下={parts[2]}），flex 居中下文字会整体偏移；"
                                  f"居中交给 align-items:center，上下取同值")
+
+    # R39 自绘弹层必须用细滚动条
+    #     浏览器默认滚动条是 17px 带箭头的方块，在 Acrylic 弹层里非常出戏；而且这条很容易漏 ——
+    #     只有"项数超过 15 项（MaxDropDownHeight 504 / 项高 32）"时才看得见，演示数据通常不到。
+    if re.search(r'class\s*=\s*"[^"]*fl-combo-popup[^"]*"', html_code):
+        for m in re.finditer(r'class\s*=\s*"([^"]*fl-combo-popup[^"]*)"', html_code):
+            if "fl-scroll" not in m.group(1):
+                fails.append(f"R39: 弹层 class=\"{m.group(1)}\" 缺 fl-scroll"
+                             f"（会出现原生滚动条；细滚动条见 fluent2-controls.css 的 .fl-scroll）")
+    if "fl-scroll" in html_code and controls_css:
+        if "::-webkit-scrollbar-thumb" not in controls_css:
+            fails.append("R39 fluent2-controls.css: 用了 fl-scroll 但没有 ::-webkit-scrollbar-thumb 规则")
+        # Chromium 116+：scrollbar-width/color 非 auto 会让 ::-webkit-scrollbar 全部失效，
+        # 必须有一个 @supports 块把它们重置回 auto
+        if not re.search(r"@supports\s*(?:\(\s*)?selector\(::-webkit-scrollbar\)", controls_css):
+            fails.append("R39 fluent2-controls.css: 缺 @supports selector(::-webkit-scrollbar) 块"
+                         "（不重置 scrollbar-width 为 auto，伪元素样式在 Chromium 里会被静默忽略）")
+
+    # R40 设置行造型
+    if ".fl-settings-row" in (controls_css or ""):
+        row = re.search(r"\.fl-settings-row\s*\{([^}]*)\}", controls_css)
+        body = row.group(1) if row else ""
+        if "--fl-settings-row-h" not in body:
+            fails.append("R40 fluent2-controls.css: .fl-settings-row 的行高必须走 --fl-settings-row-h（56，实测派生）")
+        if "border-radius" not in body:
+            fails.append("R40 fluent2-controls.css: .fl-settings-row 需要圆角 4（hover 底色不能是直角的通栏块）")
+        if not re.search(r"\.fl-settings-row\[data-divided\][^{]*::after\s*\{[^}]*left", controls_css):
+            fails.append("R40 fluent2-controls.css: 设置行的分隔线必须左缩进对齐文字起点（data-divided::after + left）")
+    if ".fl-settings" in html_code:
+        if not re.search(r'class\s*=\s*"[^"]*fl-settings-(text|title)"', html_code):
+            fails.append("R40: 用了 .fl-settings 但行内没有 .fl-settings-text / .fl-settings-title"
+                         "（设置行必须是「左文本 + 右控件」，纯文本不应直接塞进行里）")
 
     # 输出
     print(f"目标：{target}")

@@ -181,6 +181,70 @@ async function main() {
   check("弹层已 portal 到 body（避免被 overflow:clip 裁切）", openState.parent === "BODY", openState.parent);
   check("弹层 position:fixed", openState.pos === "fixed", openState.pos);
   check("弹层有实际尺寸（未塌陷/未被裁）", openState.w > 60 && openState.h > 60, `${openState.w}×${openState.h}`);
+
+  /* 滚动条：塞 20 项到弹层里，看它是不是自定义的细滚动条（原生约 15-17px 且带箭头） */
+  const comboScroll = await evaluate(`(function(){
+    var pop = document.getElementById("combo-view-list");
+    var n = 0;
+    while (pop.children.length < 20) {
+      var d = document.createElement("div");
+      d.className = "fl-combo-item";
+      d.setAttribute("role", "option");
+      d.textContent = "选项 " + (++n + 4);
+      pop.appendChild(d);
+    }
+    var w = pop.offsetWidth - pop.clientWidth;
+    var out = {
+      hasScroll: pop.scrollHeight > pop.clientHeight + 2,
+      sbw: w,
+      cls: pop.className,
+      ff: getComputedStyle(pop).scrollbarColor || "",
+      maxH: getComputedStyle(pop).maxHeight
+    };
+    while (pop.children.length > 4) pop.removeChild(pop.lastElementChild);
+    return out;
+  })()`);
+  check("弹层超长时出现滚动", comboScroll.hasScroll === true, `scrollHeight>clientHeight ${comboScroll.hasScroll} maxH=${comboScroll.maxH}`);
+  /* headless 默认用 overlay 滚动条（不占布局宽），所以"占宽"这条在 CI 里恒为边框宽、证明力弱；
+     改从 CSSOM 里核对规则本身：.fl-scroll 的 ::-webkit-scrollbar 必须设宽 ≤12px，
+     thumb 必须有圆角与透明边框（两者缺一，滚动条就退化成原生方块）。 */
+  const sbRules = await evaluate(`(function(){
+    var out = { width: null, thumbRadius: null, thumbBorder: null, buttons: false };
+    /* 规则写在 @supports 里，必须递归进去找（CSSSupportsRule 自己有 cssRules） */
+    function walk(rules) {
+      for (var j = 0; j < rules.length; j++) {
+        var r = rules[j];
+        if (r.cssRules && !r.selectorText) { walk(r.cssRules); continue; }
+        if (!r.selectorText || r.selectorText.indexOf("fl-scroll") < 0) continue;
+        if (/::-webkit-scrollbar$/.test(r.selectorText)) out.width = r.style.width;
+        if (/::-webkit-scrollbar-thumb$/.test(r.selectorText)) {
+          /* 多条规则命中同一伪元素（静止/hover/active），只取第一次给出的值 */
+          out.thumbRadius = out.thumbRadius || r.style.borderRadius;
+          out.thumbBorder = out.thumbBorder || r.style.borderWidth || r.style.border;
+        }
+        if (/::-webkit-scrollbar-button/.test(r.selectorText)) out.buttons = true;
+      }
+    }
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      walk(document.styleSheets[i].cssRules || []);
+    }
+    return out;
+  })()`);
+  check("滚动条是自定义细条（规则宽度 ≤12px 且去掉箭头按钮）",
+    !!sbRules.width && parseFloat(sbRules.width) <= 12 && sbRules.buttons === true,
+    `::-webkit-scrollbar{width:${sbRules.width}} button 规则=${sbRules.buttons}`);
+  check("滚动条 thumb 是圆头内缩（圆角 + 透明边框做出「细」的视觉）",
+    !!sbRules.thumbRadius && !!sbRules.thumbBorder,
+    `border-radius:${sbRules.thumbRadius} border:${sbRules.thumbBorder}`);
+  check("弹层带 fl-scroll 类且设了 Firefox 的 scrollbar-color", /fl-scroll/.test(comboScroll.cls) && !!comboScroll.ff,
+    `${comboScroll.cls} | scrollbar-color: ${comboScroll.ff}`);
+  /* Chromium 116+ 里标准属性（scrollbar-width/color 非 auto）会让 ::-webkit-scrollbar 全部失效。
+     我们靠 @supports selector(::-webkit-scrollbar) 把它们重置回 auto；若哪天被删掉，
+     这里会立刻变成 thin，说明伪元素样式已经悄悄失效。 */
+  const sbStd = await evaluate(
+    `getComputedStyle(document.getElementById("combo-view-list")).scrollbarWidth`);
+  check("Chromium 里 scrollbar-width 必须被重置为 auto（否则 webkit 伪元素样式失效）",
+    sbStd === "auto", String(sbStd));
   check("键盘高亮项已设置 aria-activedescendant", !!openState.active, String(openState.active));
   await shot("x3-combo-open");
 

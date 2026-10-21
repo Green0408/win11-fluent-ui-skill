@@ -92,12 +92,16 @@ body {
 .fl-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--fl-space-2);
   min-height: var(--fl-control-height);
-  padding: var(--fl-btn-padding, var(--fl-space-3) var(--fl-btn-pad-h) var(--fl-space-2) var(--fl-btn-pad-h));
+  /* 纵向内边距必须左右对称：XAML 的 ButtonPadding=11,5,11,6 是给 XAML ContentPresenter
+     的字基线对齐用的，照搬到 flex 居中盒里会让文字整体下沉 2px（5 vs 6 再叠 12/8 更明显）。
+     这里上下各 4，居中交给 align-items:center。 */
+  padding: var(--fl-space-1) var(--fl-btn-pad-h);
   border-radius: var(--fl-radius-control);
   border: var(--fl-stroke) solid var(--fl-control-stroke);
   background: var(--fl-control-fill-default);
   color: var(--fl-text-primary);
   font: inherit;
+  line-height: 1.35;
   box-shadow: var(--fl-shadow-e2); /* Control elevation 2 (Rest) */
   cursor: pointer; text-decoration: none;
   transition: background var(--fl-dur-fast) var(--fl-ease-standard);
@@ -273,8 +277,16 @@ body {
   --fl-slider-fill: calc(var(--fl-slider-inner) / 2
                    + (100% - var(--fl-slider-inner)) * var(--fl-slider-pct));
 }
-.fl-slider:not(:disabled):hover  { --fl-slider-accent: var(--fl-accent-fill-hover); }
-.fl-slider:not(:disabled):active { --fl-slider-accent: var(--fl-accent-fill-pressed); }
+/* 状态反馈用**不透明**的混色，不用 alpha 档位：AccentFillColorSecondary/Tertiary 是 10%/20% 透明，
+   叠在卡片上会让填充段和 thumb 看起来"变透明/发灰"（暗色更明显，蓝底透出灰环形）。
+   混色方向跟着主题走：亮色主题文字色=黑 → hover 变深、暗色主题文字色=白 → hover 变亮，
+   两个主题都是"实色变一档"，不会有透出底层的问题。 */
+.fl-slider:not(:disabled):hover  {
+  --fl-slider-accent: color-mix(in srgb, var(--fl-accent-fill) 90%, var(--fl-text-primary));
+}
+.fl-slider:not(:disabled):active {
+  --fl-slider-accent: color-mix(in srgb, var(--fl-accent-fill) 80%, var(--fl-text-primary));
+}
 .fl-slider:disabled {
   cursor: default;
   --fl-slider-accent: var(--fl-accent-fill-disabled);

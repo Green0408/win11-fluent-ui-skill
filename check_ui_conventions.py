@@ -50,6 +50,7 @@ R39 自绘弹层必须用细滚动条：.fl-combo-popup 必须带 fl-scroll，�
 R40 设置行造型：行高走 --fl-settings-row-h、hover 底色带圆角、分隔线左缩进对齐文字、行内必须有 .fl-settings-text
 R41 转场必须两拍：.fl-page-in 要有 animation-delay、离场页不许与入页同长、转场页不得涂不透明底
 R42 应用外壳：body 锁高度、.fl-shell 有 min-height:0、内容层固定 1fr 行、.fl-page 是滚动容器
+R43 滚动条悬停/拖动态不许变粗：thumb 的 border-width 不得 <2px（否则画满 12px 命中区）
 """
 import re
 import sys
@@ -581,6 +582,23 @@ def main():
         if not re.search(r"@supports\s*(?:\(\s*)?selector\(::-webkit-scrollbar\)", controls_css):
             fails.append("R39 fluent2-controls.css: 缺 @supports selector(::-webkit-scrollbar) 块"
                          "（不重置 scrollbar-width 为 auto，伪元素样式在 Chromium 里会被静默忽略）")
+
+    # R43 滚动条悬停/拖动态不许变粗
+    #     thumb 的"细"是靠 4px 透明边框 + content-box 裁出来的；边框一收到 0 就画满 12px 命中区。
+    #     hover 与 :active 两种写法都要查：状态既可能写在容器上（:hover::-webkit-scrollbar-thumb），
+    #     也可能写在 thumb 上（::-webkit-scrollbar-thumb:active）——只认后者会漏掉 hover 那条。
+    if controls_css and "::-webkit-scrollbar-thumb" in controls_css:
+        for m in re.finditer(r"[^{}]*::-webkit-scrollbar-thumb[^{]*\{([^}]*)\}", controls_css):
+            sel = m.group(0).split("{")[0]
+            state = re.search(r":(hover|active)", sel)
+            if not state:
+                continue
+            # 0 可以不带单位（border-width: 0），所以 px 后缀要可选
+            bw = re.search(r"border-width\s*:\s*([\d.]+)\s*(px)?", m.group(1))
+            if bw and float(bw.group(1)) < 2:
+                fails.append(f"R43 fluent2-controls.css: 滚动条 :{state.group(1)} 态 border-width={bw.group(1)}px 太小"
+                             f"（视觉会占 {12 - 2 * float(bw.group(1)):.0f}px，看起来太粗）；"
+                             f"hover 与拖动都保持 3px（视觉 6px）")
 
     # R40 设置行造型
     if ".fl-settings-row" in (controls_css or ""):

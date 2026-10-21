@@ -318,10 +318,15 @@ async function main() {
         if (r.cssRules && !r.selectorText) { walk(r.cssRules); continue; }
         if (!r.selectorText || r.selectorText.indexOf("fl-scroll") < 0) continue;
         if (/::-webkit-scrollbar$/.test(r.selectorText)) out.width = r.style.width;
-        if (/::-webkit-scrollbar-thumb$/.test(r.selectorText)) {
-          /* 多条规则命中同一伪元素（静止/hover/active），只取第一次给出的值 */
+        if (/::-webkit-scrollbar-thumb/.test(r.selectorText)) {
+          /* 多条规则命中同一伪元素（静止/hover/active），静止态只取第一次给出的值 */
           out.thumbRadius = out.thumbRadius || r.style.borderRadius;
           out.thumbBorder = out.thumbBorder || r.style.borderWidth || r.style.border;
+          if (/:hover|:active/.test(r.selectorText)) {
+            var bw = r.style.borderWidth;
+            if (/:hover/.test(r.selectorText)) out.hoverBorder = bw;
+            else out.activeBorder = bw;
+          }
         }
         if (/::-webkit-scrollbar-button/.test(r.selectorText)) out.buttons = true;
       }
@@ -337,6 +342,11 @@ async function main() {
   check("滚动条 thumb 是圆头内缩（圆角 + 透明边框做出「细」的视觉）",
     !!sbRules.thumbRadius && !!sbRules.thumbBorder,
     `border-radius:${sbRules.thumbRadius} border:${sbRules.thumbBorder}`);
+  /* hover 与拖动态的透明度边框不能收到 <2px，否则 thumb 画满 12px 命中区（"激活后太粗"的来源） */
+  const bwNum = (v) => parseFloat(String(v || "0"));
+  check("滚动条 hover/拖动态不变粗（透明边框仍 ≥2px，视觉 ≤8px）",
+    bwNum(sbRules.hoverBorder) >= 2 && bwNum(sbRules.activeBorder) >= 2,
+    `hover:${sbRules.hoverBorder} active:${sbRules.activeBorder}`);
   check("弹层带 fl-scroll 类且设了 Firefox 的 scrollbar-color", /fl-scroll/.test(comboScroll.cls) && !!comboScroll.ff,
     `${comboScroll.cls} | scrollbar-color: ${comboScroll.ff}`);
   /* Chromium 116+ 里标准属性（scrollbar-width/color 非 auto）会让 ::-webkit-scrollbar 全部失效。

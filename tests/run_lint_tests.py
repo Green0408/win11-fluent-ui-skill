@@ -94,6 +94,10 @@ BAD_CASES = {
     "R40": ("fluent2-controls.css",
             "  min-height: var(--fl-settings-row-h);",
             "  min-height: 56px;"),
+    # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
+    "R43": ("fluent2-controls.css",
+             "    background: var(--fl-control-strong-fill);\n    border-width: 3px;",
+             "    background: var(--fl-control-strong-fill);\n    border-width: 0;"),
     # 页面不再是滚动容器 → 内容区无法独立滚动
     "R42": ("fluent2-controls.css",
             "  overflow-y: auto; overflow-x: hidden;   /* 每个页面各自滚，切页各记各的位置 */",

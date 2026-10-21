@@ -594,9 +594,10 @@ button.fl-settings-row, a.fl-settings-row {
 
 /* ---- 细滚动条（.fl-scroll）----
    浏览器默认滚动条是 17px 带上下箭头的方块，在 Acrylic 弹层里非常出戏。
-   Win11 的做法是「细、圆头、无箭头、hover 变粗」：
+   Win11 的做法是「细、圆头、无箭头、hover 略微变粗」：
      · 命中区 12px，静止时只画 4px（靠 4px 透明 border + content-box 裁出）
-     · hover 时 border 收到 2px → 视觉 8px，颜色加深一档
+     · hover / 拖动时 border 收到 3px → 视觉 6px，颜色加深一档
+     · **拖动（:active）不再继续变粗** —— 曾经收到 0 直接画满 12px，在弹层里粗得很突兀
      · 永远透明轨道，不占视觉空间
    ⚠ 关键坑：Chromium 116+ 里，只要元素上出现 `scrollbar-width` / `scrollbar-color` 的**非 auto** 值，
      `::-webkit-scrollbar-*` 全部失效（标准属性优先）。所以两套写法必须互斥：
@@ -622,11 +623,12 @@ button.fl-settings-row, a.fl-settings-row {
   :is(.fl-scroll, .fl-page, .fl-nav):hover::-webkit-scrollbar-thumb,
   :is(.fl-scroll, .fl-page, .fl-nav):focus-within::-webkit-scrollbar-thumb {
     background: var(--fl-control-strong-fill);
-    border-width: 2px;                  /* hover 变粗到 8px */
+    border-width: 3px;                  /* hover 视觉 6px */
   }
+  /* 拖动时与 hover 同宽：再收窄就画满 12px 命中区，弹层里会显得又粗又重 */
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:active {
     background: var(--fl-control-strong-fill);
-    border-width: 0;
+    border-width: 3px;
   }
 }
 

@@ -252,47 +252,90 @@ body {
               0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
 
-/* ---- Slider（XAML Slider_themeresources：SliderTrackThemeHeight=4、SliderInnerThumbWidth=12、
-        SliderThumbCornerRadius=10；hover scale 1.167 / pressed 0.833，ControlNormalAnimationDuration 250ms + FastOutSlowIn） ---- */
+/* ---- Slider（XAML Slider_themeresources）
+       几何：SliderTrackThemeHeight=4、SliderInnerThumbWidth=12、SliderThumbCornerRadius=10
+       配色四档（轨道填充 SliderTrackValueFill 与 thumb SliderThumbBackground 同档）：
+         rest=AccentFillColorDefault、PointerOver=AccentFillColorSecondary、
+         Pressed=AccentFillColorTertiary、Disabled=AccentFillColorDisabled
+       轨道底 SliderTrackFill=ControlStrongFillColorDefault（Disabled 走 ControlStrongFillColorDisabled）
+       微动效：hover scale 1.167 / pressed 0.833，ControlNormalAnimationDuration 250ms + FastOutSlowIn
+       注意：填充段**不设 transition** —— 它必须与 thumb 逐帧一致，加过渡会把拖动变成拖影 ---- */
 .fl-slider {
   -webkit-appearance: none; appearance: none;
   width: 100%; height: var(--fl-control-height);
   background: transparent; cursor: pointer;
+  /* --fl-slider-pct：0..1 的单位数，由 M.slider.auto() 写入；缺省 0 = 无填充段（等价旧观感，不会画错） */
+  --fl-slider-pct: 0;
+  --fl-slider-accent: var(--fl-accent-fill);
+  --fl-slider-rest: var(--fl-control-strong-fill);
+  /* 填充宽 = 半 thumb + 比例 ×（轨道宽 - thumb 宽）
+     thumb 中心的实际行程是「轨道宽 - thumb 宽」，直接写 100% × pct 会在两端各偏半个 thumb */
+  --fl-slider-fill: calc(var(--fl-slider-inner) / 2
+                   + (100% - var(--fl-slider-inner)) * var(--fl-slider-pct));
 }
+.fl-slider:not(:disabled):hover  { --fl-slider-accent: var(--fl-accent-fill-hover); }
+.fl-slider:not(:disabled):active { --fl-slider-accent: var(--fl-accent-fill-pressed); }
+.fl-slider:disabled {
+  cursor: default;
+  --fl-slider-accent: var(--fl-accent-fill-disabled);
+  --fl-slider-rest: var(--fl-control-strong-fill-disabled);
+}
+
 .fl-slider::-webkit-slider-runnable-track {
   height: var(--fl-slider-track);
   border-radius: calc(var(--fl-slider-track) / 2);
-  background: var(--fl-control-strong-fill);
+  background-color: var(--fl-slider-rest);   /* 渐变解析失败时的兜底：仍是能看的整条轨道 */
+  /* 两个同位置停点 = 硬边界（不是色带渐变） */
+  background-image: linear-gradient(to right,
+    var(--fl-slider-accent) var(--fl-slider-fill),
+    var(--fl-slider-rest) var(--fl-slider-fill));
+}
+/* RTL：填充段改从右侧起算（Firefox 的 ::-moz-range-progress 随 direction 自动翻转，不需要另写） */
+[dir="rtl"] .fl-slider::-webkit-slider-runnable-track {
+  background-image: linear-gradient(to left,
+    var(--fl-slider-accent) var(--fl-slider-fill),
+    var(--fl-slider-rest) var(--fl-slider-fill));
 }
 .fl-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: var(--fl-slider-inner); height: var(--fl-slider-inner);
   margin-top: calc((var(--fl-slider-track) - var(--fl-slider-inner)) / 2);
   border: 0; border-radius: var(--fl-slider-radius);
-  background: var(--fl-accent-fill);
+  background: var(--fl-slider-accent);
   box-shadow: 0 0 0 var(--fl-space-1) var(--fl-control-solid-fill); /* 外环 20px 近似 SliderOuterThumbBackground */
   transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard);
 }
-.fl-slider:hover::-webkit-slider-thumb  { transform: scale(1.167); } /* 14px */
-.fl-slider:active::-webkit-slider-thumb { transform: scale(0.833); } /* 10px */
+.fl-slider:not(:disabled):hover::-webkit-slider-thumb  { transform: scale(1.167); } /* 14px */
+.fl-slider:not(:disabled):active::-webkit-slider-thumb { transform: scale(0.833); } /* 10px */
 .fl-slider:focus-visible { outline: none; }
 .fl-slider:focus-visible::-webkit-slider-thumb {
   box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
               0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
+
+/* Firefox：填充段用原生的 ::-moz-range-progress，几何由引擎算，不需要渐变 */
 .fl-slider::-moz-range-track {
   height: var(--fl-slider-track);
   border-radius: calc(var(--fl-slider-track) / 2);
-  background: var(--fl-control-strong-fill);
+  background: var(--fl-slider-rest);
+}
+.fl-slider::-moz-range-progress {
+  height: var(--fl-slider-track);
+  border-radius: calc(var(--fl-slider-track) / 2);
+  background: var(--fl-slider-accent);
 }
 .fl-slider::-moz-range-thumb {
   width: var(--fl-slider-inner); height: var(--fl-slider-inner);
   border: 0; border-radius: var(--fl-slider-radius);
-  background: var(--fl-accent-fill);
+  background: var(--fl-slider-accent);
   transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard);
 }
-.fl-slider:hover::-moz-range-thumb  { transform: scale(1.167); }
-.fl-slider:active::-moz-range-thumb { transform: scale(0.833); }
+.fl-slider:not(:disabled):hover::-moz-range-thumb  { transform: scale(1.167); }
+.fl-slider:not(:disabled):active::-moz-range-thumb { transform: scale(0.833); }
+.fl-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+}
 
 /* ---- 表盘（连续型动效的宿主）：指针绕表盘圆心旋转 ----
    .fl-dial 定尺寸；.fl-dial-hand 从圆心向上画，transform-origin 落在自身底边 = 圆心；

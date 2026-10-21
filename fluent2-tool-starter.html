@@ -344,6 +344,9 @@
 
   /* 自绘 ComboBox：绑定页面上所有 .fl-combo（选择结果通过 fl-combo-change 事件回传） */
   M.combo.auto();
+  /* 滑块：把 value 折算成填充比例写进行内样式，轨道左侧才有 accent 已填充段
+     （motion.js 已自启一次，这里显式再调一遍是幂等的，示意作者该放在哪） */
+  M.slider.auto();
   if ($("combo-view")) {
     $("combo-view").addEventListener("fl-combo-change", function (e) {
       M.toast("视图切换为：" + e.detail.text);

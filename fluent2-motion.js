@@ -465,6 +465,38 @@
     }
   };
 
+  /* 滑块辅助：把当前值折算成 0..1 的 --fl-slider-pct，供轨道「已填充段」渐变使用
+     （纯 CSS 拿不到 range 的值；几何补偿在 CSS 侧，见 --fl-slider-fill）
+     键盘与 aria 全部交给原生 input[type=range]，这里不接管 */
+  function sliderSync(el) {
+    var min = parseFloat(el.min), max = parseFloat(el.max), val = parseFloat(el.value);
+    if (isNaN(min)) min = 0;
+    if (isNaN(max)) max = 100;
+    if (isNaN(val)) val = min;
+    var pct = max > min ? (val - min) / (max - min) : 0;
+    pct = pct < 0 ? 0 : (pct > 1 ? 1 : pct);
+    el.style.setProperty("--fl-slider-pct", pct);   // 不四舍五入：长轨道上 2 位小数会有 1px 级锯齿
+  }
+
+  M.slider = {
+    sync: sliderSync,
+    /* 幂等：重复调用不会重复绑事件 */
+    auto: function (scope) {
+      var nodes = (scope || document).querySelectorAll(".fl-slider");
+      var out = [];
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        out.push(el);
+        sliderSync(el);
+        if (el.getAttribute("data-fl-slider") === "ready") continue;
+        el.setAttribute("data-fl-slider", "ready");
+        el.addEventListener("input", function (e) { sliderSync(e.currentTarget); });
+        el.addEventListener("change", function (e) { sliderSync(e.currentTarget); });
+      }
+      return out;
+    }
+  };
+
   /* 浮层（flyout / contextmenu）：开 = point 入、关 = soft 出（官方 Consistent：同入口同方式开合）
      显隐与延迟隐藏由 .fl-overlay 的 transition（含 visibility 0s 延迟）承担，这里只切状态类 */
   function setOverlay(el, open) {
@@ -534,6 +566,16 @@
       (durationMs || 2000) + (REDUCED ? 0 : 83 + 80));
     return el;
   };
+
+  /* 自启：滑块的填充段依赖 --fl-slider-pct，缺省 0 会静默退回「整条轨道一个颜色」
+     → 这里按 readyState 兜一次（幂等，作者再手动调 M.slider.auto() 也不会重复绑事件）
+     动态插入的滑块仍需作者自己调 M.slider.auto(容器) */
+  function sliderBoot() { M.slider.auto(); }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", sliderBoot);
+  } else {
+    sliderBoot();
+  }
 
   global.M = M;
 })(window);

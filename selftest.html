@@ -123,8 +123,11 @@
           </div>
         </div>
         <div style="margin-top: var(--fl-space-3);">
-          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">Slider</span>
+          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">Slider（30 / 100 / 0 / 禁用）</span>
           <input class="fl-slider" id="sld" type="range" min="0" max="100" value="30" aria-label="Slider">
+          <input class="fl-slider" id="sld-100" type="range" min="0" max="100" value="100" aria-label="Slider 满值">
+          <input class="fl-slider" id="sld-0" type="range" min="0" max="100" value="0" aria-label="Slider 零值">
+          <input class="fl-slider" id="sld-dis" type="range" min="0" max="100" value="60" disabled aria-label="Slider 禁用">
         </div>
       </div>
 
@@ -187,6 +190,7 @@
   /* 半选演示 + 自绘 ComboBox */
   if ($("cb-c")) $("cb-c").indeterminate = true;
   M.combo.auto();
+  M.slider.auto();   // 滑块填充段依赖运行时写入的比例变量（motion.js 也会自启一次，幂等）
   /* 多选列表：点整行切换 */
   document.querySelectorAll("#list-multi .fl-listitem").forEach(function (item) {
     item.addEventListener("click", function () {

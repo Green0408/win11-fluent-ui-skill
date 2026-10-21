@@ -350,6 +350,9 @@ CONTROL_GEOMETRY_EXTRA = [
      "source": "KIT 自定（官方只给 ListViewItemMinHeight=40）：图标+主副两行文本的行高，4 的倍数，与 Win11 设置页实测观感一致"},
     {"key": "IconSize", "value": "20", "type": "Double",
      "source": "Fluent 图标族 16/20/24 三档的中档（列表项图标）；4 的倍数，与 raw/xaml_ListViewItem 里 MultiSelectCheckBox 的 20px 槽位一致"},
+    {"key": "SettingsRowHeight", "value": "56", "type": "Double",
+     "source": "实测派生（设置类应用录屏，2026-10-21）：图标 20 + 主 14/20 + 副 12/16 两行 + 上下各 2 padding ≈ 56；"
+               "行距实测 39 屏幕 px（渲染宽 1100 / 录制宽 2400，约合 56 CSS px），4 的倍数"},
 ]
 
 
@@ -535,6 +538,8 @@ def build():
                f' /* = -ListViewItemContentOffsetX（XAML 为 -40.5，负号表示内容右移；此处取正值使用） */')
     css.append(f'  --fl-list-item-height-two-line: {gx("ListItemHeightTwoLine", "64")}px; /* KIT 自定：图标+主副两行，官方未单列 */')
     css.append(f'  --fl-icon-size: {gx("IconSize", "20")}px; /* 列表项图标 20（Fluent 图标族 16/20/24 中档） */')
+    css.append(f'  --fl-settings-row-h: {gx("SettingsRowHeight", "56")}px;'
+               f' /* 设置行最小高（实测派生：图标 20 + 主副两行 + 上下各 2） */')
     css.append(f'  --fl-combo-min-width: {gx("ComboBoxThemeMinWidth", "64")}px; /* ComboBoxThemeMinWidth */')
     css.append(f'  --fl-combo-popup-min-width: {gx("ComboBoxPopupThemeMinWidth", "80")}px; /* ComboBoxPopupThemeMinWidth */')
     css.append(f'  --fl-combo-popup-stroke: {gx("ComboBoxPopupBorderThemeThickness", "2")}px; /* ComboBoxPopupBorderThemeThickness */')
@@ -712,6 +717,7 @@ def build():
              "ListViewItemMaxDropDownHeight": "下拉面板最大高（15 项一屏）",
              "CheckGlyphStrokeThickness": "勾号描边宽（ListViewItem CheckGlyph）",
              "ListItemHeightTwoLine": "两行列表项行高（KIT 自定）",
+             "SettingsRowHeight": "设置行最小高（实测派生）",
              "IconSize": "列表项图标尺寸"}
     for item in CONTROL_GEOMETRY:
         v, _t, s = getval(item["key"])

@@ -195,6 +195,7 @@
 | 勾号描边宽（ListViewItem CheckGlyph） | `2.5` | raw/xaml_ListViewItem_themeresources.xaml：CheckGlyph Path StrokeThickness=2.5（18.5x17 视箱，Stretch=Fill） |
 | 两行列表项行高（KIT 自定） | `64` | KIT 自定（官方只给 ListViewItemMinHeight=40）：图标+主副两行文本的行高，4 的倍数，与 Win11 设置页实测观感一致 |
 | 列表项图标尺寸 | `20` | Fluent 图标族 16/20/24 三档的中档（列表项图标）；4 的倍数，与 raw/xaml_ListViewItem 里 MultiSelectCheckBox 的 20px 槽位一致 |
+| 设置行最小高（实测派生） | `56` | 实测派生（设置类应用录屏，2026-10-21）：图标 20 + 主 14/20 + 副 12/16 两行 + 上下各 2 padding ≈ 56；行距实测 39 屏幕 px（渲染宽 1100 / 录制宽 2400，约合 56 CSS px），4 的倍数 |
 
 ## 断点与单位
 出处：<https://learn.microsoft.com/en-us/windows/apps/design/layout/screen-sizes-and-breakpoints-for-responsive-design>

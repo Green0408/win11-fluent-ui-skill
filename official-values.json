@@ -517,6 +517,11 @@
       "value": "20",
       "type": "Double",
       "source": "Fluent 图标族 16/20/24 三档的中档（列表项图标）；4 的倍数，与 raw/xaml_ListViewItem 里 MultiSelectCheckBox 的 20px 槽位一致"
+    },
+    "extra:SettingsRowHeight": {
+      "value": "56",
+      "type": "Double",
+      "source": "实测派生（设置类应用录屏，2026-10-21）：图标 20 + 主 14/20 + 副 12/16 两行 + 上下各 2 padding ≈ 56；行距实测 39 屏幕 px（渲染宽 1100 / 录制宽 2400，约合 56 CSS px），4 的倍数"
     }
   },
   "motion": {

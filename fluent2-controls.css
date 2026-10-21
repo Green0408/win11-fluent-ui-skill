@@ -484,6 +484,139 @@ body {
 /* ListViewItemDisabledThemeOpacity = 0.3 */
 .fl-listitem[aria-disabled="true"] { opacity: 0.3; cursor: default; }
 
+/* ---- 设置页列表（settings 模块）----
+   对齐 Win11 设置类应用的"组 → 行"造型（实测自 2026-10-21 录屏）：
+     · 组默认**不套卡片**，直接铺在页面底色上；只有需要分区时才 data-card
+     · 行 = 图标 20 + 主标题 + 副标题 + 右侧控件/数值/箭头，两行行高 56（--fl-settings-row-h）
+     · 行与行之间默认**没有分隔线**（录屏里语音包两行之间确实无线）；
+       需要分隔时写 data-divided，线会自动左缩到文字起点，与图标列对齐
+     · hover 是整行浅填充 + 圆角 4，不做"每行一个胶囊"（那是 ListViewItem 的形态，不是设置行） */
+.fl-settings { display: flex; flex-direction: column; gap: var(--fl-space-6); }
+
+.fl-settings-header {
+  margin: 0;
+  font-size: var(--fl-font-size-body);
+  line-height: var(--fl-line-body);
+  font-weight: var(--fl-weight-semibold);
+  color: var(--fl-text-primary);
+}
+/* 组说明：紧跟在 header 下面，说明这组设置是干什么的 */
+.fl-settings-desc {
+  margin: var(--fl-space-1) 0 0;
+  font-size: var(--fl-font-size-caption);
+  line-height: var(--fl-line-caption);
+  color: var(--fl-text-secondary);
+}
+
+.fl-settings-group { display: flex; flex-direction: column; }
+/* 可选卡片造型：Windows 11 23H2 之后部分页面用卡片分组 */
+.fl-settings-group[data-card] {
+  padding: var(--fl-space-1) 0;
+  background: var(--fl-card-bg);
+  border: var(--fl-stroke) solid var(--fl-card-stroke);
+  border-radius: var(--fl-radius-control);
+}
+
+.fl-settings-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--fl-space-3);
+  min-height: var(--fl-settings-row-h);
+  padding: var(--fl-space-1) var(--fl-space-3);
+  border-radius: var(--fl-radius-control);
+  /* 默认不可点（纯展示行）；可点行用 button / a / [tabindex] 自带 cursor */
+  transition: background var(--fl-dur-control-faster) var(--fl-ease-standard);
+}
+button.fl-settings-row, a.fl-settings-row, .fl-settings-row[tabindex] { cursor: pointer; }
+button.fl-settings-row, a.fl-settings-row {
+  width: 100%; border: 0; background: transparent; color: inherit;
+  font: inherit; text-align: left; text-decoration: none;
+}
+.fl-settings-row:hover { background: var(--fl-subtle-fill-hover); }
+.fl-settings-row:active { background: var(--fl-subtle-fill-pressed); }
+.fl-settings-row[aria-disabled="true"] { opacity: 0.3; cursor: default; }
+.fl-settings-row[aria-disabled="true"]:hover,
+.fl-settings-row[aria-disabled="true"]:active { background: transparent; }
+
+.fl-settings-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--fl-icon-size); height: var(--fl-icon-size); flex-shrink: 0;
+  color: var(--fl-text-secondary);
+}
+.fl-settings-icon > * { width: 100%; height: 100%; display: block; }
+
+.fl-settings-text { display: flex; flex-direction: column; min-width: 0; }
+.fl-settings-title {
+  font-size: var(--fl-font-size-body);
+  line-height: var(--fl-line-body);
+  color: var(--fl-text-primary);
+}
+.fl-settings-sub {
+  font-size: var(--fl-font-size-caption);
+  line-height: var(--fl-line-caption);
+  color: var(--fl-text-secondary);
+}
+.fl-settings-title,
+.fl-settings-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 单行档：没有副标题时行高回到 40（= ListViewItemMinHeight，视觉上更紧凑） */
+.fl-settings-row:not(:has(.fl-settings-sub)) { min-height: var(--fl-list-item-height); }
+
+.fl-settings-action {
+  display: inline-flex; align-items: center; gap: var(--fl-space-2);
+  color: var(--fl-text-secondary); flex-shrink: 0;
+}
+
+/* 分隔线：data-divided，左侧缩进到文字起点（行左 padding + 图标 20 + 列间距 12 = 44），
+   右侧与行右 padding 对齐；最后一行不再画 */
+.fl-settings-row[data-divided]::after {
+  content: ""; position: absolute; left: calc(var(--fl-space-3) + var(--fl-icon-size) + var(--fl-space-3));
+  right: var(--fl-space-3); bottom: 0; height: var(--fl-stroke);
+  background: var(--fl-divider-stroke);
+}
+.fl-settings-row[data-divided]:last-child::after { display: none; }
+/* 没有图标列时，缩进退回行内边距，线从文字左缘开始 */
+.fl-settings-row[data-divided]:not(:has(.fl-settings-icon))::after { left: var(--fl-space-3); }
+
+/* ---- 细滚动条（.fl-scroll）----
+   浏览器默认滚动条是 17px 带上下箭头的方块，在 Acrylic 弹层里非常出戏。
+   Win11 的做法是「细、圆头、无箭头、hover 变粗」：
+     · 命中区 12px，静止时只画 4px（靠 4px 透明 border + content-box 裁出）
+     · hover 时 border 收到 2px → 视觉 8px，颜色加深一档
+     · 永远透明轨道，不占视觉空间
+   ⚠ 关键坑：Chromium 116+ 里，只要元素上出现 `scrollbar-width` / `scrollbar-color` 的**非 auto** 值，
+     `::-webkit-scrollbar-*` 全部失效（标准属性优先）。所以两套写法必须互斥：
+       默认（Firefox）用标准属性；支持 webkit 伪元素的引擎里先把它们重置回 auto，再写伪元素样式。
+     写成"两套并存"的结果是 Chrome 里悄悄退化成原生样式，而且测不出报错。 */
+.fl-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fl-control-strong-fill) 55%, transparent) transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  .fl-scroll { scrollbar-width: auto; scrollbar-color: auto; }  /* 让位给下面的伪元素写法 */
+  .fl-scroll::-webkit-scrollbar { width: 12px; height: 12px; }
+  .fl-scroll::-webkit-scrollbar-track,
+  .fl-scroll::-webkit-scrollbar-corner { background: transparent; }
+  .fl-scroll::-webkit-scrollbar-button { display: none; }  /* 去掉上下箭头与双箭头 */
+  .fl-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--fl-control-strong-fill) 55%, transparent);
+    background-clip: content-box;
+    border: 4px solid transparent;      /* 4px 透明边框 → 视觉 4px */
+    border-radius: 999px;
+    min-height: 24px;
+  }
+  .fl-scroll:hover::-webkit-scrollbar-thumb,
+  .fl-scroll:focus-within::-webkit-scrollbar-thumb {
+    background: var(--fl-control-strong-fill);
+    border-width: 2px;                  /* hover 变粗到 8px */
+  }
+  .fl-scroll::-webkit-scrollbar-thumb:active {
+    background: var(--fl-control-strong-fill);
+    border-width: 0;
+  }
+}
+
 /* ---- ComboBox（自绘）----
    为什么自绘：原生 <select> 的 <option> 面板由操作系统绘制，暗色主题下会漏白底、
    且无法承载 hover/selected 状态与开合动画。`<select class="fl-select">` 仅作无 JS 回退保留。

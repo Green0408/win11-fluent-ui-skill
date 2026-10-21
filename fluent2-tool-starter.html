@@ -140,48 +140,133 @@
         </div>
       </div>
 
-      <!-- 模块：settings-panel —— 属性/设置面板（设置型工具用；与 list-detail 二选一或并存）
-           勾选框的勾是 SVG 描画（不是文本 ✓）：未选中时 stroke-dashoffset:1，选中时归 0 -->
-      <div class="fl-card" id="settings-panel" style="margin-top: var(--fl-space-3);">
-        <h3 class="fl-body-strong" style="margin:0 0 var(--fl-space-3);">面板设置</h3>
-        <div style="display:flex; flex-wrap:wrap; gap: var(--fl-space-4); align-items:center;">
-          <label class="fl-switch"><input type="checkbox" id="set-switch" checked><span class="fl-switch-track"></span><span class="fl-body">开关设置项</span></label>
-          <label class="fl-check"><input type="checkbox" id="set-check" checked>
-            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
-            <span class="fl-body">已勾选</span></label>
-          <label class="fl-check"><input type="checkbox" id="set-check-off">
-            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
-            <span class="fl-body">未勾选</span></label>
-          <label class="fl-check"><input type="checkbox" id="set-check-half">
-            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
-            <span class="fl-body">半选</span></label>
-          <label class="fl-check"><input type="checkbox" id="set-check-dis" disabled>
-            <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span>
-            <span class="fl-body">禁用</span></label>
-        </div>
-        <div style="display:flex; flex-wrap:wrap; gap: var(--fl-space-4); align-items:center; margin-top: var(--fl-space-3);">
-          <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-a" checked><span class="fl-box"></span><span class="fl-body">选项 A</span></label>
-          <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-b"><span class="fl-box"></span><span class="fl-body">选项 B</span></label>
-          <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-c" disabled><span class="fl-box"></span><span class="fl-body">选项 C（禁用）</span></label>
-        </div>
-        <div style="margin-top: var(--fl-space-3);">
-          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">下拉设置项</span>
-          <!-- 模块：combo —— 自绘 ComboBox（闭合态 + Acrylic 弹层 + 项状态 + 键盘）
-               没有 JS 时可退回 <select class="fl-select">（原生面板不可样式化，暗色会漏白） -->
-          <div class="fl-combo" id="combo-view" data-open="false">
-            <button class="fl-combo-btn" id="combo-view-btn" type="button"
-                    role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="combo-view-list">
-              <span class="fl-combo-value">列表</span>
-              <svg class="fl-combo-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5"/></svg>
+      <!-- 模块：settings —— 设置页列表造型（组标题 + 行：左图标/主副标题、右控件；行高 56）
+           造型要点：组默认不套卡片、行间默认无线；需要分隔线写 data-divided（会自动左缩到文字起点）。
+           行本身不可点时用 div；整行可点（跳转）时用 button.fl-settings-row，并保留 rol 语义。 -->
+      <div class="fl-settings" id="settings-panel" style="margin-top: var(--fl-space-6);">
+        <section>
+          <h3 class="fl-settings-header">显示</h3>
+          <p class="fl-settings-desc">这些设置只影响当前工具的界面，不改系统偏好。</p>
+          <div class="fl-settings-group">
+            <div class="fl-settings-row">
+              <span class="fl-settings-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+                  <circle cx="10" cy="10" r="4.2"/><path d="M10 1.6v2M10 16.4v2M1.6 10h2M16.4 10h2M4 4l1.4 1.4M14.6 14.6L16 16M16 4l-1.4 1.4M5.4 14.6L4 16"/>
+                </svg>
+              </span>
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">跟随系统主题</span>
+                <span class="fl-settings-sub">深浅色随系统切换，不单独记忆</span>
+              </span>
+              <span class="fl-settings-action">
+                <label class="fl-switch"><input type="checkbox" id="set-switch" checked aria-label="跟随系统主题"><span class="fl-switch-track"></span></label>
+              </span>
+            </div>
+
+            <div class="fl-settings-row" data-divided>
+              <span class="fl-settings-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+                  <rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M2.5 7.5h15M8 7.5v9"/>
+                </svg>
+              </span>
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">默认视图</span>
+                <span class="fl-settings-sub">新建条目时使用的布局</span>
+              </span>
+              <span class="fl-settings-action">
+                <!-- 模块：combo —— 自绘 ComboBox（闭合态 + Acrylic 弹层 + 项状态 + 键盘）
+                     没有 JS 时可退回 <select class="fl-select">（原生面板不可样式化，暗色会漏白） -->
+                <div class="fl-combo" id="combo-view" data-open="false">
+                  <button class="fl-combo-btn" id="combo-view-btn" type="button"
+                          role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="combo-view-list">
+                    <span class="fl-combo-value">列表</span>
+                    <svg class="fl-combo-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5"/></svg>
+                  </button>
+                  <!-- fl-scroll：细滚动条（12px 命中区 / 静止画 4px / hover 8px / 无箭头） -->
+                  <div class="fl-combo-popup fl-overlay fl-scroll" id="combo-view-list" role="listbox" tabindex="-1">
+                    <div class="fl-combo-item" role="option" id="combo-view-o1" aria-selected="true" data-value="列表">列表</div>
+                    <div class="fl-combo-item" role="option" id="combo-view-o2" aria-selected="false" data-value="网格">网格</div>
+                    <div class="fl-combo-item" role="option" id="combo-view-o3" aria-selected="false" data-value="紧凑">紧凑</div>
+                    <div class="fl-combo-item" role="option" id="combo-view-o4" aria-selected="false" aria-disabled="true" data-value="详情">详情（禁用）</div>
+                  </div>
+                </div>
+              </span>
+            </div>
+
+            <div class="fl-settings-row" data-divided>
+              <span class="fl-settings-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+                  <rect x="2.5" y="2.5" width="15" height="15" rx="2"/><path d="M2.5 2.5l15 15"/><circle cx="7" cy="7" r="1.4"/>
+                </svg>
+              </span>
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">显示缩略图</span>
+                <span class="fl-settings-sub">列表行左侧显示条目标题图</span>
+              </span>
+              <span class="fl-settings-action">
+                <label class="fl-check"><input type="checkbox" id="set-thumb" checked aria-label="显示缩略图">
+                  <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></label>
+              </span>
+            </div>
+
+            <!-- 整行可点：用 button 承载，尾部用 chevron 提示"可进入" -->
+            <button class="fl-settings-row" type="button" data-kind="drill" data-page="page-detail">
+              <span class="fl-settings-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+                  <circle cx="10" cy="10" r="7.5"/><path d="M10 13.5v1M10 6a2.2 2.2 0 0 1 .6 4.3c-.4.2-.6.5-.6.9v.3"/>
+                </svg>
+              </span>
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">关于本机</span>
+                <span class="fl-settings-sub">版本 1.0.0 · 查看详情页</span>
+              </span>
+              <span class="fl-settings-action"><span class="fl-list-chevron" aria-hidden="true"></span></span>
             </button>
-            <div class="fl-combo-popup fl-overlay" id="combo-view-list" role="listbox" tabindex="-1">
-              <div class="fl-combo-item" role="option" id="combo-view-o1" aria-selected="true" data-value="列表">列表</div>
-              <div class="fl-combo-item" role="option" id="combo-view-o2" aria-selected="false" data-value="网格">网格</div>
-              <div class="fl-combo-item" role="option" id="combo-view-o3" aria-selected="false" data-value="紧凑">紧凑</div>
-              <div class="fl-combo-item" role="option" id="combo-view-o4" aria-selected="false" aria-disabled="true" data-value="详情">详情（禁用）</div>
+          </div>
+        </section>
+
+        <section>
+          <h3 class="fl-settings-header">控件状态</h3>
+          <p class="fl-settings-desc">勾号是 SVG 描画（不是文本 ✓），半选由原生 indeterminate 驱动。</p>
+          <div class="fl-settings-group">
+            <div class="fl-settings-row" data-divided>
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">复选框四态</span>
+                <span class="fl-settings-sub">已勾选 / 未勾选 / 半选 / 禁用</span>
+              </span>
+              <span class="fl-settings-action" style="gap: var(--fl-space-3);">
+                <label class="fl-check"><input type="checkbox" id="set-check" checked aria-label="已勾选">
+                  <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></label>
+                <label class="fl-check"><input type="checkbox" id="set-check-off" aria-label="未勾选">
+                  <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></label>
+                <label class="fl-check"><input type="checkbox" id="set-check-half" aria-label="半选">
+                  <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></label>
+                <label class="fl-check"><input type="checkbox" id="set-check-dis" disabled aria-label="禁用">
+                  <span class="fl-box"><svg class="fl-check-glyph" viewBox="0 0 20 20" aria-hidden="true"><path class="fl-check-mark" d="M4.2 10.4 L8.1 14.3 L15.9 5.9" pathLength="1"/><path class="fl-check-dash" d="M5 10 H15" pathLength="1"/></svg></span></label>
+              </span>
+            </div>
+            <div class="fl-settings-row" data-divided>
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">密度</span>
+                <span class="fl-settings-sub">单选项组：舒适 / 紧凑 / 禁用</span>
+              </span>
+              <span class="fl-settings-action" style="gap: var(--fl-space-3);">
+                <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-a" checked aria-label="舒适"><span class="fl-box"></span></label>
+                <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-b" aria-label="紧凑"><span class="fl-box"></span></label>
+                <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-c" disabled aria-label="禁用"><span class="fl-box"></span></label>
+              </span>
+            </div>
+            <div class="fl-settings-row" data-divided aria-disabled="true">
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">禁用的设置行</span>
+                <span class="fl-settings-sub">整行 aria-disabled="true"，透明度 0.3 且不响应 hover</span>
+              </span>
+              <span class="fl-settings-action">
+                <label class="fl-switch"><input type="checkbox" disabled aria-label="禁用示例"><span class="fl-switch-track"></span></label>
+              </span>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </section>
 
@@ -209,12 +294,46 @@
     <!-- 页面：page-settings（设置型） -->
     <section class="fl-page" id="page-settings">
       <h2 class="fl-subtitle">设置</h2>
-      <div class="fl-card">
-        <label class="fl-switch"><input type="checkbox" id="pref-switch"><span class="fl-switch-track"></span><span class="fl-body">跟随系统主题</span></label>
-        <div style="margin-top: var(--fl-space-3);">
-          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">默认视图</span>
-          <select class="fl-select" id="pref-view"><option>列表</option><option>网格</option></select>
-        </div>
+      <!-- 设置页的"标准造型"：组标题 + 说明 + 若干行；行内左文本右控件，行高 56，组间留 24 -->
+      <div class="fl-settings" style="margin-top: var(--fl-space-4);">
+        <section>
+          <h3 class="fl-settings-header">外观</h3>
+          <div class="fl-settings-group">
+            <div class="fl-settings-row" data-divided>
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">跟随系统主题</span>
+                <span class="fl-settings-sub">关闭后可在标题栏右侧手动切换</span>
+              </span>
+              <span class="fl-settings-action">
+                <label class="fl-switch"><input type="checkbox" id="pref-switch" aria-label="跟随系统主题"><span class="fl-switch-track"></span></label>
+              </span>
+            </div>
+            <div class="fl-settings-row">
+              <span class="fl-settings-text">
+                <span class="fl-settings-title">默认视图</span>
+                <span class="fl-settings-sub">打开工具时使用的布局</span>
+              </span>
+              <span class="fl-settings-action">
+                <select class="fl-select" id="pref-view" aria-label="默认视图"><option>列表</option><option>网格</option></select>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h3 class="fl-settings-header">数据</h3>
+          <p class="fl-settings-desc">这些操作不可撤销，执行前会二次确认。</p>
+          <div class="fl-settings-group" data-card>
+            <button class="fl-settings-row" type="button">
+              <span class="fl-settings-text"><span class="fl-settings-title">导出为 JSON</span></span>
+              <span class="fl-settings-action"><span class="fl-list-chevron" aria-hidden="true"></span></span>
+            </button>
+            <button class="fl-settings-row" type="button" data-divided>
+              <span class="fl-settings-text"><span class="fl-settings-title">清空缓存</span></span>
+              <span class="fl-settings-action"><span class="fl-caption">12.4 MB</span></span>
+            </button>
+          </div>
+        </section>
       </div>
 
       <!-- 模块：continuous —— 连续型动效范例（线性/steps + infinite + 非 both；见 KIT 规则 16） -->

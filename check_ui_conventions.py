@@ -53,6 +53,7 @@ R42 应用外壳：body 锁高度、.fl-shell 有 min-height:0、内容层固定
 R43 滚动条悬停/拖动态：边框 2px 左右、必须写完整 border 简写 + background-clip（否则回弹成 12px 命中区）
 R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走省略号、JS 量宽用 offsetWidth 且做水平钳制
 R45 滚动条变粗只许 thumb 自身 hover：禁止把 :hover/:focus-within 挂在容器上（.fl-page:hover 恒真）
+R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::before、JS 必须有 reduced 分支
 """
 import re
 import sys
@@ -628,6 +629,28 @@ def main():
                 fails.append("R45 fluent2-controls.css: 滚动条变粗写成了容器 hover（" + sel.strip()[:60] + "），"
                              "应立即命中整个容器（.fl-page:hover 恒真）；要写在 thumb 上："
                              "::-webkit-scrollbar-thumb:hover")
+
+    # R46 侧栏选中指示条（NavigationView SelectionIndicator）
+    #     它是一条会移动的独立层，不是每项各画一条。三层缺一不可：
+    #     ① 容器要给定位基准；② 挂上层之后必须关掉每项的 ::before（否则同屏两条）；
+    #     ③ reduced-motion 下必须走静态落位分支（WAAPI 不受 CSS 的 animation:none 约束）。
+    if controls_css and ".fl-nav-ind" in controls_css:
+        nav_rule = re.search(r"\.fl-nav\s*\{([^}]*)\}", controls_css)
+        if not nav_rule or "position" not in nav_rule.group(1):
+            fails.append("R46 fluent2-controls.css: .fl-nav 必须 position: relative（指示条层靠它定位）")
+        if not re.search(r'\.fl-nav\[data-fl-indicator="on"\][^{]*::before', controls_css):
+            fails.append("R46 fluent2-controls.css: 缺 .fl-nav[data-fl-indicator=\"on\"] ... ::before { content: none }"
+                         "（不关掉每项的静态胶囊会看到两条）")
+        ind_rule = re.search(r"\.fl-nav-ind\s*\{([^}]*)\}", controls_css)
+        if ind_rule and re.search(r"transition\s*:[^;]*\b(top|height)", ind_rule.group(1)):
+            fails.append("R46 fluent2-controls.css: .fl-nav-ind 不许过渡 top/height（会逐帧 layout），"
+                         "位移与拉伸都走 transform")
+    if motion_js and "placeIndicator" in motion_js:
+        seg = motion_js[motion_js.index("function placeIndicator"):]
+        seg = seg[:seg.index("M.nav = M.nav")] if "M.nav = M.nav" in seg else seg[:4000]
+        if "REDUCED" not in seg:
+            fails.append("R46 fluent2-motion.js: placeIndicator 里必须有 REDUCED 分支"
+                         "（WAAPI 动画不受 CSS 的 reduced-motion 块约束）")
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

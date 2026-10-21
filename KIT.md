@@ -173,6 +173,31 @@
       只含 padding，两者直接比会差一圈边框，4 项短列表被永久压出 4px 溢出、凭空多一条滚动条；
     - `overscroll-behavior: contain`：滚到弹层尽头不要穿透到页面。
 
+26. **侧栏选中指示条（NavigationView SelectionIndicator）是一条会「拉伸移动」的独立层**，不是每项各画一条。
+    官方实现在 `microsoft-ui-xaml` 的 `NavigationView::PlayIndicatorAnimations`，参数照抄即可：
+
+| 项 | 官方值 |
+|---|---|
+| 几何 | 3 × 16，圆角 2，`AccentFillColorDefault`（`NavigationViewSelectionIndicatorWidth/Height/Radius`） |
+| 总时长 | **600ms** |
+| 缩放峰值 | 在 **33.3%（200ms）** 处达到 `|Δ| / 16 + 1`，即"刚好覆盖新旧两项" |
+| 位移 | 用 `singleStep`：前 200ms 不动，200ms 处跳到目标 |
+| 缩放中心 | 200ms 内从顶边切到底边 → 前半段往下长、后半段往上收 |
+| 缓动 | 拉伸 `cubic-bezier(0.9,0.1,1,0.2)`；收缩 `cubic-bezier(0.1,0.9,0.2,1)` |
+| 旧条 | 33.3% 之后淡出（600ms 内） |
+
+    用法：把 `.fl-nav` 里带 `aria-current="page"` 的项交给 `M.transitionTo()` 即可，
+    JS 会自动挂 `.fl-nav-ind` 层并维护 aria-current（首次进入走 `sync()` 静态落位）。
+
+    - **每项的 `::before` 必须关掉**：`.fl-nav[data-fl-indicator="on"] .fl-nav-item[aria-current="page"]::before { content: none }`
+      —— 不关就是同屏两条胶囊（校验器 R46 会拦）；
+    - **两层的分工**：`ghost` 停在旧位置往下长（origin 顶边），`pill` 落在新位置往上收（origin 底边），
+      两者在 0–200ms 完全重合所以看不出是两层；往上移动时两者的 origin 要对调；
+    - **别用 `delay` 藏首个关键帧**：WAAPI 在 delay 期间就会套用第一帧，`pill` 会从一开始就是拉伸态，
+      把 ghost 的生长阶段整个盖住（实测过，表现为"没有生长过程、直接跳"）；
+    - 位移与拉伸只走 `transform`，不要过渡 `top`/`height`；
+    - **WAAPI 不受 CSS 的 `prefers-reduced-motion` 块约束**，必须在 JS 里判 `REDUCED` 走静态落位（R46）。
+
 ## 官方关键数值速查（详见 official-values.md）
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。

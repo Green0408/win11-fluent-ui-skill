@@ -164,6 +164,81 @@ async function main() {
   check("点上方导航项 → 仍自下方进入（+shift-y，不允许反向）",
     /^var\(--fl-page-shift-y\)$/.test(up.fromY), JSON.stringify(up));
 
+  /* ---- 1.3) 侧栏选中指示条：首屏落位 / 换项时拉伸 / 只存在一条 ---- */
+  const indInit = await evaluate(`(function(){
+    var nav = document.querySelector(".fl-nav");
+    var items = nav.querySelectorAll(".fl-nav-item");
+    var pill = nav.querySelector('.fl-nav-ind[data-role="pill"]');
+    var cur = nav.querySelector('.fl-nav-item[aria-current="page"]');
+    if (!pill || !cur) return { missing: true };
+    var pr = pill.getBoundingClientRect(), cr = cur.getBoundingClientRect();
+    return {
+      on: nav.getAttribute("data-fl-indicator"),
+      pills: nav.querySelectorAll('.fl-nav-ind').length,
+      dh: +(Math.abs((pr.top + pr.height / 2) - (cr.top + cr.height / 2))).toFixed(1),
+      h: Math.round(pr.height),
+      beforeContent: getComputedStyle(cur, "::before").content
+    };
+  })()`);
+  check("指示条已挂载且只有一层（不是每项各一条）",
+    !indInit.missing && indInit.on === "on" && indInit.pills === 2, JSON.stringify(indInit));
+  check("首屏指示条对齐到当前项中心、高度 16",
+    Math.abs(indInit.dh) <= 1 && indInit.h === 16, JSON.stringify(indInit));
+  check("挂载后关掉了每项静态胶囊（::before 为 none）",
+    indInit.beforeContent === "none", String(indInit.beforeContent));
+
+  /* 点第 3 项：100ms 时应处于"拉伸"态（高度明显大于 16），700ms 后回到 16 并落到目标项 */
+  const indProbe = () => evaluate(`(function(){
+    var nav = document.querySelector(".fl-nav");
+    var pill = nav.querySelector('.fl-nav-ind[data-role="pill"]');
+    var ghost = nav.querySelector('.fl-nav-ind[data-role="ghost"]');
+    return { pillH: Math.round(pill.getBoundingClientRect().height),
+             ghostH: Math.round(ghost.getBoundingClientRect().height),
+             pillOp: +getComputedStyle(pill).opacity,
+             ghostOp: +getComputedStyle(ghost).opacity };
+  })()`);
+  await clickAt(await navBox(2));
+  await sleep(60);
+  const indEarly = await indProbe();
+  await sleep(100);
+  const indMid = await indProbe();
+  /* 拉伸段是 ease-in（0.9,0.1,1,0.2）——起手很慢，所以判据看"两帧之间在长"，
+     而不是某个固定时刻的绝对高度；pill 在 200ms 前必须还不可见，否则会盖住生长过程 */
+  check("换项途中指示条在拉伸（ghost 变高、pill 尚未显形）",
+    indMid.ghostH > indEarly.ghostH + 4 && indMid.ghostH >= 26 &&
+    indMid.pillOp < 0.2 && indMid.ghostOp > 0.8,
+    `${JSON.stringify(indEarly)} → ${JSON.stringify(indMid)}`);
+
+  await sleep(700);
+  const indEnd = await evaluate(`(function(){
+    var nav = document.querySelector(".fl-nav");
+    var pill = nav.querySelector('.fl-nav-ind[data-role="pill"]');
+    var cur = nav.querySelector('.fl-nav-item[aria-current="page"]');
+    var pr = pill.getBoundingClientRect(), cr = cur.getBoundingClientRect();
+    return { h: Math.round(pr.height), dh: +(Math.abs((pr.top + pr.height / 2) - (cr.top + cr.height / 2))).toFixed(1),
+             active: cur.textContent.trim() };
+  })()`);
+  check("指示条最终落到新项、恢复 16px",
+    indEnd.h === 16 && Math.abs(indEnd.dh) <= 1, JSON.stringify(indEnd));
+
+  /* reduced-motion：必须瞬间落位，且不产生 WAAPI 动画 */
+  await S("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+  await sleep(120);
+  await clickAt(await navBox(0));
+  await sleep(90);
+  const indReduced = await evaluate(`(function(){
+    var nav = document.querySelector(".fl-nav");
+    var pill = nav.querySelector('.fl-nav-ind[data-role="pill"]');
+    var cur = nav.querySelector('.fl-nav-item[aria-current="page"]');
+    var pr = pill.getBoundingClientRect(), cr = cur.getBoundingClientRect();
+    return { anims: pill.getAnimations().length, h: Math.round(pr.height),
+             dh: +(Math.abs((pr.top + pr.height / 2) - (cr.top + cr.height / 2))).toFixed(1) };
+  })()`);
+  check("reduced-motion 下指示条瞬时落位、不起动画",
+    indReduced.anims === 0 && indReduced.h === 16 && Math.abs(indReduced.dh) <= 1, JSON.stringify(indReduced));
+  await S("Emulation.setEmulatedMedia", { features: [] });
+  await sleep(120);
+
   /* ---- 1.4) 行程必须是「看得见的一段路」：解析两个位移 token 的真实像素 ----
      太小（<160px）在宽内容区上几乎看不出滑动；太大（>360px）会像整页飞出去。
      这里用临时元素把 var 解析成 matrix，避免依赖内部实现。 */

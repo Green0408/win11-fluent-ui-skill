@@ -94,6 +94,14 @@ BAD_CASES = {
     "R40": ("fluent2-controls.css",
             "  min-height: var(--fl-settings-row-h);",
             "  min-height: 56px;"),
+    # 指示条挂上了独立层，但没关掉每项的 ::before → 同屏两条胶囊
+    "R46a": ("fluent2-controls.css",
+             '.fl-nav[data-fl-indicator="on"] .fl-nav-item[aria-current="page"]::before { content: none; }',
+             '/* removed */'),
+    # 容器没有定位基准 → 指示条会相对更外层定位
+    "R46b": ("fluent2-controls.css",
+             "  position: relative;          /* 指示条层的定位基准（.fl-nav-ind 的 offsetParent） */",
+             ""),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
     "R43a": ("fluent2-controls.css",

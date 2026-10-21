@@ -22,6 +22,7 @@
 | 列表（分组线） | `.fl-list-sep`（1px，上下各 4px；独立兄弟元素，不被行背景覆盖） | XAML NavigationViewItemSeparatorHeight + DividerStrokeColorDefault |
 | 卡片 | `.fl-card`（圆角 8、elevation 8、`--fl-card-bg/stroke`） | XAML Card* + layering Card=8 |
 | 应用外壳（布局） | `.fl-shell` + `.fl-content-layer` + `.fl-page`：左导航固定、内容区独立滚动；每页各自滚（切页记住位置） | web-app-shell 常见做法（KIT 规则 24）；Win11 视觉依据见 navigation-basics |
+| 左导航（选中指示条） | `.fl-nav-ind`（JS 自动挂；`M.nav.indicator.to/sync`，`M.transitionTo` 已接线） | XAML NavigationViewSelectionIndicator* + `NavigationView::PlayIndicatorAnimations`（600ms / 33.3% / 两条 bezier） |
 | 左导航 | `.fl-nav` + `.fl-nav-item`（项高 36、圆角 2、选中=subtle 填充 + 3×16 accent 胶囊） | XAML NavigationViewItemOnLeftMinHeight / SelectionIndicatorWidth/Height/Radius |
 | 通知条 | `.fl-infobar[data-severity=success/caution/critical]`（`--fl-success/caution/critical`） | XAML SystemFillColor* |
 | flyout / 右键菜单 | `.fl-flyout.fl-overlay`（Acrylic 近似 + 圆角 8 + 阴影 e32） | materials + geometry + layering Flyout=32 |

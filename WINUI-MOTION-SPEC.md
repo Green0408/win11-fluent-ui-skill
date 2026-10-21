@@ -155,3 +155,19 @@
 点击「播放一次」双侧同步；带 1/4 慢放、实时行程读数、以及两条曲线的解析进度表。
 `tests/` 下还有定格脚本思路：用 `document.getAnimations()` 暂停后设 `currentTime`，可抓任意时刻的确定帧。
 
+---
+
+## 8. 侧栏选中指示条（源码级规范）
+
+`microsoft-ui-xaml` → `controls/dev/NavigationView/NavigationView.cpp` → `PlayIndicatorAnimations()`：
+
+| 关键帧 | 值 |
+|---|---|
+| posAnim | 0% = from；33.3% = to（`singleStep`：前段不动，到点直接跳） |
+| scaleAnim | 0% = 1；33.3% = `|to-from|/dimension + 1`；100% = 1 |
+| centerAnim | 0% = 0；100% = dimension（200ms，`singleStep` → 缩放中心在 200ms 处切边） |
+| duration | 600ms（opacity 同） |
+| easing | 拉伸 `cubic-bezier(0.9,0.1,1,0.2)`；收缩 `cubic-bezier(0.1,0.9,0.2,1)` |
+
+模板实现见 KIT 规则 26；录屏实测见 `VIDEO-ALIGN.md` §12（拉伸峰值 = 16 + 行距，与公式一致）。
+

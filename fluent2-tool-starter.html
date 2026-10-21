@@ -178,11 +178,15 @@
     });
   });
 
-  /* 二级下钻：内容区入口 → drill（水平 176px）；返回按钮 → M.back（方向取反） */
+  /* 二级下钻：内容区入口 → drill（默认水平 176px）；返回按钮 → M.back（方向取反）
+     data-dir 可选：写 up/down/left/right 可覆盖入场方位（不写则由页面栈推断） */
   document.querySelectorAll("[data-kind='drill'][data-page]").forEach(function (b) {
     b.addEventListener("click", function (e) {
       e.preventDefault();
-      M.transitionTo(b.getAttribute("data-page"), { kind: "drill" });
+      M.transitionTo(b.getAttribute("data-page"), {
+        kind: "drill",
+        dir: b.getAttribute("data-dir") || undefined
+      });
     });
   });
   if ($("btn-back")) $("btn-back").addEventListener("click", function () { M.back("drill"); });

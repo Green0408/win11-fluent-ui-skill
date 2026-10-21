@@ -58,16 +58,50 @@
     }
   }
 
-  /* 写入本轮的入/出方向：入页起点 = from，出页终点 = 反号 */
-  function applyShift(inEl, outEl, kind, dir) {
-    var axis = kind === "drill" ? "x" : "y";
-    var mag = kind === "drill" ? "var(--fl-page-shift-drill)" : "var(--fl-page-shift-nav)";
-    var sign = dir === "back" ? -1 : 1;
-    var v = "calc(" + mag + " * " + sign + ")";
-    var neg = "calc(" + mag + " * " + (sign * -1) + ")";
+  /* ---- 转场方向 -------------------------------------------------------------
+     dir 的语义 = **新页的入场起点方位**（不是运动方向）：
+       up    → 起点在上方（-72px），向下落到 0
+       down  → 起点在下方（+72px），向上落到 0
+       left  → 起点在左侧（-176px）
+       right → 起点在右侧（+176px）
+     forward / back 是逻辑方向，按轴映射（drill→right/left，nav→down/up），
+     与本文件旧调用点、M.back() 完全兼容。
+     轴由方向决定，行程由轴决定，kind 只提供缺省轴 —— 所以 {dir:"up"} 不带 kind 也能用，
+     而 {kind:"drill", dir:"up"} 表示"水平场景下改走垂直"，见 KIT 规则 15。 */
+  var DIR = {
+    forward: { axis: null, sign: 1 },
+    back:    { axis: null, sign: -1 },
+    up:      { axis: "y",  sign: -1 },
+    down:    { axis: "y",  sign: 1 },
+    left:    { axis: "x",  sign: -1 },
+    right:   { axis: "x",  sign: 1 }
+  };
+  var DIR_NAMES = ["forward", "back", "up", "down", "left", "right"];
+
+  function axisOfKind(kind) { return kind === "drill" ? "x" : "y"; }
+
+  /* dir → {axis, sign}；非法值返回 null，由调用方退化 —— 绝不静默当成 forward
+     （旧实现只判 dir === "back"，其余一律 +1，导致竖向永远"从下方进入"且 dir:'top' 无报错） */
+  function shiftOf(kind, dir) {
+    var d = DIR[dir];
+    if (!d) return null;
+    return { axis: d.axis || axisOfKind(kind), sign: d.sign };
+  }
+
+  function shiftVar(axis) {
+    return axis === "x" ? "var(--fl-page-shift-x)" : "var(--fl-page-shift-y)";
+  }
+
+  /* 写入本轮的入/出方向：入页起点 = +sign*mag，出页终点 = -sign*mag
+     只接受 axis / sign，不再感知 kind / dir —— "方向只有一种符号"这类缺陷因此在结构上无法复现 */
+  function applyShift(inEl, outEl, axis, sign) {
+    var mag = shiftVar(axis);
+    var pos = mag, neg = "calc(" + mag + " * -1)";
+    var inV = sign > 0 ? pos : neg;
+    var outV = sign > 0 ? neg : pos;
     var zero = "0px";
-    var inX = axis === "x" ? v : zero, inY = axis === "y" ? v : zero;
-    var outX = axis === "x" ? neg : zero, outY = axis === "y" ? neg : zero;
+    var inX = axis === "x" ? inV : zero, inY = axis === "y" ? inV : zero;
+    var outX = axis === "x" ? outV : zero, outY = axis === "y" ? outV : zero;
     if (inEl) {
       inEl.style.setProperty("--fl-page-from-x", inX);
       inEl.style.setProperty("--fl-page-from-y", inY);
@@ -76,6 +110,47 @@
       outEl.style.setProperty("--fl-page-to-x", outX);
       outEl.style.setProperty("--fl-page-to-y", outY);
     }
+  }
+
+  /* 导航项在侧栏中的先后序：给竖向转场定符号（点更靠上的项 → 新页自上方进入） */
+  function navOrder() {
+    var els = document.querySelectorAll(".fl-nav-item[data-page]");
+    var map = {}, i;
+    for (i = 0; i < els.length; i++) map[els[i].getAttribute("data-page")] = i;
+    return map;
+  }
+
+  function has(map, key) {
+    return key != null && Object.prototype.hasOwnProperty.call(map, key);
+  }
+
+  /* 方向解析，四级退化：显式 dir → 导航项先后序 → 页面栈（目标是上一页=back）→ 缺省 forward
+     返回 {axis, sign, dir, isBack}；isBack 只决定页面栈语义，与物理方向彻底解耦 */
+  function resolveShift(kind, explicit, pageId, curId) {
+    var s = explicit ? shiftOf(kind, explicit) : null;
+    if (explicit && !s && global.console && global.console.warn) {
+      global.console.warn('[M.transitionTo] 未知方向 dir="' + explicit + '"，可选 ' +
+        DIR_NAMES.join(" / ") + "；已回退为自动推断");
+    }
+    var backByStack = pageStack.length >= 2 && pageStack[pageStack.length - 2] === pageId;
+    if (s) {
+      return { axis: s.axis, sign: s.sign, dir: explicit,
+               isBack: explicit === "back" || backByStack };
+    }
+    if (kind === "nav") {
+      var order = navOrder();
+      if (has(order, pageId) && has(order, curId) && order[pageId] !== order[curId]) {
+        var d = order[pageId] < order[curId] ? "up" : "down"; // 点靠上的项 → 自上方进入
+        s = shiftOf(kind, d);
+        return { axis: s.axis, sign: s.sign, dir: d, isBack: false };
+      }
+    }
+    if (backByStack) {
+      s = shiftOf(kind, "back");
+      return { axis: s.axis, sign: s.sign, dir: "back", isBack: true };
+    }
+    s = shiftOf(kind, "forward");
+    return { axis: s.axis, sign: s.sign, dir: "forward", isBack: false };
   }
 
   /* 主题切换：dark | light（tokens.css 以 [data-theme] 承载双主题） */
@@ -88,11 +163,14 @@
     return cur;
   };
 
-  /* 页面转场：两轴 × 两向（实测派生 283ms；drill 水平 176px / nav 垂直 72px）
+  /* 页面转场：两轴 × 四向（实测派生 283ms；drill 水平 176px / nav 垂直 72px）
      kind: "nav"（一级导航，点侧栏）| "drill"（二级下钻，点内容区入口）
-     dir : "forward" | "back"；缺省按页面栈推断（目标是栈中倒数第二页 → back）
+     dir : "forward" | "back" | "up" | "down" | "left" | "right"
+           缺省时按「导航项先后序 → 页面栈」自动推断（点上面那条 → 内容从上方进入）
      两页由 CSS 放在同一网格单元里重叠（不上下堆叠），转场期锁内容区高度，全程无布局跳变。
-     用法：M.transitionTo("page-detail", { kind: "drill" }) / M.back("drill") */
+     用法：M.transitionTo("page-detail", { kind: "drill" })
+           M.transitionTo("page-b")                        // nav + 自动定符号
+           M.transitionTo("page-x", { dir: "up" })          // 显式指定入场方位 */
   M.transitionTo = function (pageId, opts) {
     var next = document.getElementById(pageId);
     if (!next) return null;
@@ -105,18 +183,17 @@
     var gen = ++pageGen;
 
     if (!pageStack.length && cur && cur.id) pageStack = [cur.id];
-    var dir = opts.dir ||
-      (pageStack.length >= 2 && pageStack[pageStack.length - 2] === pageId ? "back" : "forward");
+    var shift = resolveShift(kind, opts.dir, pageId, cur ? cur.id : null);
 
     settlePages();                 // 先清上一轮残留（含位移变量），否则连点时符号会串
-    applyShift(next, cur, kind, dir);
+    applyShift(next, cur, shift.axis, shift.sign);
     void next.offsetWidth;         // 单次 reflow：让「移除类 → 添加类」真实发生，动画才会重播
 
     if (REDUCED) {                 // 无障碍：瞬时切换，不做位移与淡入淡出
       if (cur) cur.classList.remove("fl-current");
       if (host) host.style.minHeight = "";
       next.classList.add("fl-current");
-      recordStack(pageId, dir);
+      recordStack(pageId, shift.isBack);
       M.stagger(next);
       return next;
     }
@@ -130,7 +207,7 @@
       host.style.minHeight = Math.max(cur ? cur.offsetHeight : 0, next.offsetHeight) + "px";
     }
     M.stagger(next); // 入场页的元素分批入场与页面入场同步启动（否则隐藏页里的 .fl-entrance 永不显形）
-    recordStack(pageId, dir);
+    recordStack(pageId, shift.isBack);
 
     onAnimEnd(cur, gen, PAGE_MS, function () {
       if (cur) cur.classList.remove("fl-page-leaving", "fl-page-out");
@@ -142,9 +219,11 @@
     return next;
   };
 
-  /* 页面栈：forward 入栈；back 截断到目标页（配合 dir 缺省推断） */
-  function recordStack(pageId, dir) {
-    if (dir === "back") {
+  /* 页面栈：isBack 为真才截断到目标页（配合方向缺省推断）
+     注意 isBack 只看「目标是不是上一页」，与位移方向无关 —— up/down 一律是 forward 语义，
+     否则「点侧栏里更上面的一项」会被误判成返回，A→C→B 之后 M.back() 会跳到 A */
+  function recordStack(pageId, isBack) {
+    if (isBack) {
       var i = pageStack.lastIndexOf(pageId);
       pageStack = i >= 0 ? pageStack.slice(0, i + 1) : pageStack.concat([pageId]);
     } else if (pageStack[pageStack.length - 1] !== pageId) {

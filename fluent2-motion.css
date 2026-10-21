@@ -65,11 +65,13 @@
 }
 .fl-strong-entrance { animation: fl-strong-entrance-kf 667ms var(--fl-ease-strong-1) both; }
 
-/* ---- 页面转场：一套 keyframe 覆盖「两轴 × 两向」（实测派生 283ms / 176-72px）----
+/* ---- 页面转场：一套 keyframe 覆盖「两轴 × 四向」（实测派生 283ms / 176-72px）----
    轴与方向由 JS 写入 4 个带符号的自定义属性（单位 px），keyframe 内不写位移字面量（校验器 R20）：
-     --fl-page-from-x / -from-y  新页起点偏移
+     --fl-page-from-x / -from-y  新页起点偏移（负值 = 从左侧/上方进入）
      --fl-page-to-x   / -to-y    旧页终点偏移
-   二级下钻 drill：x 轴 ±var(--fl-page-shift-drill)；一级导航 nav：y 轴 ±var(--fl-page-shift-nav)
+   行程按轴取：x 轴 var(--fl-page-shift-x)=176px、y 轴 var(--fl-page-shift-y)=72px；
+   方向取六个值之一（forward / back / up / down / left / right），由 motion.js 的 DIR 表解析成符号，
+   缺省按「导航项先后序 → 页面栈」推断 —— 点侧栏更上面的一项即自上方进入（详见 KIT 规则 15）。
    位移与淡入拆成两条 animation：位移走 --fl-dur-page + --fl-ease-page（对称加减速），
    淡入淡出走 83ms + linear —— 对上录屏「内容 ≈83ms 内换掉、其余时间只有位移」的观测。 */
 .fl-page-in {

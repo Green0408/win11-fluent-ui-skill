@@ -158,10 +158,22 @@ async function main() {
   check("drill 第 1 拍：新页还没出现（opacity 0），旧页仍在",
     beat && beat.inOp === 0 && beat.outBg === "rgba(0, 0, 0, 0)",
     JSON.stringify(beat));
-  check("drill 入页有 83ms 延迟（等旧页退场完再进来）",
+  check("drill 入页有 167ms 延迟（= 旧页退场时长，两拍首尾相接）",
     beat && parseFloat(beat.inDelay) > 0, beat && beat.inDelay);
 
-  await sleep(120);
+  /* 第 1 拍内（≈100ms）：旧页必须在动且在淡出 —— 起手就顿住是「卡顿」的直接来源 */
+  await sleep(100);
+  const moving = await evaluate(`(function(){
+    var out = document.querySelector(".fl-page.fl-page-leaving");
+    if (!out) return null;
+    return { x: +out.getBoundingClientRect().left.toFixed(1),
+             op: +getComputedStyle(out).opacity };
+  })()`);
+  check("drill 第 1 拍：≈100ms 时旧页已在移动且正在淡出（不许起手顿住）",
+    moving && moving.x <= 254 && moving.op > 0.2 && moving.op < 0.9,
+    JSON.stringify(moving));
+
+  await sleep(140);
   const beat2 = await evaluate(`(function(){
     var inn = document.querySelector(".fl-page.fl-page-in");
     var out = document.querySelector(".fl-page.fl-page-leaving");
@@ -169,7 +181,7 @@ async function main() {
     return { outGone: !out, inOp: +getComputedStyle(inn).opacity,
              inX: +inn.getBoundingClientRect().left.toFixed(1) };
   })()`);
-  check("drill 第 2 拍：≈120ms 时旧页已退场、新页已在滑（尚未落位）",
+  check("drill 第 2 拍：≈240ms 时旧页已退场、新页已在滑（尚未落位）",
     beat2 && beat2.outGone === true && beat2.inOp > 0.2 && beat2.inX > 260,
     JSON.stringify(beat2));
   await sleep(450);

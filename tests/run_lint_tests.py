@@ -96,7 +96,7 @@ BAD_CASES = {
             "  min-height: 56px;"),
     # 去掉入页延迟 → 两页同时进出，会重影
     "R41": ("fluent2-motion.css",
-            "  animation-delay: var(--fl-dur-fast);",
+            "  animation-delay: var(--fl-dur-normal);",
             ""),
 }
 

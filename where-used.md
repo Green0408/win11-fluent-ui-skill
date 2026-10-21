@@ -12,7 +12,7 @@
 | 下拉（首选） | `.fl-combo`（闭合态 32/箭头 12、Acrylic 弹层 radius 8/描边 2/最大高 504、项 32+胶囊 1.5、`M.combo.auto()` 接键盘） | XAML ComboBox_themeresources（ComboBoxThemeMinWidth / PopupBorderThemeThickness / ItemCornerRadius / MaxDropDownHeight） |
 | 下拉（无 JS 回退） | `.fl-select`（原生 `<select>` 套 TextBox 外观；面板由 OS 绘制，暗色会漏白） | 同上 |
 | 开关 | `.fl-switch`（轨道 40×20、旋钮 12、开态位移 20px、hover 14 / pressed 17） | XAML ToggleSwitch（KnobTranslateTransform X=20、SplineDoubleKeyFrame 14/17） |
-| 滑块 | `.fl-slider`（轨道 4、内圆 12、圆角 10；hover 1.167 / pressed 0.833，250ms） | XAML Slider（SliderTrackThemeHeight / SliderInnerThumbWidth / SliderThumbCornerRadius） |
+| 滑块 | `.fl-slider`（轨道 4、内圆 12、圆角 10；hover 1.167 / pressed 0.833，250ms；左段 accent 已填充段 + thumb 同步四档色；`M.slider.auto()` 写入 `--fl-slider-pct`） | XAML Slider（SliderTrackThemeHeight / SliderInnerThumbWidth / SliderThumbCornerRadius / SliderTrackFill / **SliderTrackValueFill** / SliderThumbBackground 的 PointerOver·Pressed·Disabled 四档） |
 | 复选/单选 | `.fl-check` / `.fl-radio`（20×20、圆角 4、描边 1；勾号为 SVG 描画 12px/描边 2.5、167ms；单选内点 12 + hover 1.167/pressed 0.833；含半选/禁用） | XAML CheckBoxSize/GlyphSize/BorderThickness + RadioButtonCheckGlyphSize + ListViewItem CheckGlyph StrokeThickness |
 | 列表（结构） | `.fl-list` + `.fl-listitem` + `.fl-list-content`（勾选列 + 图标 20 + 主副标题 + 尾部区域；行高 40/64 两档；`minmax(0,1fr)` 保省略号） | XAML ListViewItemMinHeight/MinWidth/CornerRadius |
 | 列表（状态） | 六档：rest / hover / pressed / selected / selected+hover / selected+pressed（后者比前者更淡，官方反色档）；选中条 3×16 圆角 1.5；禁用 0.3 | XAML ListViewItemPresenter 六组 Background brush + SelectionIndicatorCornerRadius |

@@ -56,6 +56,8 @@ async function main() {
   const userDir = fs.mkdtempSync(path.join(os.tmpdir(), "cdp-profile-"));
   const chrome = spawn(CHROME, [
     "--headless=new", "--disable-gpu", "--hide-scrollbars", "--mute-audio",
+    /* file:// 下每个文件都是 opaque origin，不加这个标志读不到 CSSStyleSheet.cssRules */
+    "--allow-file-access-from-files",
     `--remote-debugging-port=${PORT}`, `--user-data-dir=${userDir}`,
     "--window-size=1100,900", "--force-device-scale-factor=2", "about:blank",
   ], { stdio: "ignore" });
@@ -208,7 +210,95 @@ async function main() {
   })()`);
   check("勾号是 <svg> 且带 dash 过渡", glyph.tag.toLowerCase() === "svg" && glyph.dash !== "none", JSON.stringify(glyph));
 
-  /* ---- 5) reduced-motion 下终态正确 ---- */
+  /* ---- 5) 滑块已填充段：--fl-slider-pct 跟随值、轨道是双段渐变、hover/pressed/禁用四档配色 ---- */
+  await clickAt(await navBox(2));   // 滑块在设置页
+  await sleep(420);
+  const sl = await evaluate(`(function(){
+    var el = document.getElementById("set-slider");
+    function pct() { return getComputedStyle(el).getPropertyValue("--fl-slider-pct").trim(); }
+    function set(v) { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); }
+    var out = {};
+    set(0);   out.p0   = pct();
+    set(40);  out.p40  = pct();
+    out.fill40 = getComputedStyle(el).getPropertyValue("--fl-slider-fill").replace(/\\s+/g, " ").trim();
+    set(100); out.p100 = pct();
+    var track = [];
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var rules = document.styleSheets[i].cssRules || [];
+      for (var j = 0; j < rules.length; j++) {
+        var r = rules[j];
+        if (r.selectorText && r.selectorText.indexOf("::-webkit-slider-runnable-track") >= 0 &&
+            r.style && r.style.backgroundImage) track.push(r.style.backgroundImage);
+      }
+    }
+    out.track = track;
+    set(40);
+    return out;
+  })()`);
+  const trackAll = (sl.track || []).join(" ");
+  check("滑块 pct 跟随值（0/40/100 → 0/0.4/1）",
+    sl.p0 === "0" && sl.p40 === "0.4" && sl.p100 === "1", JSON.stringify([sl.p0, sl.p40, sl.p100]));
+  check("轨道是双段渐变，且 LTR/RTL 两个方向都在（不是整条单色）",
+    /to right/.test(trackAll) && /to left/.test(trackAll) && /var\(--fl-slider-fill\)/.test(trackAll),
+    String(trackAll).replace(/\s+/g, " ").slice(0, 80));
+  check("填充宽走半 thumb 补偿 calc（含 100% 与 thumb 宽）",
+    /100%/.test(sl.fill40) && /12px/.test(sl.fill40), sl.fill40);
+
+  /* 像素判不出「填充宽到底多宽」（被 4px 外环遮住），所以在这里读渐变解析后的 px 停点：
+     把同一条 calc 挂到一个等宽探针 div 上，浏览器会把 var() 代进去并算出 px。 */
+  const probe = await evaluate(`(function(){
+    var src = document.getElementById("set-slider");
+    var w = src.getBoundingClientRect().width;
+    var wrap = document.createElement("div");
+    wrap.className = "fl-slider";
+    wrap.style.cssText = "--fl-slider-pct:0.3;display:block;height:4px;width:" + w + "px";
+    var inner = document.createElement("div");
+    /* 把同一个 calc 当成宽度用，浏览器会把它算成 px（放在 background 停点里只会剩 calc(30% + 2.4px)） */
+    inner.style.cssText = "width:var(--fl-slider-fill);height:1px";
+    wrap.appendChild(inner);
+    document.body.appendChild(wrap);
+    var fw = inner.getBoundingClientRect().width;
+    var pct = getComputedStyle(inner).getPropertyValue("--fl-slider-pct").trim();
+    wrap.remove();
+    return { w: w, fill: fw, pct: pct };
+  })()`);
+  const want = 6 + 0.3 * (probe.w - 12);
+  check("填充宽 = 半 thumb + 0.3×(轨道宽-12)（实测解析后的宽度）",
+    Math.abs(probe.fill - want) <= 0.6,
+    `实测=${probe.fill.toFixed(1)} 期望=${want.toFixed(1)} 轨道宽=${probe.w} pct=${probe.pct}`);
+
+  const sb = await evaluate(`(function(){
+    var r = document.getElementById("set-slider").getBoundingClientRect();
+    return { x: r.left + r.width * 0.5, y: r.top + r.height / 2 };
+  })()`);
+  const accent = () => evaluate(`getComputedStyle(document.getElementById("set-slider")).getPropertyValue("--fl-slider-accent").trim()`);
+  const restAccent = await accent();
+  await mouse("mouseMoved", sb.x, sb.y);
+  await sleep(140);
+  const hoverAccent = await accent();
+  await mouse("mousePressed", sb.x, sb.y, "left");
+  await sleep(140);
+  const pressAccent = await accent();
+  await mouse("mouseReleased", sb.x, sb.y, "left");
+  await mouse("mouseMoved", 5, 5);
+  await sleep(340);
+  check("滑块填充段 hover/pressed 逐档变色（Default→Secondary→Tertiary）",
+    restAccent !== hoverAccent && hoverAccent !== pressAccent && restAccent !== pressAccent,
+    [restAccent, hoverAccent, pressAccent].join(" / "));
+  await shot("x5-slider");
+
+  const dis = await evaluate(`(function(){
+    var el = document.getElementById("set-slider");
+    el.disabled = true;
+    var cs = getComputedStyle(el);
+    var out = { accent: cs.getPropertyValue("--fl-slider-accent").trim(),
+                rest: cs.getPropertyValue("--fl-slider-rest").trim() };
+    el.disabled = false;
+    return out;
+  })()`);
+  check("滑块禁用改用 Disabled 档配色", dis.accent !== restAccent && !!dis.rest, JSON.stringify(dis));
+
+  /* ---- 6) reduced-motion 下终态正确 ---- */
   await S("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
   await sleep(200);
   const rm = await evaluate(`(function(){

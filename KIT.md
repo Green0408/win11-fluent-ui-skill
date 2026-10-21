@@ -11,7 +11,7 @@
 | `fluent2-tokens.css` | 全部 `--fl-*` 官方变量（颜色暗/亮双主题、动效时长/缓动、圆角、间距、阴影）。脚本生成，勿手改 |
 | `fluent2-controls.css` | 控件样式：按钮/输入/**列表（六档 + 行结构 + 多选列）**/**勾选·单选（SVG 勾号）**/**自绘 ComboBox**/开关/卡片/导航/浮层/对话框/InfoBar/字阶类 |
 | `fluent2-motion.css` | 动效类：fl-entrance / fl-point-to-point / fl-exit / **fl-page-in / fl-page-out（页面转场两轴四向）** / fl-fade / fl-strong-entrance / **fl-continuous / fl-tick（连续型）** / fl-overlay / fl-smoke（一次性动效用 animation，状态切换用 transition） |
-| `fluent2-motion.js` | 编排 API：`M.transitionTo(id,{kind,dir})` / `M.back(kind)` / `M.stack()` / `M.stagger()` / **`M.combo.init/auto`** / **`M.list.multiselect/syncParent`** / `M.flyout` / `M.dialog` / `M.toast` / `M.theme` |
+| `fluent2-motion.js` | 编排 API：`M.transitionTo(id,{kind,dir})` / `M.back(kind)` / `M.stack()` / `M.stagger()` / **`M.combo.init/auto`** / **`M.list.multiselect/syncParent`** / **`M.slider.init/auto`** / `M.flyout` / `M.dialog` / `M.toast` / `M.theme` |
 | `fluent2-tool-starter.html` | 可拆装骨架（模块标记 `<!-- 模块：<名> -->`） |
 | `selftest.html` | 自测页（校验器应 0 FAIL） |
 
@@ -19,7 +19,7 @@
 
 1. **颜色**只用 `var(--fl-*)`。禁手写 hex / rgb。accent 唯一入口：`--fl-accent`（默认 #0078D4，Win11 默认系统强调色），整体替换即可换主题色；主题内实际填充用 `--fl-accent-fill`（暗=Dark1 档、亮=Light2 档，XAML 规则）。
 2. **动效**只用 `var(--fl-dur-*)` / `var(--fl-ease-*)` 与 motion.css 的类。禁字面 ms / cubic-bezier。页面转场必须走 `M.transitionTo()`（默认垂直；二级页用 `{kind:'drill'}`），禁直接切类。
-   **三类表达不要混用**：① 一次性动效（入场/出场/页面转场/Strong Entrance）用 keyframe `animation`；② 可逆的状态切换（hover/active/开关/浮层开合）用 `transition`；③ 连续型（秒针/进度环）用 animation + `infinite` + linear/steps 且**禁 both/forwards**。混用会让控件的 `transition` 简写覆盖入场动画（曾导致卡片入场静默失效）。
+   **三类表达不要混用**：① 一次性动效（入场/出场/页面转场/Strong Entrance）用 keyframe `animation`；② 可逆的状态切换（hover/active/开关/浮层开合）用 `transition`；③ 连续型（秒针/进度环）用 animation + `infinite` + linear/steps 且**禁 both/forwards**。混用会让控件的 `transition` 简写覆盖入场动画（曾导致卡片入场静默失效）。**第三类例外**：跟着指针逐帧变形的（滑块已填充段、拖拽预览）**一律不加过渡** —— 它属于「值跟随」，加 250ms 会把拖动变成拖影，是新的抖动源（校验器 R35 会拦住 `transition: background`）。
 3. **圆角**只用 `var(--fl-radius-control)`（4px，页内元素）/ `var(--fl-radius-overlay)`（8px，浮层级）；直边相接处不圆角（0px）。
    控件内部另有官方小圆角 token，**不属于 4/8 两档**、按 XAML 原值使用：`--fl-radius-checkbox` 3（列表内复选框）、`--fl-radius-indicator` 2（导航选中条）、`--fl-radius-list-indicator` 1.5（列表选中条）、`--fl-radius-combo-item` 3 / `--fl-radius-combo-pill` 1.5 / `--fl-radius-combo-highlight` 7（下拉项与高亮框）。
 4. **字号**只用 `.fl-caption/.fl-body/.fl-body-strong/.fl-body-large/.fl-subtitle/.fl-title/.fl-title-large/.fl-display` 字阶类。
@@ -64,6 +64,10 @@
     - **六档状态顺序即语义**（选中+hover 必须写在 `:hover` 之后），官方反色档「选中+hover 比仅选中更淡」不是 bug。
 18. **勾选框**的勾必须是 `.fl-check-glyph` 的 SVG（`pathLength="1"` + `stroke-dashoffset`），**禁止**用文本字符 "✓"。半选用原生 `:indeterminate`（由 JS 设 `input.indeterminate = true`），不要自造 `data-indeterminate`。
 19. **下拉**首选 `.fl-combo`（自绘：有 Acrylic 弹层、项状态、开合动效、完整键盘）。`.fl-select` 只作无 JS 回退 —— 原生 `<option>` 面板由操作系统绘制，暗色主题会漏白底且无法承载项状态。自绘弹层必须 portal 到 `body` 且 `position: fixed`（内容区有 `overflow: clip`）。
+20. **滑块**的已填充段（thumb 左侧、accent 色）靠 `--fl-slider-pct`（0–1）驱动，由 `M.slider.auto()` 在 `input` 时写入 —— **没有这个变量，轨道就是整条同色**（Win11 是左 accent 右灰）。
+    - 填充宽 = `calc(12px / 2 + (100% - 12px) * var(--fl-slider-pct))`：减 12px 是因为 thumb 圆心行程比轨道短一个 thumb 宽，不补偿会让两端各溢出 6px；
+    - 填充段**禁止**加 `transition: background`（值跟随加过渡会变成拖影，是新的抖动源；校验器 R35 会拦）；thumb 的 `transform` 缩放保留 250ms；
+    - 填充色与 thumb 同步走四档（Default → PointerOver @0.9 → Pressed @0.8 → Disabled）；`[dir="rtl"]` 下渐变方向要翻转。
 
 ## 官方关键数值速查（详见 official-values.md）
 
@@ -71,7 +75,7 @@
 - **实测派生（非官方档，来自 60fps 录屏反解）**：页面转场 283ms（`--fl-dur-page`）、drill 176px、nav 72px、`--fl-ease-page` = cubic-bezier(0.6,0,0.3,1)、连续型 `--fl-dur-sweep` 60s / `--fl-dur-tick` 1s。官方四档仍是 83/167/250/333，检索官方规范时不要引用这一行。
 - accent 状态档位（XAML brush Opacity）：`--fl-accent-fill-hover` = Default @0.9、`--fl-accent-fill-pressed` = Default @0.8。状态反馈用档位色过渡，禁用 `filter: brightness()`。
 - 字阶：Caption 12/16、Body 14/20、Body Strong 14/20 Semibold、Body Large 18/24、Subtitle 20/28、Title 28/36、Title Large 40/52、Display 68/92。
-- 控件：高 32px；Button padding 11,5,11,6；TextBox padding 10,5,6,6；列表项 min-height 40；ContentDialog padding 24 / max-width 548 / min-height 184；Switch 轨道 40×20、旋钮 12（hover 14 / pressed 17）、开态位移 **20px**（XAML `KnobTranslateTransform X=20`）；Slider 轨道 4 / 内圆 12 / 圆角 10（hover 1.167、pressed 0.833，250ms）。
+- 控件：高 32px；Button padding 11,5,11,6；TextBox padding 10,5,6,6；列表项 min-height 40；ContentDialog padding 24 / max-width 548 / min-height 184；Switch 轨道 40×20、旋钮 12（hover 14 / pressed 17）、开态位移 **20px**（XAML `KnobTranslateTransform X=20`）；Slider 轨道 4 / 内圆 12 / 圆角 10（hover 1.167、pressed 0.833，250ms）；轨道**左段为 accent 已填充段**（`SliderTrackValueFill`，宽 = 半 thumb + 比例×(轨道宽-12)，由 `M.slider.auto()` 写 `--fl-slider-pct`），填充与 thumb 同步四档变色（Default→Secondary 0.9→Tertiary 0.8→Disabled）。
 - 列表：行高单行 40 / 两行 64（后者 KIT 自定）；圆角 4；选中条 3×16 圆角 1.5；多选列宽 40.5；禁用透明度 0.3；图标 20；行内间距 12。
 - 勾选/单选：方框 20×20、圆角 4、描边 1；勾号字形 12 / 描边 2.5；单选内点 12（hover 1.167 / pressed 0.833）；控件行高 32。
 - 下拉（自绘）：闭合态高 32、最小宽 64、箭头 12×12 距右缘 14；弹层最小宽 80、最大高 504（15 项）、圆角 8、描边 2、项高 32、项圆角 3、选中胶囊 3×16 圆角 1.5。

@@ -71,6 +71,11 @@ BAD_CASES = {
     "R34": ("fluent2-controls.css",
             "  position: fixed; z-index: 40;",
             "  position: absolute; z-index: 40;"),
+    # 图省事写成 100% × pct：两端会偏半个 thumb，肉眼几乎看不出来，靠这条规则锁
+    "R35": ("fluent2-controls.css",
+            "  --fl-slider-fill: calc(var(--fl-slider-inner) / 2\n"
+            "                   + (100% - var(--fl-slider-inner)) * var(--fl-slider-pct));",
+            "  --fl-slider-fill: calc(100% * var(--fl-slider-pct));"),
 }
 
 # 处方：按模块名整块删除（与 FLUENT-COMPOSE.md 的四种处方一致）

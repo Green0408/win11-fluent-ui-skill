@@ -42,6 +42,7 @@ R31 勾号必须是 SVG 描边：禁止 content:"✓" 文本勾，必须有 .fl-
 R32 reduced-motion 必须覆盖 .fl-check-glyph / .fl-combo-popup / .fl-listitem
 R33 ComboBox 可达性：combobox/listbox/option 三个 role + aria-expanded/controls + 键盘 Escape/方向键/activedescendant
 R34 弹层不得被裁：.fl-combo-popup 必须 position: fixed，且 JS 有 portal 到 body 的证据
+R35 滑块必须有填充段且做半 thumb 补偿：轨道双段渐变 + --fl-slider-fill 走 calc(inner/2 + (100%-inner)×pct) + 禁 background 过渡
 """
 import re
 import sys
@@ -495,6 +496,25 @@ def main():
                          "（.fl-content-layer 有 overflow:clip，absolute 会被裁）")
         if "appendChild(popup)" not in (motion_js or ""):
             fails.append("R34 fluent2-motion.js: ComboBox 弹层必须 portal 到 body")
+
+    # R35 滑块必须有已填充段，且填充宽必须做「半 thumb」补偿
+    #     只写 100% × pct 也能让左侧变色，但 thumb 的实际行程是「轨道宽 - thumb 宽」，
+    #     两端会偏半个 thumb —— 这类"看起来有、其实错位"没法靠肉眼验收，必须靠规则锁。
+    if ".fl-slider" in (controls_css or ""):
+        track = re.search(r"\.fl-slider::-webkit-slider-runnable-track\s*\{([^}]*)\}", controls_css)
+        if not track or "linear-gradient" not in track.group(1):
+            fails.append("R35 fluent2-controls.css: 滑块轨道必须是双段渐变（SliderTrackValueFill = "
+                         "AccentFillColorDefault），不得整条单色")
+        fill_var = re.search(r"--fl-slider-fill\s*:\s*calc\(([^;]*)\)", controls_css)
+        if not fill_var:
+            fails.append("R35 fluent2-controls.css: 缺 --fl-slider-fill 的 calc 定义")
+        elif "var(--fl-slider-inner)" not in fill_var.group(1):
+            fails.append("R35 fluent2-controls.css: --fl-slider-fill 必须含半 thumb 补偿"
+                         "（calc(inner/2 + (100% - inner) × pct)）；直接写 100% × pct 会在两端偏半个 thumb")
+        slider_body = re.search(r"\.fl-slider\s*\{([^}]*)\}", controls_css)
+        if slider_body and re.search(r"transition\s*:[^;]*\bbackground", slider_body.group(1)):
+            fails.append("R35 fluent2-controls.css: 滑块填充段不得加 background 过渡"
+                         "（拖动时会变成拖影，是新的抖动源）")
 
     # 输出
     print(f"目标：{target}")

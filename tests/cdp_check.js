@@ -109,6 +109,8 @@ async function main() {
 
   /* 当前在 page-main（导航第 0 项）→ 点第 2 项（设置，更靠下）应从下方进入 */
   await clickAt(await navBox(2));
+  await sleep(110);
+  await shot("x0-transition-down");   // 转场中段：两页叠放、新页偏下
   const down = await evaluate(`(function(){
     var p = document.getElementById("page-settings");
     return { fromY: p.style.getPropertyValue("--fl-page-from-y"),
@@ -121,6 +123,8 @@ async function main() {
 
   /* 再点回第 0 项（条目管理，更靠上）→ 应从上方进入（负号） */
   await clickAt(await navBox(0));
+  await sleep(110);
+  await shot("x0-transition-up");     // 转场中段：新页偏上
   const up = await evaluate(`(function(){
     var p = document.getElementById("page-main");
     return { fromY: p.style.getPropertyValue("--fl-page-from-y") };

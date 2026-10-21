@@ -283,16 +283,57 @@ async function main() {
   check("弹层 position:fixed", openState.pos === "fixed", openState.pos);
   check("弹层有实际尺寸（未塌陷/未被裁）", openState.w > 60 && openState.h > 60, `${openState.w}×${openState.h}`);
 
-  /* 4 项的短弹层不该有滚动条：项文字一旦折行，弹层会被撑高、凭空长出一条滚动条 */
+  /* 弹层不许伸到视口外：右侧一旦被窗口裁掉，滚动条正好在裁掉那一侧 —— 表现是"没有滚动条" */
+  const bounds = await evaluate(`(function(){
+    var p = document.getElementById("combo-view-list");
+    var r = p.getBoundingClientRect();
+    return { left: Math.round(r.left), right: Math.round(r.right),
+             vw: window.innerWidth, vh: window.innerHeight,
+             bottom: Math.round(r.bottom) };
+  })()`);
+  check("弹层不越出视口左右边界（否则右侧滚动条会被窗口裁掉）",
+    bounds.left >= 7 && bounds.right <= bounds.vw - 7,
+    JSON.stringify(bounds));
+  check("弹层不越出视口下边界", bounds.bottom <= bounds.vh - 3, JSON.stringify(bounds));
+
+  /* 4 项的短弹层不该有滚动条：项文字一旦折行、或 maxHeight 与 border-box 语义不匹配，
+     弹层都会凭空长出一条滚动条（而那条"没用的滚动条"最扎眼） */
   const shortList = await evaluate(`(function(){
     var pop = document.getElementById("combo-view-list");
     var wrapped = [].some.call(pop.children, function (c) { return c.getBoundingClientRect().height > 40; });
     return { scroll: pop.scrollHeight - pop.clientHeight, h: pop.clientHeight, wrapped: wrapped };
   })()`);
-  /* scroll 允许几 px 余量：弹层高度受可用空间钳制，钳到比内容少一点是正常的；
-     真正要防的是「选项折行把内容撑高几十 px」 */
-  check("短弹层不因折行而溢出（选项单行显示）",
-    shortList.wrapped === false && shortList.scroll <= 8, JSON.stringify(shortList));
+  check("短弹层恰好装下 4 项（不溢出、不出滚动条）",
+    shortList.wrapped === false && shortList.scroll <= 1, JSON.stringify(shortList));
+
+  /* 超长选项：弹层被 max-width 挡住、文字走省略号，而不是把弹层撑到屏幕外 */
+  const longText = await evaluate(`(function(){
+    var pop = document.getElementById("combo-view-list");
+    var d = document.createElement("div");
+    d.className = "fl-combo-item";
+    d.setAttribute("role", "option");
+    d.setAttribute("data-tmp", "long");
+    d.textContent = "超长选项：" + "这条文字故意写得非常非常长，用来把弹层宽度顶到 max-width 上，".repeat(4) + "然后必须出现省略号";
+    pop.appendChild(d);
+    window.dispatchEvent(new Event("resize"));       // 触发 re-place
+    return new Promise(function (res) {
+      requestAnimationFrame(function () {
+        var r = pop.getBoundingClientRect();
+        var cs = getComputedStyle(d);
+        var out = { right: Math.round(r.right), vw: window.innerWidth,
+                    overflow: cs.textOverflow, itemScrollW: d.scrollWidth, itemW: d.clientWidth,
+                    popClientW: pop.clientWidth, hScroll: pop.scrollWidth - pop.clientWidth };
+        d.remove();
+        window.dispatchEvent(new Event("resize"));
+        res(out);
+      });
+    });
+  })()`);
+  check("超长选项被省略号截断（不横向溢出、弹层不出横条）",
+    longText.overflow === "ellipsis" && longText.itemScrollW > longText.itemW && longText.hScroll <= 1,
+    JSON.stringify(longText));
+  check("超长选项下弹层仍不越出视口右边界",
+    longText.right <= longText.vw - 7, JSON.stringify(longText));
 
   /* 滚动条：塞 20 项到弹层里，看它是不是自定义的细滚动条（原生约 15-17px 且带箭头） */
   const comboScroll = await evaluate(`(function(){
@@ -305,7 +346,9 @@ async function main() {
       d.textContent = "选项 " + (++n + 4);
       pop.appendChild(d);
     }
-    var w = pop.offsetWidth - pop.clientWidth;
+    var cs = getComputedStyle(pop);
+    /* offset-client 同时含左右边框（弹层 2px×2），不扣掉会把滚动条量宽 4px */
+    var w = pop.offsetWidth - pop.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
     var out = {
       hasScroll: pop.scrollHeight > pop.clientHeight + 2,
       sbw: w,
@@ -347,6 +390,10 @@ async function main() {
     }
     return out;
   })()`);
+  /* 注意：cdp_check 以 --hide-scrollbars 启动，占宽恒为 0，所以这里只能断言上界；
+     真实宽度由 CSSOM 规则那条（width:12px）与 tests/combo_probe.js 的实测量保证 */
+  check("滚动条占宽不超过 12px（自定义细条）",
+    comboScroll.sbw <= 12, `实际占宽 ${comboScroll.sbw}px`);
   check("滚动条是自定义细条（规则宽度 ≤12px 且去掉箭头按钮）",
     !!sbRules.width && parseFloat(sbRules.width) <= 12 && sbRules.buttons === true,
     `::-webkit-scrollbar{width:${sbRules.width}} button 规则=${sbRules.buttons}`);

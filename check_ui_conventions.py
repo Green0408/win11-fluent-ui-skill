@@ -51,6 +51,7 @@ R40 设置行造型：行高走 --fl-settings-row-h、hover 底色带圆角、�
 R41 转场必须两拍：.fl-page-in 要有 animation-delay、离场页不许与入页同长、转场页不得涂不透明底
 R42 应用外壳：body 锁高度、.fl-shell 有 min-height:0、内容层固定 1fr 行、.fl-page 是滚动容器
 R43 滚动条悬停/拖动态不许变粗：thumb 的 border-width 不得 <2px（否则画满 12px 命中区）
+R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走省略号、JS 量宽用 offsetWidth 且做水平钳制
 """
 import re
 import sys
@@ -599,6 +600,30 @@ def main():
                 fails.append(f"R43 fluent2-controls.css: 滚动条 :{state.group(1)} 态 border-width={bw.group(1)}px 太小"
                              f"（视觉会占 {12 - 2 * float(bw.group(1)):.0f}px，看起来太粗）；"
                              f"hover 与拖动都保持 3px（视觉 6px）")
+
+    # R44 弹层不许越出视口
+    #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，
+    #     而滚动条正好在最右边 —— 被窗口裁掉的表现就是"根本没有滚动条"。三层都要有：
+    #     ① CSS max-width 封顶；② 选项省略号，别把弹层撑宽；③ JS 横向钳制。
+    if controls_css and ".fl-combo-popup" in controls_css:
+        pop_rule = re.search(r"\.fl-combo-popup\s*\{([^}]*)\}", controls_css)
+        pop_body = pop_rule.group(1) if pop_rule else ""
+        if "max-width" not in pop_body:
+            fails.append("R44 fluent2-controls.css: .fl-combo-popup 必须设 max-width（如 calc(100vw - 16px)），"
+                         "否则 nowrap 长选项会把弹层撑到视口外，右侧滚动条被窗口裁掉")
+    if controls_css and ".fl-combo-item" in controls_css:
+        item_rule = re.search(r"\.fl-combo-item\s*\{([^}]*)\}", controls_css)
+        item_body = item_rule.group(1) if item_rule else ""
+        if "text-overflow" not in item_body:
+            fails.append("R44 fluent2-controls.css: .fl-combo-item 必须 text-overflow: ellipsis"
+                         "（nowrap + 无省略号会把弹层撑宽）")
+    if motion_js and "function place" in motion_js:
+        if "Math.min(r.left" not in motion_js and "Math.min(btn" not in motion_js:
+            fails.append("R44 fluent2-motion.js: place() 必须做水平钳制（Math.min(r.left, innerWidth - margin - w)），"
+                         "否则贴右边缘的弹层会越出视口")
+        if "popup.offsetWidth" not in motion_js:
+            fails.append("R44 fluent2-motion.js: place() 量弹层宽度必须用 offsetWidth —— "
+                         "getBoundingClientRect 会把入场态 scale(0.98) 算进去，少 2% 导致钳制不生效")
 
     # R40 设置行造型
     if ".fl-settings-row" in (controls_css or ""):

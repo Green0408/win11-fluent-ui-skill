@@ -96,8 +96,20 @@ BAD_CASES = {
             "  min-height: 56px;"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     "R43": ("fluent2-controls.css",
-             "    background: var(--fl-control-strong-fill);\n    border-width: 4px;",
+             "    background: var(--fl-control-strong-fill);\n    border-width: 3px;",
              "    background: var(--fl-control-strong-fill);\n    border-width: 0;"),
+    # 弹层去掉 max-width → nowrap 长选项把弹层撑到视口外，右侧滚动条被窗口裁掉
+    "R44a": ("fluent2-controls.css",
+             "  max-width: calc(100vw - var(--fl-space-4));\n",
+             ""),
+    # 选项去掉省略号 → 长文本撑宽弹层
+    "R44b": ("fluent2-controls.css",
+             "  overflow: hidden;\n  text-overflow: ellipsis;\n",
+             ""),
+    # place() 用 getBoundingClientRect 量宽 → 入场 scale(0.98) 让读数少 2%，钳制失效
+    "R44c": ("fluent2-motion.js",
+             "      var w = popup.offsetWidth;",
+             "      var w = popup.getBoundingClientRect().width;"),
     # 页面不再是滚动容器 → 内容区无法独立滚动
     "R42": ("fluent2-controls.css",
             "  overflow-y: auto; overflow-x: hidden;   /* 每个页面各自滚，切页各记各的位置 */",
@@ -180,7 +192,8 @@ def main():
                 continue
             p.write_text(text.replace(old, new, 1), encoding="utf-8")
             code, out = run(td / "fluent2-tool-starter.html", td)
-            hit = rule in out
+            base = re.match(r"R\d+", rule).group(0)   # R44a → R44：一个规则可以有多份坏例
+            hit = base in out
             ok = code == 1 and hit
             print(f"  {rule}  {'✓' if ok else '✗'}  exit={code} hit={hit}")
             if not ok:

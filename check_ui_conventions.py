@@ -54,6 +54,7 @@ R43 滚动条悬停/拖动态：边框 2px 左右、必须写完整 border 简�
 R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走省略号、JS 量宽用 offsetWidth 且做水平钳制
 R45 滚动条变粗只许 thumb 自身 hover：禁止把 :hover/:focus-within 挂在容器上（.fl-page:hover 恒真）
 R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::before、JS 必须有 reduced 分支
+R47 指示条拉伸必须"留在按钮内"：峰值来自固定常量，禁止按 |Δ| 派生（会跨过项间隙、跑出按钮）
 """
 import re
 import sys
@@ -651,6 +652,16 @@ def main():
         if "REDUCED" not in seg:
             fails.append("R46 fluent2-motion.js: placeIndicator 里必须有 REDUCED 分支"
                          "（WAAPI 动画不受 CSS 的 reduced-motion 块约束）")
+        # R47 峰值必须"留在按钮内"
+        #     按 |Δ| 拉伸（16+|Δ|）会从旧项一路盖到新项，跨过项间隙 —— 看起来就是"装饰条跑出按钮"，
+        #     与录屏不符。官方观感是：旧项里长出来 → 换项瞬间直接在新项上出现 → 新项里收回，
+        #     两段都发生在各自项内部，峰值是固定比例（实测 1.6×，1 格与 4 格跳转同值）。
+        if re.search(r"(?:size\.h|\.h)\s*\+\s*Math\.abs\(", seg) or "Math.abs(d)" in seg:
+            fails.append("R47 fluent2-motion.js: 指示条峰值不许按 |Δ| 派生（16+|Δ| 会跨过项间隙、跑出按钮；"
+                         "实测固定 1.6×，见 video-analysis/ind_edges.py）")
+        if "IND_PEAK_SCALE" not in seg:
+            fails.append("R47 fluent2-motion.js: 峰值必须取自固定常量 IND_PEAK_SCALE，"
+                         "并按项高做上限钳制（否则改 --fl-nav-item-height 后会长出按钮）")
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

@@ -96,8 +96,10 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 .fl-nav-item:active { background: var(--fl-subtle-fill-pressed); color: var(--fl-text-secondary); }
 .fl-nav-item[aria-current="page"] { background: var(--fl-subtle-fill-hover); font-weight: var(--fl-weight-semibold); }
 /* 选中指示条：3×16 胶囊（NavigationViewSelectionIndicatorWidth/Height/Radius）
-   默认由 JS 挂一个独立的 .fl-nav-ind 层来画，以便在两项之间做"拉伸→收缩"的移动动画
-   （与 WinUI NavigationView 的 offset/scale 动画同构）。没有 JS 时退回每项的 ::before。 */
+   默认由 JS 挂一个独立的 .fl-nav-ind 层来画，以便做"拉伸→收缩"的移动动画。
+   注意（录屏实测）：拉伸峰值固定 1.6×（16→25.6），**始终落在所在导航项内部**，
+   条不会跨过项间隙、也不会跑出按钮；换项瞬间是"旧项塌缩 + 新项直接满高出现"。
+   没有 JS 时退回每项的 ::before。 */
 .fl-nav-item[aria-current="page"]::before {
   content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   width: var(--fl-nav-indicator-w); height: var(--fl-nav-indicator-h);
@@ -112,11 +114,13 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   border-radius: var(--fl-radius-indicator);
   background: var(--fl-accent-fill);
   pointer-events: none; opacity: 0;
-  /* 拉伸阶段的锚点由 JS 按方向切换：向下移动锚顶边、向上移动锚底边 */
+  /* 锚点由 JS 按方向切换：旧条锚"尾部边"（往下的方向=顶边）往目标长；
+     新条锚"头部边"（往下的方向=底边）往回缩。1.6× 单向生长 = 中心只挪 4.8px，
+     项高 36 - 条高 16 = 20px 余量，所以两侧都不会越界。 */
   transform-origin: 50% 0;
   will-change: transform, opacity;
 }
-/* 过渡期克隆：只负责"旧位置向新位置拉长"这一半 */
+/* 过渡期两层：ghost 在旧项里长/塌，pill 在新项里收 */
 .fl-nav-ind[data-role="ghost"] { z-index: 1; }
 .fl-nav-ind[data-role="pill"] { z-index: 2; }
 

@@ -238,17 +238,28 @@
   M.stack = function () { return pageStack.slice(); };
 
   /* ---- 侧栏选中指示条（NavigationView SelectionIndicator）-------------------------
-     官方实现（microsoft-ui-xaml: NavigationView::PlayIndicatorAnimations）：
-       · 总时长 600ms；缩放关键帧在 33.3%（=200ms）处达到 |Δ|/dim + 1，即"拉伸到刚好覆盖两项"
-       · 位移用 singleStep：前 200ms 不动，200ms 处直接跳到目标（所以看起来是"先长出来再跳"）
-       · 缩放中心 200ms 内从顶边切到底边 → 于是前半段往下长、后半段往上收
-       · 拉伸段缓动 (0.9,0.1,1,0.2)（慢起后加速）；收缩段 (0.1,0.9,0.2,1)
-       · 旧指示条在 33.3% 之后淡出（600ms 内）
-     本实现用两个层拟合同一效果：ghost 停在旧位置往下长、pill 落在新位置往上收，
-     两者在 0–200ms 完全重合（所以看不出是两层），200ms 后 ghost 淡出、pill 收缩。 */
-  var IND_MS = 600, IND_PEAK = 0.3333;
-  var IND_EASE_GROW = "cubic-bezier(0.9,0.1,1,0.2)";
-  var IND_EASE_SHRINK = "cubic-bezier(0.1,0.9,0.2,1)";
+     ⚠ 先看结论：指示条**从不离开所在的导航项**（从不跨过项间空隙）。
+       它是"旧项里长出来 → 换项瞬间直接在新项上出现 → 新项里收回去"，
+       两段拉伸都发生在各自项的内部，峰值高度固定，与跳了几格无关。
+
+     一手依据：`时钟 2026-10-21 21-24-36.mp4`（1808×1408 @1.5x）逐帧半高边缘法实测
+     （脚本见 video-analysis/ind_edges.py）：
+       · 静止 23.8 设备px = 16 CSS；峰值 38.1 设备px = 25.4 CSS ≈ **16 × 1.6**，
+         1 格跳转与 4 格跳转的峰值完全一样（38.06 / 38.20），确认是固定比例而非 |Δ| 派生
+       · 旧项：锚在"尾部边"（往下的方向 = 顶边）**单向**往目标方向长，中心只挪 4.8px；
+         拉满后 2~3 帧（≈33ms）朝头部边塌缩并淡出
+       · 新项：直接以满高（1.6×）出现，锚在"头部边"（往下 = 底边），333ms 收缩回 16
+       · 节奏：拉伸 167ms（ControlFast）→ 换项 → 收缩 333ms（ControlSlow），总 500ms
+       · 曲线拟合（RMSE）：拉伸 (0.4,0,0.7,0.4)=0.046；收缩 (0.25,0.1,0.25,1)=0.036
+
+     ⚠ 不要按 |Δ| 拉伸成"覆盖两项"（16+|Δ|）。早期版本就是这么写的，条会越过项间隙、
+       看起来"跑出按钮"，与录屏不符 —— 校验器 R47 专门拦这个。
+     实现用两层：ghost 停在旧项里长/塌，pill 落在新项里收。 */
+  var IND_MS = 500, IND_PEAK = 1 / 3;
+  var IND_PEAK_SCALE = 1.6;             // 实测峰值 25.4/16 ≈ 1.6（与距离无关）
+  var IND_EDGE_MS = 83;                 // 旧条塌缩淡出（实测 33ms，取官方 83 档）
+  var IND_EASE_GROW = "cubic-bezier(0.4,0,0.7,0.4)";
+  var IND_EASE_SHRINK = "cubic-bezier(0.25,0.1,0.25,1)";
 
   function indSize(nav) {
     var cs = global.getComputedStyle(nav);
@@ -312,32 +323,47 @@
     if (ghost.getAnimations) ghost.getAnimations().forEach(function (a) { a.cancel(); });
 
     var fromTop = itemCenter(nav, fromItem);
-    var d = top - fromTop;
-    var scale = (size.h + Math.abs(d)) / size.h;   // 拉伸到刚好覆盖两项
-    var down = d > 0;
+    var down = top > fromTop;
 
-    /* ghost：留在旧位置，往下（或往上）长到覆盖新项，200ms 后开始淡出 */
+    /* 峰值比例：固定 1.6（实测），再按"项内上下各留 2px"钳一次 ——
+       这样即使有人把 --fl-nav-item-height 调到很小，条也不会长出按钮。 */
+    var itemH = Math.min(
+      toItem.offsetHeight || size.h,
+      fromItem.offsetHeight || size.h
+    );
+    var cap = 1 + Math.max(0, itemH - size.h - 4) / size.h;
+    var peak = Math.min(IND_PEAK_SCALE, cap);
+    var h = size.h;
+
+    /* ghost：留在旧位置，锚"尾部边"朝目标方向单向长到 peak；
+       换项瞬间（peak 处）改用"头部边"不动、塌缩到 0.2 并淡出
+       —— 用 translateY 补偿锚点切换，避免 origin 中途变化导致跳位。 */
     ghost.style.top = fromTop + "px";
     ghost.style.transformOrigin = down ? "50% 0" : "50% 100%";
     ghost.style.opacity = "1";
+    var collapse = (peak - 0.2) * h;
+    var collapseShift = "translateY(" + (down ? collapse : -collapse) + "px) scaleY(0.2)";
+    var edgeAt = IND_PEAK + IND_EDGE_MS / IND_MS;
     ghost.animate([
       { transform: "scaleY(1)", opacity: 1, offset: 0, easing: IND_EASE_GROW },
-      { transform: "scaleY(" + scale + ")", opacity: 1, offset: IND_PEAK, easing: IND_EASE_SHRINK },
-      { transform: "scaleY(" + scale + ")", opacity: 0, offset: 1 }
+      { transform: "scaleY(" + peak + ")", opacity: 1, offset: IND_PEAK, easing: "cubic-bezier(0.2,0.9,0.3,1)" },
+      { transform: collapseShift, opacity: 0, offset: edgeAt },
+      { transform: collapseShift, opacity: 0, offset: 1 }
     ], { duration: IND_MS, fill: "both" });
 
-    /* pill：落在新位置，反向 —— 前 200ms 不可见（这一段由 ghost 独自"长出来"），
-       200ms 处一次性显形并保持"覆盖两项"的尺寸，再用 400ms 收成 16px。
+    /* pill：落在新项的最终位置，锚"头部边"。
+       前 1/3 不可见（那一段是 ghost 在旧项里长），换项瞬间**直接以满高出现**（没有位移、
+       没有滑过间隙），再用 2/3 时长收成 16。
        ⚠ 不能只靠 delay：WAAPI 在 delay 期间就会套用首个关键帧，
          pill 会从一开始就是拉伸态、把 ghost 的生长阶段整个盖住（实测过）。 */
     pill.style.top = top + "px";
     pill.style.transformOrigin = down ? "50% 100%" : "50% 0";
-    var atFull = "scaleY(" + scale + ")";
+    var atFull = "scaleY(" + peak + ")";
     var anim = pill.animate([
       { transform: atFull, opacity: 0, offset: 0 },
       { transform: atFull, opacity: 0, offset: IND_PEAK - 0.002 },
-      { transform: atFull, opacity: 1, offset: IND_PEAK },
-      { transform: "scaleY(1)", opacity: 1, offset: 1, easing: IND_EASE_SHRINK }
+      { transform: atFull, opacity: 1, offset: IND_PEAK, easing: IND_EASE_SHRINK },
+      { transform: "scaleY(1)", opacity: 1, offset: 1 }
     ], { duration: IND_MS, fill: "both" });
     anim.onfinish = function () {
       pill.style.transform = "none";      // 结算后不留合成层，避免长期挂在 GPU 上

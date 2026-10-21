@@ -102,6 +102,14 @@ BAD_CASES = {
     "R46b": ("fluent2-controls.css",
              "  position: relative;          /* 指示条层的定位基准（.fl-nav-ind 的 offsetParent） */",
              ""),
+    # 指示条峰值按 |Δ| 派生 → 会从旧项一路盖到新项、跨过项间隙（"跑出按钮"）
+    "R47a": ("fluent2-motion.js",
+             "    var peak = Math.min(IND_PEAK_SCALE, cap);",
+             "    var peak = (size.h + Math.abs(d)) / size.h;"),
+    # 峰值写死比例但删掉常量 → 相当于把"固定 1.6×"的结论丢了，改项高就会越界
+    "R47b": ("fluent2-motion.js",
+             "    var peak = Math.min(IND_PEAK_SCALE, cap);",
+             "    var peak = Math.min(1.6, cap);"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
     "R43a": ("fluent2-controls.css",

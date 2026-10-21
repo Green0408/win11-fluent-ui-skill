@@ -157,17 +157,23 @@
 
 ---
 
-## 8. 侧栏选中指示条（源码级规范）
+## 8. 侧栏选中指示条（录屏实测优先）
 
-`microsoft-ui-xaml` → `controls/dev/NavigationView/NavigationView.cpp` → `PlayIndicatorAnimations()`：
+`microsoft-ui-xaml` → `controls/dev/NavigationView/NavigationView.cpp` → `PlayIndicatorAnimations()`
+给出的关键帧是 `|to-from|/dimension + 1`、600ms、posAnim `singleStep`。**这组值在录屏里对不上**：
 
-| 关键帧 | 值 |
-|---|---|
-| posAnim | 0% = from；33.3% = to（`singleStep`：前段不动，到点直接跳） |
-| scaleAnim | 0% = 1；33.3% = `|to-from|/dimension + 1`；100% = 1 |
-| centerAnim | 0% = 0；100% = dimension（200ms，`singleStep` → 缩放中心在 200ms 处切边） |
-| duration | 600ms（opacity 同） |
-| easing | 拉伸 `cubic-bezier(0.9,0.1,1,0.2)`；收缩 `cubic-bezier(0.1,0.9,0.2,1)` |
+| | 源码（记忆值） | 录屏实测（`时钟 21-24-36.mp4`，半高边缘法） |
+|---|---|---|
+| 峰值 | `|Δ|/16 + 1`（跨 1 项 = 3.5×） | **固定 1.6×**，跨 1 项与跨 4 项相同 |
+| 位移 | 200ms 处单步跳到目标 | **不位移**：旧条在旧项塌缩、新条在新项出现 |
+| 总时长 | 600ms | **≈500ms**（拉伸 167 + 收缩 333） |
+| 缓动 | (0.9,0.1,1,0.2) / (0.1,0.9,0.2,1) | (0.4,0,0.7,0.4) / (0.25,0.1,0.25,1)（RMSE 0.046 / 0.036） |
 
-模板实现见 KIT 规则 26；录屏实测见 `VIDEO-ALIGN.md` §12（拉伸峰值 = 16 + 行距，与公式一致）。
+按源码值实现的表现是"一根长条从旧项一路盖到新项、跨过项间隙"——用户第一眼就指出
+"装饰条是不会跑出按钮的，而是在下一个按钮上出现，靠按钮范围内的有限拉伸形成呼应"。
+逐帧复核证实了这一点：两条**各自都不越出所属项的 rect**（峰值 25.6 在项高 36 内，两端各留 0.4px）。
+
+- 逐帧数据与拟合：`VIDEO-ALIGN.md` §12（旧版结论已标注被推翻）；
+- 模板实现：KIT 规则 26；两层 ghost/pill，origin 分别锚"尾部边/头部边"；
+- 校验：R47（禁 `|Δ|` 派生、峰值必须来自己命名常量）；`tests/nav_indicator_shots.js` 打印逐帧越界量。
 

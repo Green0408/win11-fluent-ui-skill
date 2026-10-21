@@ -187,29 +187,80 @@ async function main() {
   check("挂载后关掉了每项静态胶囊（::before 为 none）",
     indInit.beforeContent === "none", String(indInit.beforeContent));
 
-  /* 点第 3 项：100ms 时应处于"拉伸"态（高度明显大于 16），700ms 后回到 16 并落到目标项 */
+  /* 点第 3 项：全程逐 30ms 采样，重点是"条不许跑出按钮" ——
+     实测录屏：拉伸峰值固定 1.6×、始终落在所属项内部；换项瞬间旧项塌缩、新项直接满高出现。
+     旧实现按 |Δ| 拉伸成"覆盖两项"，ghost 会越过项边界 20px（这就是用户说的"跑出按钮"）。 */
   const indProbe = () => evaluate(`(function(){
     var nav = document.querySelector(".fl-nav");
+    var items = nav.querySelectorAll(".fl-nav-item");
     var pill = nav.querySelector('.fl-nav-ind[data-role="pill"]');
     var ghost = nav.querySelector('.fl-nav-ind[data-role="ghost"]');
-    return { pillH: Math.round(pill.getBoundingClientRect().height),
-             ghostH: Math.round(ghost.getBoundingClientRect().height),
-             pillOp: +getComputedStyle(pill).opacity,
-             ghostOp: +getComputedStyle(ghost).opacity };
+    var cur = nav.querySelector('.fl-nav-item[aria-current="page"]');
+    var pr = pill.getBoundingClientRect(), gr = ghost.getBoundingClientRect();
+    var cr = cur.getBoundingClientRect();
+    return { pillH: +pr.height.toFixed(1), ghostH: +gr.height.toFixed(1),
+             pillOp: +getComputedStyle(pill).opacity, ghostOp: +getComputedStyle(ghost).opacity,
+             pillDh: +(Math.abs((pr.top + pr.height / 2) - (cr.top + cr.height / 2))).toFixed(1),
+             itemH: +cr.height.toFixed(1),
+             curTop: +cr.top.toFixed(1), curBottom: +cr.bottom.toFixed(1),
+             pillTop: +pr.top.toFixed(1), pillBottom: +pr.bottom.toFixed(1),
+             ghostTop: +gr.top.toFixed(1), ghostBottom: +gr.bottom.toFixed(1) };
   })()`);
-  await clickAt(await navBox(2));
-  await sleep(60);
-  const indEarly = await indProbe();
-  await sleep(100);
-  const indMid = await indProbe();
-  /* 拉伸段是 ease-in（0.9,0.1,1,0.2）——起手很慢，所以判据看"两帧之间在长"，
-     而不是某个固定时刻的绝对高度；pill 在 200ms 前必须还不可见，否则会盖住生长过程 */
-  check("换项途中指示条在拉伸（ghost 变高、pill 尚未显形）",
-    indMid.ghostH > indEarly.ghostH + 4 && indMid.ghostH >= 26 &&
-    indMid.pillOp < 0.2 && indMid.ghostOp > 0.8,
-    `${JSON.stringify(indEarly)} → ${JSON.stringify(indMid)}`);
+  const srcItemTop = (await evaluate(`(function(){
+    var it = document.querySelector('.fl-nav-item[aria-current="page"]');
+    var r = it.getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom };
+  })()`));
 
-  await sleep(700);
+  /* 采样窗口：换项 167ms + 收缩 333ms，30ms 一帧够看清形状。
+     峰值只可能出现在 pill 上（ghost 的峰值只维持一帧就塌缩，30ms 采样抓不到），
+     所以"1.6×"的判据取 pill 的峰值；ghost 只看"在长、不越界"。 */
+  const jumpTo = async (idx) => {
+    await clickAt(await navBox(idx));
+    const out = [];
+    for (let k = 0; k < 16; k++) {
+      await sleep(30);
+      out.push(await indProbe());
+    }
+    return out;
+  };
+  const samples = await jumpTo(2);
+  const peakOf = (arr) => Math.max(...arr.map(s => Math.max(s.pillH, s.ghostH)));
+  const peakH = peakOf(samples);
+  const itemH = samples[0].itemH;
+  check("指示条拉伸峰值固定 1.6×（16→25.6px）",
+    peakH >= 24.5 && peakH <= 27 && peakH / 16 >= 1.5,
+    `峰值 ${peakH}px = ${(peakH / 16).toFixed(2)}×（项高 ${itemH}）`);
+  check("拉伸不跑出按钮：旧条始终在源项 rect 内、峰值 ≤ 项高-2",
+    samples.every(s => s.ghostTop >= srcItemTop.top - 1 && s.ghostBottom <= srcItemTop.bottom + 1) &&
+    peakH <= itemH - 2,
+    `srcItem ${srcItemTop.top.toFixed(1)}~${srcItemTop.bottom.toFixed(1)} ` +
+    `ghostTop ${Math.min(...samples.map(s => s.ghostTop))}~` +
+    `ghostBottom ${Math.max(...samples.map(s => s.ghostBottom))} 峰值 ${peakH}`);
+  /* 新条也只能落在目标项范围内（不得跨到相邻项） */
+  check("新条不跑出按钮：pill 始终在目标项 rect 内",
+    samples.every(s => s.pillTop >= s.curTop - 1 && s.pillBottom <= s.curBottom + 1),
+    `pill ${Math.min(...samples.map(s => s.pillTop))}~${Math.max(...samples.map(s => s.pillBottom))} ` +
+    `item ${samples[0].curTop}~${samples[0].curBottom}`);
+  /* 前 1/3（167ms）是旧项在长，pill 必须还不可见，否则会盖住生长段 */
+  const before = samples.slice(0, 3);
+  check("拉伸段（前 167ms）pill 尚未显形、ghost 在长",
+    before.every(s => s.pillOp < 0.2) && samples.some(s => s.ghostH > 16),
+    JSON.stringify(samples.slice(0, 4).map(s => [s.ghostH, s.pillOp])));
+  /* 换项后：pill 立刻是满高（不是从 16 长起来，也不是滑过来） */
+  const after = samples.filter(s => s.pillOp > 0.9);
+  check("换项后 pill 直接以满高出现（≈26px），不经过 16px 中间态",
+    after.length > 0 && Math.max(...after.map(s => s.pillH)) >= 22, JSON.stringify(after.map(s => s.pillH)));
+
+  /* 距离无关性：再跳一格（跨 1 项）的峰值必须与跨 2 项时一致 ——
+     按 |Δ| 拉伸的实现这里会差出一倍。 */
+  await sleep(600);
+  const nearJump = await jumpTo(1);
+  const nearPeak = peakOf(nearJump);
+  check("峰值与跳几格无关（跨 1 项 vs 跨 2 项差值 ≤1.5px）",
+    Math.abs(nearPeak - peakH) <= 1.5, `跨2项 ${peakH}px / 跨1项 ${nearPeak}px`);
+
+  await sleep(600);
   const indEnd = await evaluate(`(function(){
     var nav = document.querySelector(".fl-nav");
     var pill = nav.querySelector('.fl-nav-ind[data-role="pill"]');

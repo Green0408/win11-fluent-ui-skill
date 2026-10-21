@@ -173,26 +173,29 @@
       只含 padding，两者直接比会差一圈边框，4 项短列表被永久压出 4px 溢出、凭空多一条滚动条；
     - `overscroll-behavior: contain`：滚到弹层尽头不要穿透到页面。
 
-26. **侧栏选中指示条（NavigationView SelectionIndicator）是一条会「拉伸移动」的独立层**，不是每项各画一条。
-    官方实现在 `microsoft-ui-xaml` 的 `NavigationView::PlayIndicatorAnimations`，参数照抄即可：
+26. **侧栏选中指示条（NavigationView SelectionIndicator）是一条会「拉伸」的独立层**，不是每项各画一条。
+    **条永远不出自己的按钮**：在旧项里长出来 → 换项瞬间直接在新项上出现 → 在新项里收回，
+    靠两端**相向的有限拉伸**做呼应（值取自录屏逐帧半高边缘法，见 `VIDEO-ALIGN.md` §12）：
 
-| 项 | 官方值 |
+| 项 | 值 |
 |---|---|
 | 几何 | 3 × 16，圆角 2，`AccentFillColorDefault`（`NavigationViewSelectionIndicatorWidth/Height/Radius`） |
-| 总时长 | **600ms** |
-| 缩放峰值 | 在 **33.3%（200ms）** 处达到 `|Δ| / 16 + 1`，即"刚好覆盖新旧两项" |
-| 位移 | 用 `singleStep`：前 200ms 不动，200ms 处跳到目标 |
-| 缩放中心 | 200ms 内从顶边切到底边 → 前半段往下长、后半段往上收 |
-| 缓动 | 拉伸 `cubic-bezier(0.9,0.1,1,0.2)`；收缩 `cubic-bezier(0.1,0.9,0.2,1)` |
-| 旧条 | 33.3% 之后淡出（600ms 内） |
+| 拉伸峰值 | **固定 1.6×**（16 → 25.6），与跳几格无关（跨 1 项/跨 4 项实测同为 38.1 设备 px） |
+| 拉伸方向 | **单向**：旧条锚"尾部边"朝目标长（往下走 = 顶边），中心只挪 4.8px |
+| 拉伸范围 | 只在所属项内：25.6 vs 项高 36，两端各留 0.4px（`--fl-nav-item-height` 改小要同步钳制） |
+| 换项 | 旧条朝"头部边"塌缩+淡出 83ms；新条在目标项上**直接以满高出现**（不滑过间隙、不从 16 长起） |
+| 节奏 | 拉伸 **167ms**（ControlFast）+ 收缩 **333ms**（ControlSlow）= 500ms |
+| 缓动 | 拉伸 `cubic-bezier(0.4,0,0.7,0.4)`；收缩 `cubic-bezier(0.25,0.1,0.25,1)` |
 
     用法：把 `.fl-nav` 里带 `aria-current="page"` 的项交给 `M.transitionTo()` 即可，
     JS 会自动挂 `.fl-nav-ind` 层并维护 aria-current（首次进入走 `sync()` 静态落位）。
 
+    - ⚠ **不要按 `|Δ|/16+1` 拉伸**（XAML 源码的写法）：会拉到 16+行距、跨过项间隙，
+      看起来就是"装饰条跑出按钮"，与录屏不符 —— 第一版照抄踩过，校验器 R47 现在拦这个；
     - **每项的 `::before` 必须关掉**：`.fl-nav[data-fl-indicator="on"] .fl-nav-item[aria-current="page"]::before { content: none }`
-      —— 不关就是同屏两条胶囊（校验器 R46 会拦）；
-    - **两层的分工**：`ghost` 停在旧位置往下长（origin 顶边），`pill` 落在新位置往上收（origin 底边），
-      两者在 0–200ms 完全重合所以看不出是两层；往上移动时两者的 origin 要对调；
+      —— 不关就是同屏两条胶囊（R46 会拦）；
+    - **两层的分工**：`ghost` 停在旧项里往目标长（origin = 尾部边），`pill` 落在新项里往回缩
+      （origin = 头部边）；往上移动时两者的 origin 对调，塌缩用 translateY 补偿，不许中途换 origin；
     - **别用 `delay` 藏首个关键帧**：WAAPI 在 delay 期间就会套用第一帧，`pill` 会从一开始就是拉伸态，
       把 ghost 的生长阶段整个盖住（实测过，表现为"没有生长过程、直接跳"）；
     - 位移与拉伸只走 `transform`，不要过渡 `top`/`height`；

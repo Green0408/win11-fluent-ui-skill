@@ -283,6 +283,17 @@ async function main() {
   check("弹层 position:fixed", openState.pos === "fixed", openState.pos);
   check("弹层有实际尺寸（未塌陷/未被裁）", openState.w > 60 && openState.h > 60, `${openState.w}×${openState.h}`);
 
+  /* 4 项的短弹层不该有滚动条：项文字一旦折行，弹层会被撑高、凭空长出一条滚动条 */
+  const shortList = await evaluate(`(function(){
+    var pop = document.getElementById("combo-view-list");
+    var wrapped = [].some.call(pop.children, function (c) { return c.getBoundingClientRect().height > 40; });
+    return { scroll: pop.scrollHeight - pop.clientHeight, h: pop.clientHeight, wrapped: wrapped };
+  })()`);
+  /* scroll 允许几 px 余量：弹层高度受可用空间钳制，钳到比内容少一点是正常的；
+     真正要防的是「选项折行把内容撑高几十 px」 */
+  check("短弹层不因折行而溢出（选项单行显示）",
+    shortList.wrapped === false && shortList.scroll <= 8, JSON.stringify(shortList));
+
   /* 滚动条：塞 20 项到弹层里，看它是不是自定义的细滚动条（原生约 15-17px 且带箭头） */
   const comboScroll = await evaluate(`(function(){
     var pop = document.getElementById("combo-view-list");

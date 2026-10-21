@@ -306,6 +306,9 @@
     /* 定位：优先向下展开，下方不够且上方更宽裕则翻转；只赋值 left/top（不做 transition） */
     function place() {
       var r = btn.getBoundingClientRect();
+      /* 先清掉上一轮写进 style 的 maxHeight：否则 scrollHeight 读到的是「被钳过的值」，
+         钳制会自我维持 —— 4 项短列表被永久压出 4px 溢出，凭空多一条滚动条 */
+      popup.style.maxHeight = "";
       var maxH = parseFloat(global.getComputedStyle(popup).maxHeight) || 504;
       var wantH = Math.min(popup.scrollHeight, maxH);
       var below = global.innerHeight - r.bottom - 8;

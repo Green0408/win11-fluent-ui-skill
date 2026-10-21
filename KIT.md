@@ -113,9 +113,11 @@
     - 控件放在 `.fl-settings-action` 里，**不要**在行内重复写一遍标题文字（标题已经在左边）。
 23. **任何可滚动的浮层都必须加 `.fl-scroll`**（ComboBox 弹层、长菜单、长对话框）。浏览器默认滚动条是 17px 带上下箭头的方块，在 Acrylic 弹层里非常出戏。
     - 两套写法**互斥**：Chromium 116+ 里 `scrollbar-width` / `scrollbar-color` 只要是 non-auto，`::-webkit-scrollbar-*` 全部失效。所以默认给 Firefox 写标准属性，再用 `@supports selector(::-webkit-scrollbar)` 块把它们重置回 `auto`，然后写伪元素样式（校验器 R39 会拦缺 `@supports` 块）；
-    - 视觉：命中区 12px、静止画 4px（4px 透明 border + `background-clip: content-box` 裁出）、hover / 拖动收到 3px border → 视觉 6px、thumb 圆角 999、**去掉 `::-webkit-scrollbar-button`**；
+    - 视觉：命中区 12px、静止画 **2px**（5px 透明 border + `background-clip: content-box` 裁出）、hover / 拖动收到 4px border → 视觉 **4px**、thumb 圆角 999、**去掉 `::-webkit-scrollbar-button`**；
+    - **聚焦不许触发变粗**：加了 `:focus-within` 时，下拉一展开（焦点自动进 listbox）就会变成粗条 —— 看起来像「一打开就一根杠」；
     - **拖动（`:active`）不许继续变粗**：曾经收到 0，thumb 直接画满 12px 命中区，在弹层里又粗又重（校验器 R43 会拦）；
     - 这条容易漏：只有"超过 15 项（MaxDropDownHeight 504 ÷ 项高 32）"才看得见滚动条，演示数据通常到不了这个量。
+    - **下拉项必须 `white-space: nowrap`**：项文字一折行，弹层就被撑高，4 个选项的短列表也会凭空长出一条滚动条 —— 用户第一眼看到的就是「一个没用的滚动条」。弹层宽度可以超过按钮（`min-width` 只是下限）。
 
 24. **布局：左导航固定、只有右侧内容区滚**（不是整页滚）。三层缺一不可，任何一层断掉都会退回"整页滚动"：
 
@@ -147,7 +149,7 @@
 - 控件：高 32px；Button padding 11,5,11,6；TextBox padding 10,5,6,6；列表项 min-height 40；ContentDialog padding 24 / max-width 548 / min-height 184；Switch 轨道 40×20、旋钮 12（hover 14 / pressed 17）、开态位移 **20px**（XAML `KnobTranslateTransform X=20`）；Slider 轨道 4 / 内圆 12 / 圆角 10（hover 1.167、pressed 0.833，250ms）；轨道**左段为 accent 已填充段**（`SliderTrackValueFill`，宽 = 半 thumb + 比例×(轨道宽-12)，由 `M.slider.auto()` 写 `--fl-slider-pct`），填充与 thumb 同步四档变色（Default→Secondary 0.9→Tertiary 0.8→Disabled）。
 - 列表：行高单行 40 / 两行 64（后者 KIT 自定）；圆角 4；选中条 3×16 圆角 1.5；多选列宽 40.5；禁用透明度 0.3；图标 20；行内间距 12。
 - 设置页列表：行高 **56**（实测派生）；组默认不套卡片；分隔线左缩进 = 行内边距 12 + 图标 20 + 列间距 12 = 44；组间 24。
-- 滚动条（.fl-scroll）：命中区 12 / 静止视觉 4 / hover·拖动视觉 6 / 圆角 999 / 无箭头按钮；Firefox 走 scrollbar-width:thin 回退。
+- 滚动条（.fl-scroll）：命中区 12 / 静止视觉 **2** / hover·拖动视觉 **4** / 圆角 999 / 无箭头按钮；只认 `:hover`，不认 `:focus-within`；Firefox 走 scrollbar-width:thin 回退。
 - 勾选/单选：方框 20×20、圆角 4、描边 1；勾号字形 12 / 描边 2.5；单选内点 12（hover 1.167 / pressed 0.833）；控件行高 32。
 - 下拉（自绘）：闭合态高 32、最小宽 64、箭头 12×12 距右缘 14；弹层最小宽 80、最大高 504（15 项）、圆角 8、描边 2、项高 32、项圆角 3、选中胶囊 3×16 圆角 1.5。
 - 控件级时长：`--fl-dur-control-faster` 83ms（状态色变）/ `-fast` 167ms（勾号描绘）/ `-normal` 250ms（滑块、单选缩放）。

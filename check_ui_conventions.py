@@ -25,8 +25,15 @@ check_ui_conventions.py —— win11-fluent-ui 规范检查器
  R15 浮层关闭必须延迟 visibility（.fl-overlay/.fl-smoke 的 :not(.fl-open) 要有 visibility 0s … var(--fl-dur-)）
  R16 多页必须叠放（≥2 个 .fl-page 时资产 CSS 必须有 grid-area: 1 / 1；缺 scrollbar-gutter 仅警告）
  R17 禁止内联 transition-delay / transitionDelay（改用 --fl-stagger-delay 自定义属性）
- R18 一次性入场/出场必须 animation 化（.fl-entrance/.fl-point-to-point/.fl-exit 块内须有 animation）
+ R18 一次性入场/出场必须 animation 化（.fl-entrance/.fl-point-to-point/.fl-exit/.fl-page-in/.fl-page-out）
  R19 dialog 居中禁用 transform: translate(-50%…)（须用独立 translate 属性，transform 留给开合动效）
+ R20 页面转场位移禁写死：@keyframes fl-page-* 内不得出现非零 px 字面量位移（须走 --fl-page-* 变量）
+ R21 转场必须两轴通用：有 .fl-page-in 时 CSS 必须定义 x/y 四个位移变量，JS 必须写入 from-x 与 from-y
+ R22 drill 必须有方向：HTML 出现 data-kind="drill" 时必须能表达方向（data-dir 或 M.back(）
+ R23 连续型动效必须线性非 both：infinite 的规则只能 linear/steps、禁 both/forwards、reduced 里关停
+ R24 reduced-motion 必须覆盖页面转场类（.fl-page-in/.fl-page-out）
+ R25 --fl-ease-linear 只允许用于 opacity/visibility 过渡（位移/底色用 linear 会「生硬」）
+ R26 页面转场容器必须裁剪（.fl-content-layer 需 overflow: clip/hidden，否则横向位移撑出滚动条）
 """
 import re
 import sys
@@ -280,11 +287,16 @@ def main():
 
     # R18 一次性入场/出场必须 animation 化（transition 会被控件自身 transition 简写覆盖）
     if motion_css:
-        for cls in ("fl-entrance", "fl-point-to-point", "fl-exit"):
+        for cls in ("fl-entrance", "fl-point-to-point", "fl-exit", "fl-page-in", "fl-page-out"):
             has_anim = False
             for m in re.finditer(r"[^{}]*\.%s[^{}]*\{([^{}]*)\}" % cls, motion_css):
                 decl = re.search(r"animation\s*:\s*([^;]+)", m.group(1))
                 if decl and not decl.group(1).strip().startswith("none"):
+                    has_anim = True
+                    break
+                # 长写（animation-name + animation-duration）同样算 animation 化
+                if re.search(r"animation-name\s*:\s*[^;]+", m.group(1)) and \
+                   re.search(r"animation-duration\s*:\s*[^;]+", m.group(1)):
                     has_anim = True
                     break
             if not has_anim:
@@ -296,6 +308,100 @@ def main():
         if not ignored(controls_css, m.start()):
             fails.append(f"R19 fluent2-controls.css L{line_of(controls_css, m.start())}: dialog 居中禁用 "
                          f"transform，请用 translate: -50% -50%")
+
+    # ---- R20-R26：转场两轴两向 + 连续型动效 防复发 ----
+
+    def keyframe_body(text, name):
+        """取 @keyframes <name> 的完整体内文本（花括号可嵌套）。"""
+        m = re.search(r"@keyframes\s+%s\s*\{" % re.escape(name), text)
+        if not m:
+            return None, -1
+        i, depth = m.end(), 1
+        start = m.end()
+        while i < len(text) and depth:
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+            i += 1
+        return text[start:i - 1], m.start()
+
+    # R20 页面转场位移禁写死（换尺寸/换方向只能改变量）
+    for kf in re.findall(r"@keyframes\s+(fl-page-[\w-]+)", motion_css or ""):
+        body, pos = keyframe_body(motion_css, kf)
+        if body is None:
+            continue
+        for tm in re.finditer(r"translate[3dXY]*\(([^)]*)\)", body):
+            arg = tm.group(1)
+            if "--fl-page-" in arg:
+                continue
+            if re.search(r"(?<![\d.])[1-9][\d.]*px", arg):
+                fails.append(f"R20 fluent2-motion.css L{line_of(motion_css, pos)}: @keyframes {kf} "
+                             f"位移写死（{arg.strip()}），须走 var(--fl-page-*) 变量")
+                break
+
+    # R21 转场必须两轴通用（防「只做垂直」）
+    if ".fl-page-in" in (motion_css or ""):
+        need_vars = ["--fl-page-from-x", "--fl-page-from-y", "--fl-page-to-x", "--fl-page-to-y"]
+        missing = [v for v in need_vars if v not in motion_css]
+        if missing:
+            fails.append(f"R21 fluent2-motion.css: 转场必须两轴通用，缺少 {', '.join(missing)}")
+        if motion_js and not (re.search(r'setProperty\(\s*["\']--fl-page-from-x', motion_js)
+                              and re.search(r'setProperty\(\s*["\']--fl-page-from-y', motion_js)):
+            fails.append("R21 fluent2-motion.js: 转场必须同时写入 --fl-page-from-x 与 --fl-page-from-y"
+                         "（只写一个轴 = 只会垂直或只会水平）")
+
+    # R22 drill 必须有方向（否则返回动画方向错或没有）；注释不算数
+    html_code = re.sub(r"<!--.*?-->", "", html, flags=re.S)
+    if re.search(r'data-kind\s*=\s*["\']drill["\']', html_code):
+        if "data-dir" not in html_code and "M.back(" not in html_code:
+            fails.append('R22: 出现 data-kind="drill" 但没有方向传递（需 data-dir 或 M.back(）')
+
+    # R23 连续型动效必须线性非 both，且 reduced 里关停
+    reduced_body = ""
+    rm = re.search(r"@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{", motion_css or "")
+    if rm:
+        reduced_body = motion_css[rm.end():]
+    for name, text, sel, body, pos in blocks:
+        if name != "fluent2-motion.css":
+            continue
+        if not re.search(r"(animation-iteration-count|animation)\s*:[^;]*\binfinite\b", body):
+            continue
+        timing_ok = (re.search(r"animation-timing-function\s*:\s*var\(--fl-ease-(linear|steps-)", body)
+                     or re.search(r"animation\s*:[^;]*\b(linear|steps\()", body))
+        if not timing_ok:
+            fails.append(f"R23 fluent2-motion.css L{line_of(text, pos)}: 连续型动效 {sel} 必须 "
+                         f"linear 或 steps（--fl-ease-linear / --fl-ease-steps-*）")
+        if re.search(r"animation-fill-mode\s*:\s*(both|forwards)", body) or \
+           re.search(r"animation\s*:[^;]*\b(both|forwards)\b", body):
+            fails.append(f"R23 fluent2-motion.css L{line_of(text, pos)}: 连续型动效 {sel} 禁用 "
+                         f"both/forwards（会把终态钉死）")
+        for cls in re.findall(r"\.(fl-continuous|fl-tick)\b", sel):
+            if not re.search(r"\.%s[^{]*\{[^}]*animation\s*:\s*none" % cls, reduced_body):
+                fails.append(f"R23 fluent2-motion.css: prefers-reduced-motion 必须关停 .{cls}")
+
+    # R24 reduced-motion 必须覆盖页面转场类
+    if re.search(r"\.fl-page-in\b", motion_css or ""):
+        for cls in ("fl-page-in", "fl-page-out"):
+            if not re.search(r"\.%s[^{]*\{[^}]*animation\s*:\s*none" % cls, reduced_body):
+                fails.append(f"R24 fluent2-motion.css: prefers-reduced-motion 未覆盖 .{cls}"
+                             f"（关掉系统动画后仍会位移）")
+
+    # R25 --fl-ease-linear 只允许用于 opacity/visibility
+    linear_srcs = list(asset_css) + [("HTML inline", c) for c, _p, _k in inline]
+    for nm, text in linear_srcs:
+        for m in re.finditer(r"transition\s*:\s*([^;{}]+)[;}]", text or ""):
+            for seg in m.group(1).split(","):
+                if "var(--fl-ease-linear)" in seg and not re.search(r"\b(opacity|visibility)\b", seg):
+                    fails.append(f"R25 {nm} L{line_of(text, m.start())}: --fl-ease-linear 只允许用于 "
+                                 f"opacity/visibility 过渡（位移/底色请用 --fl-ease-standard）")
+                    break
+
+    # R26 转场容器必须裁剪
+    if "fl-page-in-slide-kf" in (motion_css or ""):
+        if not re.search(r"\.fl-content-layer\s*\{[^}]*overflow\s*:\s*(clip|hidden)", controls_css):
+            fails.append("R26 fluent2-controls.css: .fl-content-layer 必须 overflow: clip/hidden"
+                         "（否则 ±位移会撑出横向滚动条）")
 
     # 输出
     print(f"目标：{target}")

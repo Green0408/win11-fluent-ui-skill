@@ -7,6 +7,7 @@
 3. 有**持续生效**的设置吗？（→ settings-panel）
 4. 有全局命令吗？（→ toolbar，高频的放画布、其余收进「⋯」flyout）
 5. 有次要/上下文动作吗？（→ flyout / contextmenu）
+6. 页面有层级吗？一级（侧栏切换）用 `nav` 垂直转场；从内容区入口进入的二级页用 `{kind:'drill'}` 水平转场 —— 两者不要混成一种。
 
 ## 四种处方
 
@@ -18,17 +19,18 @@
 ### B 列表 + 详情（条目管理型）
 保留：`titlebar` + `nav` + `toolbar` + `list-detail` + `dialog`（删除确认，仅当不可撤销）+ `contextmenu`。
 删除：grid、settings-panel（或并入详情卡片）。
-动效：列表 `M.stagger`；选择详情用 `.fl-fade`（83ms，轻量切换）；页面切换 `M.transitionTo`。
+动效：列表 `M.stagger`；选择详情用 `.fl-fade`（83ms，轻量切换）；页面切换走 `M.transitionTo()` ——
+点侧栏用默认（垂直 72px），点内容区里的入口进二级页用 `M.transitionTo(id,{kind:'drill'})`（水平 176px），返回用 `M.back('drill')`。
 
 ### C 网格 + 详情（图库型）
 保留：`titlebar` + `nav` + `grid`。
 删除：toolbar(或精简)、list-detail、settings-panel。
-动效：卡片 `M.stagger`；hover 用 `.fl-card.fl-hoverable` 内置过渡；选中项进详情可用 `.fl-strong-entrance`（弹性入场）。
+动效：卡片 `M.stagger`；hover 用 `.fl-card.fl-hoverable` 内置过渡；点卡片进详情页用 `M.transitionTo(id,{kind:'drill'})`（水平钻入，返回自动反向）；要「原地放大」观感时可用 `.fl-strong-entrance`（弹性入场）。
 
 ### D 设置型
 保留：`titlebar` + `settings-panel`（或 `topnav` 分组）。
 删除：nav、toolbar、list-detail、grid。
-动效：分组卡片 `.fl-entrance`；开关本身已有 point 曲线过渡（Switch 12×12 旋钮，XAML 几何）。
+动效：分组卡片 `.fl-entrance`；开关/滑块/复选框已内置官方微动效（开关旋钮 12→hover 14→pressed 17、开态位移 20px、83ms FastOutSlowIn；滑块 hover 1.167 / pressed 0.833、250ms）；有实时数值（进度/秒表）时用 `.fl-dial` + `.fl-tick` / `.fl-continuous`。
 
 ## 官方结构规则依据
 

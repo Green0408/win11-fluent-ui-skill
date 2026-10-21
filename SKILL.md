@@ -1,6 +1,6 @@
 ---
 name: win11-fluent-ui
-description: 用 Windows 11 / WinUI 3 / Fluent 官方规格生成工具界面（HTML/CSS/JS 网页）：官方动效时长与缓动曲线（Direct Entrance/Point to Point/Strong Entrance）、Fluent 颜色 token（暗/亮双主题、Mica/Acrylic/Smoke 网页近似）、Segoe UI Variable 字阶、官方圆角（控件 4px/浮层 8px）与海拔阴影、可拆装界面模块（单页/列表详情/网格详情/设置型）。当用户要求「用 Win11 / Fluent / WinUI 风格做个界面」「Windows 11 风格工具」「照 KIT 做界面」，需要核对 Fluent 官方数值，或发来 Win11 应用录屏要反解整屏动效与控件形态时使用。含组合处方、可复制骨架、录屏动效反解工具与可执行规范检查器。
+description: 用 Windows 11 / WinUI 3 / Fluent 官方规格生成工具界面（HTML/CSS/JS 网页）：官方动效时长与缓动曲线（Direct Entrance/Point to Point/Strong Entrance）、页面转场两轴两向（一级导航垂直 / 二级下钻水平，283ms）、连续型动效（秒针/进度环）、Fluent 颜色 token（暗/亮双主题、Mica/Acrylic/Smoke 网页近似）、Segoe UI Variable 字阶、官方圆角（控件 4px/浮层 8px）与海拔阴影、可拆装界面模块（单页/列表详情/网格详情/设置型）。当用户要求「用 Win11 / Fluent / WinUI 风格做个界面」「Windows 11 风格工具」「照 KIT 做界面」，需要核对 Fluent 官方数值，或发来 Win11 应用录屏要反解整屏动效与控件形态时使用。含组合处方、可复制骨架、录屏动效反解工具与可执行规范检查器。
 ---
 
 # Win11 / Fluent 工具界面 KIT
@@ -36,7 +36,7 @@ learn.microsoft.com 文档快照）。不要凭记忆写颜色、字号、圆角
 2. 把 `fluent2-tool-starter.html` **连同四个资产**（`fluent2-tokens.css`、`fluent2-controls.css`、`fluent2-motion.css`、`fluent2-motion.js`）复制到目标目录的**同一层**（模板用相对路径引用）。
 3. **删掉不用的模块**：搜文件里的 `模块：<名>` 标记整块删。JS 接线全部有存在性保护，删完页面照常运行，不用手工改脚本。
 4. 只改业务：标题/说明、数据、详情字段、工具栏命令、文案。
-5. **不要改**：`--fl-*` 变量值、动效类、`M.transitionTo()`、stagger 步进、浮层开合逻辑。
+5. **不要改**：`--fl-*` 变量值、动效类、`M.transitionTo()` 的签名与默认参数、stagger 步进、浮层开合逻辑。
 6. **交付前必须跑**（有 FAIL 返回 1，目标「合计未通过：0」，不达标不交付）：
 
    ```bash
@@ -46,7 +46,8 @@ learn.microsoft.com 文档快照）。不要凭记忆写颜色、字号、圆角
 ## 硬性规则摘要（完整版见 KIT.md）
 
 - 颜色只用 `var(--fl-*)`；动效只用 `var(--fl-dur-*/--fl-ease-*)` 与 motion 类；页面转场必须走 `M.transitionTo()`。
-- 一次性动效（入场/出场/转场）用 `animation`，状态切换（hover/active/浮层开合）用 `transition`，两类别混用。
+- **转场分两轴两向**：点侧栏（一级）用默认 `nav`（垂直 72px）；点内容区入口进二级页用 `{kind:'drill'}`（水平 176px），返回用 `M.back('drill')`（方向自动取反）。两者都是 283ms + 交叉淡化。
+- 一次性动效（入场/出场/转场）用 `animation`，状态切换（hover/active/浮层开合）用 `transition`，连续型（秒针/进度环）用 `animation + infinite + linear/steps（禁 both）` —— 三类别混用。
 - 圆角两档：控件 4px / 浮层 8px（`--fl-radius-*`）；字号只用 `.fl-*` 字阶类；间距/尺寸 4 的倍数（`--fl-space-*`）。
 - 浮层隐藏必须 visibility/pointer-events（`.fl-overlay` 已内置，且 visibility 延迟切换以保证出场动画可见）；对话框只用于不可撤销且后果重大的确认。
 - 多页布局是 grid 同格叠放（`.fl-page { grid-area: 1 / 1 }`），转场期靠 `.fl-page-leaving` 保持离场页渲染，不要改成上下堆叠。
@@ -91,3 +92,6 @@ python analyze_video.py report 录屏.mp4 --work ...                    # 10 节
 5. 忘了删页面上不存在的模块对应的接线（其实有保护，但模块功能要重新判断该不该存在，见 FLUENT-COMPOSE.md 第 5 问）。
 6. 用 `transition-delay` 做 stagger、用 `filter: brightness()` 做按压反馈 → 分别被 R17 / R14 拦下（前者让 hover 迟滞，后者无法平滑过渡）。
 7. 把入场动画写成 `transition` → 会被控件自身的 `transition` 简写覆盖（R18），表现为「动画根本没播」。
+8. 把二级下钻也做成垂直转场（或只做垂直不做水平）→ 与官方应用观感不符，且 R21 会拦「只写一个轴」。
+9. 连续型动效用 `both`/`forwards`，或拿 `--fl-ease-standard` 驱动秒针 → 终态被钉死/节奏不对，R23 会拦。
+10. 用 `--fl-ease-linear` 做位移或底色过渡 → 「生硬」的来源之一，R25 只放行 opacity/visibility。

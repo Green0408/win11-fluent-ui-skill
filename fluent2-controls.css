@@ -231,6 +231,22 @@ body {
 .fl-slider:hover::-moz-range-thumb  { transform: scale(1.167); }
 .fl-slider:active::-moz-range-thumb { transform: scale(0.833); }
 
+/* ---- 表盘（连续型动效的宿主）：指针绕表盘圆心旋转 ----
+   .fl-dial 定尺寸；.fl-dial-hand 从圆心向上画，transform-origin 落在自身底边 = 圆心；
+   旋转动画加在 .fl-dial-hand 本身（.fl-tick / .fl-continuous），不要再套一层容器 */
+.fl-dial { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+.fl-dial-hand {
+  position: absolute; left: 50%; bottom: 50%;
+  width: 2px; margin-left: -1px; border-radius: 1px;
+  background: var(--fl-text-primary);
+  transform-origin: 50% 100%;
+}
+.fl-dial-hub {
+  position: absolute; left: 50%; top: 50%;
+  width: 8px; height: 8px; margin: -4px 0 0 -4px;
+  border-radius: 50%; background: var(--fl-text-primary);
+}
+
 /* ---- 列表项（ListViewItem：MinHeight 40、圆角 4、禁用透明度 0.3） ---- */
 .fl-listitem {
   display: flex; align-items: center; gap: var(--fl-space-3);

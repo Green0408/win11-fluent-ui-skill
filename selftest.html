@@ -59,15 +59,12 @@
         </div>
       </div>
 
-      <!-- 连续型动效：% 秒针 steps(60) + 分针 linear 倍乘 -->
+      <!-- 连续型动效：秒针 steps(60) + 分针 linear 倍乘 -->
       <div class="fl-card" id="continuous-card" style="display:flex; gap: var(--fl-space-6); align-items:center;">
-        <div style="position:relative; width:72px; height:72px; flex-shrink:0;">
-          <div class="fl-tick" style="position:absolute; inset:0;">
-            <span style="position:absolute; left:50%; bottom:50%; width:2px; height:28px; margin-left:-1px; background: var(--fl-accent-fill);"></span>
-          </div>
-          <div class="fl-continuous" style="position:absolute; inset:0; animation-duration: calc(var(--fl-dur-sweep) * 60);">
-            <span style="position:absolute; left:50%; bottom:50%; width:2px; height:22px; margin-left:-1px; background: var(--fl-text-primary);"></span>
-          </div>
+        <div class="fl-dial">
+          <span class="fl-dial-hand fl-tick" style="height:28px; background: var(--fl-accent-fill);"></span>
+          <span class="fl-dial-hand fl-continuous" style="height:22px; animation-duration: calc(var(--fl-dur-sweep) * 60);"></span>
+          <span class="fl-dial-hub"></span>
         </div>
         <span class="fl-caption">连续型动效（秒针/分针）</span>
       </div>

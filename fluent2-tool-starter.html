@@ -121,14 +121,10 @@
 
       <!-- 模块：continuous —— 连续型动效范例（线性/steps + infinite + 非 both；见 KIT 规则 16） -->
       <div class="fl-card" id="continuous" style="margin-top: var(--fl-space-3); display:flex; gap: var(--fl-space-6); align-items:center;">
-        <div style="position:relative; width:96px; height:96px; flex-shrink:0;">
-          <div class="fl-tick" style="position:absolute; inset:0;">
-            <span style="position:absolute; left:50%; bottom:50%; width:2px; height:38px; margin-left:-1px; background: var(--fl-accent-fill);"></span>
-          </div>
-          <div class="fl-continuous" style="position:absolute; inset:0; animation-duration: calc(var(--fl-dur-sweep) * 60);">
-            <span style="position:absolute; left:50%; bottom:50%; width:2px; height:30px; margin-left:-1px; background: var(--fl-text-primary);"></span>
-          </div>
-          <div style="position:absolute; left:50%; top:50%; width:8px; height:8px; margin:-4px 0 0 -4px; border-radius:50%; background: var(--fl-text-primary);"></div>
+        <div class="fl-dial">
+          <span class="fl-dial-hand fl-tick" style="height:38px; background: var(--fl-accent-fill);"></span>
+          <span class="fl-dial-hand fl-continuous" style="height:30px; animation-duration: calc(var(--fl-dur-sweep) * 60);"></span>
+          <span class="fl-dial-hub"></span>
         </div>
         <div>
           <p class="fl-body-strong" style="margin:0 0 var(--fl-space-1);">连续型动效</p>

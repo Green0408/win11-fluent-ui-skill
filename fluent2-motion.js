@@ -285,7 +285,7 @@
     return el;
   }
 
-  /* 把指示条放到某项上；animate=true 时按官方节奏从 fromItem 过渡过去 */
+  /* 把指示条放到某项上；给了 fromItem 时播"旧项内拉伸 → 新项满高出现 → 收回"两段动画 */
   function placeIndicator(nav, toItem, fromItem) {
     if (!nav || !toItem) return;
     nav.setAttribute("data-fl-indicator", "on");

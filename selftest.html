@@ -34,6 +34,7 @@
         <button class="fl-btn" id="btn-normal" type="button">次命令</button>
         <button class="fl-btn fl-btn-subtle" id="btn-more" type="button" aria-haspopup="true">⋯</button>
         <input class="fl-input" id="search" type="search" placeholder="搜索…">
+        <button class="fl-btn" id="btn-drill" type="button" data-kind="drill" data-page="page-c">下钻</button>
       </div>
 
       <div id="list" role="listbox" aria-label="列表">
@@ -52,6 +53,23 @@
         <label class="fl-check"><input type="checkbox" id="cb-a" checked><span class="fl-box"></span><span class="fl-body">CheckBox</span></label>
         <label class="fl-radio"><input type="radio" name="r" id="rd-a" checked><span class="fl-box"></span><span class="fl-body">Radio</span></label>
         <select class="fl-select" id="sel"><option>ComboBox</option></select>
+        <div style="margin-top: var(--fl-space-3);">
+          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">Slider</span>
+          <input class="fl-slider" id="sld" type="range" min="0" max="100" value="30" aria-label="Slider">
+        </div>
+      </div>
+
+      <!-- 连续型动效：% 秒针 steps(60) + 分针 linear 倍乘 -->
+      <div class="fl-card" id="continuous-card" style="display:flex; gap: var(--fl-space-6); align-items:center;">
+        <div style="position:relative; width:72px; height:72px; flex-shrink:0;">
+          <div class="fl-tick" style="position:absolute; inset:0;">
+            <span style="position:absolute; left:50%; bottom:50%; width:2px; height:28px; margin-left:-1px; background: var(--fl-accent-fill);"></span>
+          </div>
+          <div class="fl-continuous" style="position:absolute; inset:0; animation-duration: calc(var(--fl-dur-sweep) * 60);">
+            <span style="position:absolute; left:50%; bottom:50%; width:2px; height:22px; margin-left:-1px; background: var(--fl-text-primary);"></span>
+          </div>
+        </div>
+        <span class="fl-caption">连续型动效（秒针/分针）</span>
       </div>
     </section>
 
@@ -60,6 +78,14 @@
       <div class="fl-card fl-strong-entrance" id="strong-card">
         <span class="fl-body-strong">Strong Entrance 演示</span>
       </div>
+    </section>
+
+    <section class="fl-page" id="page-c">
+      <div class="fl-toolbar">
+        <button class="fl-btn" id="btn-back" type="button" data-back>← 返回</button>
+        <h2 class="fl-subtitle" style="margin:0;">页面 C（drill 目标）</h2>
+      </div>
+      <div class="fl-card"><p class="fl-body">水平钻入进来的二级页，返回走反向。</p></div>
     </section>
   </main>
 </div>
@@ -92,6 +118,9 @@
     });
   });
   if ($("btn-infobar-close")) $("btn-infobar-close").addEventListener("click", function () { $("infobar").remove(); });
+  /* 二级下钻与返回（drill = 水平；返回方向取反） */
+  if ($("btn-drill")) $("btn-drill").addEventListener("click", function () { M.transitionTo("page-c", { kind: "drill" }); });
+  if ($("btn-back")) $("btn-back").addEventListener("click", function () { M.back("drill"); });
   if ($("btn-more")) $("btn-more").addEventListener("click", function (e) { e.stopPropagation(); M.flyout.toggle("flyout-more"); });
   if ($("btn-primary")) $("btn-primary").addEventListener("click", function () { M.dialog.show("dialog-test"); });
   if ($("btn-dialog-ok")) $("btn-dialog-ok").addEventListener("click", function () { M.dialog.hide("dialog-test"); M.toast("已确认"); });

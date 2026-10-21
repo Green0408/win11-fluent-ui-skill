@@ -14,11 +14,17 @@
   --fl-ease-strong-2: cubic-bezier(0.85,0,0.75,1);
   --fl-ease-linear: linear;
 
+  /* 控件级时长档：XAML 用 ControlFaster/Fast/NormalAnimationDuration 命名，与上面动效四档数值相同但语义不同，勿混用 */
+  --fl-dur-control-faster: 83ms; /* 控件状态色变、开关旋钮尺寸/位移（ControlFasterAnimationDuration） */
+  --fl-dur-control-fast: 167ms; /* 控件中等反馈（ControlFastAnimationDuration） */
+  --fl-dur-control-normal: 250ms; /* 控件较大位移/尺寸变化、勾号描绘（ControlNormalAnimationDuration） */
+
   /* 实测派生（非官方档位）：Win11 官方应用 60fps 录屏反解，方法与原始数字见 VIDEO-ALIGN.md §9 */
   --fl-dur-page: 283ms;  /* 页面转场（二级下钻水平 / 一级导航垂直共用同一节奏） */
   --fl-dur-tick: 1s;  --fl-dur-sweep: 60s;
   --fl-ease-page: cubic-bezier(0.6,0,0.3,1);  --fl-ease-steps-60: steps(60, end);
   --fl-page-shift-drill: 176px;  --fl-page-shift-nav: 72px;
+  --fl-page-shift-x: var(--fl-page-shift-drill);  --fl-page-shift-y: var(--fl-page-shift-nav);  /* 按轴取行程：drill=水平 176 / nav=垂直 72，供 motion.js 按方向选轴时引用 */
 
   /* 字体栈（Segoe UI Variable → fallback） */
   --fl-font: "Segoe UI Variable Display","Segoe UI Variable","Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
@@ -48,6 +54,33 @@
   --fl-slider-track: 4px;   /* SliderTrackThemeHeight */
   --fl-slider-inner: 12px;  /* SliderInnerThumbWidth */
   --fl-slider-radius: 10px; /* SliderThumbCornerRadius */
+
+  /* 控件专属几何（逐一取自 raw/xaml_*_themeresources.xaml，勿凭空改写） */
+  --fl-check-size: 20px;      /* CheckBoxSize */
+  --fl-check-glyph: 12px;     /* CheckBoxGlyphSize */
+  --fl-check-height: 32px;     /* CheckBoxHeight */
+  --fl-check-min-width: 120px; /* CheckBoxMinWidth */
+  --fl-check-stroke: 1px;     /* CheckBoxBorderThickness */
+  --fl-radio-glyph: 12px;     /* RadioButtonCheckGlyphSize */
+  --fl-glyph-stroke: 2.5px;    /* ListViewItem CheckGlyph StrokeThickness */
+  --fl-radius-checkbox: 3px;   /* ListViewItemCheckBoxCornerRadius；CheckBox 本体用 --fl-radius-control */
+  --fl-radius-indicator: 2px;  /* NavigationViewSelectionIndicatorRadius */
+  --fl-radius-list-indicator: 1.5px; /* ListViewItemSelectionIndicatorCornerRadius */
+  --fl-radius-combo-highlight: 7px; /* ComboBoxHiglightBorderCornerRadius（XAML 原键名少一个 h） */
+  --fl-radius-combo-item: 3px;      /* ComboBoxItemCornerRadius */
+  --fl-radius-combo-pill: 1.5px;  /* ComboBoxItemPillCornerRadius */
+  --fl-nav-item-height: 36px; /* NavigationViewItemOnLeftMinHeight */
+  --fl-nav-indicator-w: 3px;  /* NavigationViewSelectionIndicatorWidth */
+  --fl-nav-indicator-h: 16px; /* NavigationViewSelectionIndicatorHeight */
+  --fl-list-min-width: 88px; /* ListViewItemMinWidth */
+  --fl-list-check-offset: 40.5px; /* = -ListViewItemContentOffsetX（XAML 为 -40.5，负号表示内容右移；此处取正值使用） */
+  --fl-list-item-height-two-line: 64px; /* KIT 自定：图标+主副两行，官方未单列 */
+  --fl-combo-min-width: 64px; /* ComboBoxThemeMinWidth */
+  --fl-combo-popup-min-width: 80px; /* ComboBoxPopupThemeMinWidth */
+  --fl-combo-popup-stroke: 2px; /* ComboBoxPopupBorderThemeThickness */
+  --fl-combo-max-h: 504px; /* MaxDropDownHeight，15 项一屏 */
+  --fl-combo-glyph: 12px;  /* DropDownGlyph 12x12 */
+  --fl-combo-glyph-gap: 14px; /* DropDownGlyph Margin 右值 */
 
   /* 间距（content-basics） */
   --fl-space-1: 4px;  --fl-space-2: 8px;  --fl-space-3: 12px;

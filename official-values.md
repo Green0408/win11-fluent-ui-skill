@@ -71,6 +71,15 @@
 | Fade | linear | 83ms | 仅 Opacity |
 | Strong Entrance | 三关键帧 Elastic In | 167+167+333ms | Position, Scale（弹性入场） |
 
+### 控件级时长档（XAML `Control*AnimationDuration`，与上面四档同数值、不同语义）
+出处：`raw/xaml_Common_themeresources_any.xaml`。
+
+| CSS 变量 | 时长 | XAML key | 用途 |
+|---|---|---|---|
+| `--fl-dur-control-faster` | 83ms | ControlFasterAnimationDuration | 控件状态色变、开关旋钮尺寸/位移（ControlFasterAnimationDuration） |
+| `--fl-dur-control-fast` | 167ms | ControlFastAnimationDuration | 控件中等反馈（ControlFastAnimationDuration） |
+| `--fl-dur-control-normal` | 250ms | ControlNormalAnimationDuration | 控件较大位移/尺寸变化、勾号描绘（ControlNormalAnimationDuration） |
+
 规则：Direct Exit 必须与 fade out 组合（官方硬性要求）；Strong Entrance 为 Elastic In 三关键帧：167ms(0.85,0,0,1) → 167ms(0.85,0,0.75,1) → 333ms(0.85,0,0,1)；同一入口的表面以相同方式开合（Consistent）；优先用现成控件转场（Resourceful），网页对应=直接用本 KIT 的 motion 类。
 
 ## 动效：实测派生（**非官方档位**）
@@ -153,14 +162,38 @@
 | ContentDialog 最大宽 | `548` | raw/xaml_ContentDialog_themeresources.xaml |
 | ContentDialog 最小高 | `184` | raw/xaml_ContentDialog_themeresources.xaml |
 | 列表项最小高 | `40` | raw/xaml_ListViewItem_themeresources.xaml |
+| 列表项最小宽 | `88` | raw/xaml_ListViewItem_themeresources.xaml |
 | 列表项圆角 | `4` | raw/xaml_ListViewItem_themeresources.xaml |
 | 选中指示条圆角 | `1.5` | raw/xaml_ListViewItem_themeresources.xaml |
+| 列表项内复选框圆角 | `3` | raw/xaml_ListViewItem_themeresources.xaml |
+| 多选时内容偏移（负值=右移） | `-40.5` | raw/xaml_ListViewItem_themeresources.xaml |
 | 列表项禁用透明度 | `0.3` | raw/xaml_ListViewItem_themeresources.xaml |
+| CheckBox 方框尺寸 | `20` | raw/xaml_CheckBox_themeresources.xaml |
+| CheckBox 勾号字号 | `12` | raw/xaml_CheckBox_themeresources.xaml |
+| CheckBox 描边宽 | `1` | raw/xaml_CheckBox_themeresources.xaml |
+| CheckBox 行高 | `32` | raw/xaml_CheckBox_themeresources.xaml |
+| CheckBox 最小宽 | `120` | raw/xaml_CheckBox_themeresources.xaml |
+| RadioButton 内点直径 | `12` | raw/xaml_RadioButton_themeresources.xaml |
+| 左侧导航项最小高 | `36` | raw/xaml_NavigationView_themeresources.xaml |
+| 导航选中条宽 | `3` | raw/xaml_NavigationView_themeresources.xaml |
+| 导航选中条高 | `16` | raw/xaml_NavigationView_themeresources.xaml |
+| 导航选中条圆角 | `2` | raw/xaml_NavigationView_themeresources.xaml |
+| ComboBox 最小宽 | `64` | raw/xaml_ComboBox_themeresources.xaml |
+| ComboBox 下拉面板最小宽 | `80` | raw/xaml_ComboBox_themeresources.xaml |
+| ComboBox 下拉面板描边宽 | `2` | raw/xaml_ComboBox_themeresources.xaml |
+| ComboBox 高亮边框圆角 | `7` | raw/xaml_ComboBox_themeresources.xaml |
+| ComboBox 选项圆角 | `3` | raw/xaml_ComboBox_themeresources.xaml |
+| ComboBox 选项选中条圆角 | `1.5` | raw/xaml_ComboBox_themeresources.xaml |
 | 文本控件最小高 | `32` | WinUI DefaultTextBoxStyle MinHeight=TextControlThemeMinHeight，默认 32（stackover­flow.com/questions/78760996 引 generic.xaml；与 WinUI 3 Gallery 视觉一致） |
 | 控件标准高 | `32` | Win11 常驻控件标准高度 32px（Button/TextBox/ComboBox/Slider 实际渲染高度；官方文档未单列数值，按 XAML 默认渲染确认） |
 | SliderTrackThemeHeight | `4` | raw/xaml_Slider_themeresources.xaml：SliderTrackThemeHeight=4（轨道粗） |
 | SliderInnerThumbWidth | `12` | raw/xaml_Slider_themeresources.xaml：SliderInnerThumbWidth=12（内圆直径，外环 20 由描边近似） |
 | SliderThumbCornerRadius | `10` | raw/xaml_Slider_themeresources.xaml：SliderThumbCornerRadius=10（圆形 thumb） |
+| ComboBox 下拉箭头尺寸 | `12` | raw/xaml_ComboBox_themeresources.xaml：DropDownGlyph Width/Height=12、Margin=0,0,14,0（下拉箭头字形与右内边距） |
+| ComboBox 下拉箭头右间距 | `14` | raw/xaml_ComboBox_themeresources.xaml：DropDownGlyph Margin 右值 14（箭头距控件右缘） |
+| 下拉面板最大高（15 项一屏） | `504` | raw/xaml_ComboBox_themeresources.xaml：ComboBox MaxDropDownHeight=504（下拉面板最大高，按 15 项一屏） |
+| 勾号描边宽（ListViewItem CheckGlyph） | `2.5` | raw/xaml_ListViewItem_themeresources.xaml：CheckGlyph Path StrokeThickness=2.5（18.5x17 视箱，Stretch=Fill） |
+| 两行列表项行高（KIT 自定） | `64` | KIT 自定（官方只给 ListViewItemMinHeight=40）：图标+主副两行文本的行高，4 的倍数，与 Win11 设置页实测观感一致 |
 
 ## 断点与单位
 出处：<https://learn.microsoft.com/en-us/windows/apps/design/layout/screen-sizes-and-breakpoints-for-responsive-design>

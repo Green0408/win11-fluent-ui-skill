@@ -353,6 +353,11 @@
       "type": "Double",
       "source": "raw/xaml_ListViewItem_themeresources.xaml"
     },
+    "xaml:ListViewItemMinWidth": {
+      "value": "88",
+      "type": "Double",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
     "xaml:ListViewItemCornerRadius": {
       "value": "4",
       "type": "CornerRadius",
@@ -363,10 +368,100 @@
       "type": "CornerRadius",
       "source": "raw/xaml_ListViewItem_themeresources.xaml"
     },
+    "xaml:ListViewItemCheckBoxCornerRadius": {
+      "value": "3",
+      "type": "CornerRadius",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
+    "xaml:ListViewItemContentOffsetX": {
+      "value": "-40.5",
+      "type": "Double",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
     "xaml:ListViewItemDisabledThemeOpacity": {
       "value": "0.3",
       "type": "Double",
       "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
+    "xaml:CheckBoxSize": {
+      "value": "20",
+      "type": "Double",
+      "source": "raw/xaml_CheckBox_themeresources.xaml"
+    },
+    "xaml:CheckBoxGlyphSize": {
+      "value": "12",
+      "type": "Double",
+      "source": "raw/xaml_CheckBox_themeresources.xaml"
+    },
+    "xaml:CheckBoxBorderThickness": {
+      "value": "1",
+      "type": "Double",
+      "source": "raw/xaml_CheckBox_themeresources.xaml"
+    },
+    "xaml:CheckBoxHeight": {
+      "value": "32",
+      "type": "Double",
+      "source": "raw/xaml_CheckBox_themeresources.xaml"
+    },
+    "xaml:CheckBoxMinWidth": {
+      "value": "120",
+      "type": "Double",
+      "source": "raw/xaml_CheckBox_themeresources.xaml"
+    },
+    "xaml:RadioButtonCheckGlyphSize": {
+      "value": "12",
+      "type": "Double",
+      "source": "raw/xaml_RadioButton_themeresources.xaml"
+    },
+    "xaml:NavigationViewItemOnLeftMinHeight": {
+      "value": "36",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
+    "xaml:NavigationViewSelectionIndicatorWidth": {
+      "value": "3",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
+    "xaml:NavigationViewSelectionIndicatorHeight": {
+      "value": "16",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
+    "xaml:NavigationViewSelectionIndicatorRadius": {
+      "value": "2",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
+    "xaml:ComboBoxThemeMinWidth": {
+      "value": "64",
+      "type": "Double",
+      "source": "raw/xaml_ComboBox_themeresources.xaml"
+    },
+    "xaml:ComboBoxPopupThemeMinWidth": {
+      "value": "80",
+      "type": "Double",
+      "source": "raw/xaml_ComboBox_themeresources.xaml"
+    },
+    "xaml:ComboBoxPopupBorderThemeThickness": {
+      "value": "2",
+      "type": "Thickness",
+      "source": "raw/xaml_ComboBox_themeresources.xaml"
+    },
+    "xaml:ComboBoxHiglightBorderCornerRadius": {
+      "value": "7",
+      "type": "CornerRadius",
+      "source": "raw/xaml_ComboBox_themeresources.xaml"
+    },
+    "xaml:ComboBoxItemCornerRadius": {
+      "value": "3",
+      "type": "CornerRadius",
+      "source": "raw/xaml_ComboBox_themeresources.xaml"
+    },
+    "xaml:ComboBoxItemPillCornerRadius": {
+      "value": "1.5",
+      "type": "CornerRadius",
+      "source": "raw/xaml_ComboBox_themeresources.xaml"
     },
     "extra:TextControlThemeMinHeight": {
       "value": "32",
@@ -392,6 +487,31 @@
       "value": "10",
       "type": "CornerRadius",
       "source": "raw/xaml_Slider_themeresources.xaml：SliderThumbCornerRadius=10（圆形 thumb）"
+    },
+    "extra:ComboBoxDropDownGlyphSize": {
+      "value": "12",
+      "type": "Double",
+      "source": "raw/xaml_ComboBox_themeresources.xaml：DropDownGlyph Width/Height=12、Margin=0,0,14,0（下拉箭头字形与右内边距）"
+    },
+    "extra:ComboBoxDropDownGlyphGap": {
+      "value": "14",
+      "type": "Double",
+      "source": "raw/xaml_ComboBox_themeresources.xaml：DropDownGlyph Margin 右值 14（箭头距控件右缘）"
+    },
+    "extra:ListViewItemMaxDropDownHeight": {
+      "value": "504",
+      "type": "Double",
+      "source": "raw/xaml_ComboBox_themeresources.xaml：ComboBox MaxDropDownHeight=504（下拉面板最大高，按 15 项一屏）"
+    },
+    "extra:CheckGlyphStrokeThickness": {
+      "value": "2.5",
+      "type": "Double",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml：CheckGlyph Path StrokeThickness=2.5（18.5x17 视箱，Stretch=Fill）"
+    },
+    "extra:ListItemHeightTwoLine": {
+      "value": "64",
+      "type": "Double",
+      "source": "KIT 自定（官方只给 ListViewItemMinHeight=40）：图标+主副两行文本的行高，4 的倍数，与 Win11 设置页实测观感一致"
     }
   },
   "motion": {
@@ -415,6 +535,23 @@
         "ms": 333,
         "use": "Direct Entrance、Point to Point（大位移）、Strong Entrance 关键帧 3",
         "source": "learn.../motion"
+      }
+    },
+    "control_durations": {
+      "faster": {
+        "ms": 83,
+        "use": "控件状态色变、开关旋钮尺寸/位移（ControlFasterAnimationDuration）",
+        "source": "raw/xaml_ToggleSwitch_themeresources.xaml 等：ControlFasterAnimationDuration=00:00:00.083"
+      },
+      "fast": {
+        "ms": 167,
+        "use": "控件中等反馈（ControlFastAnimationDuration）",
+        "source": "raw/*_themeresources.xaml：ControlFastAnimationDuration=00:00:00.167"
+      },
+      "normal": {
+        "ms": 250,
+        "use": "控件较大位移/尺寸变化、勾号描绘（ControlNormalAnimationDuration）",
+        "source": "raw/xaml_Slider_themeresources.xaml、xaml_RadioButton_themeresources.xaml：ControlNormalAnimationDuration=00:00:00.250"
       }
     },
     "easings": {

@@ -176,6 +176,16 @@ MOTION = {
         "gentle": {"ms": 250, "use": "Direct Entrance、Point to Point（中档）", "source": "learn.../motion"},
         "slow": {"ms": 333, "use": "Direct Entrance、Point to Point（大位移）、Strong Entrance 关键帧 3", "source": "learn.../motion"},
     },
+    # 控件级时长档：XAML *._themeresources 里以 ControlFaster/Fast/NormalAnimationDuration 命名，
+    # 与上面「动效四档」是两套命名（83/167/250 数值相同但语义不同），故单列，避免引用时混淆。
+    "control_durations": {
+        "faster": {"ms": 83, "use": "控件状态色变、开关旋钮尺寸/位移（ControlFasterAnimationDuration）",
+                   "source": "raw/xaml_ToggleSwitch_themeresources.xaml 等：ControlFasterAnimationDuration=00:00:00.083"},
+        "fast": {"ms": 167, "use": "控件中等反馈（ControlFastAnimationDuration）",
+                 "source": "raw/*_themeresources.xaml：ControlFastAnimationDuration=00:00:00.167"},
+        "normal": {"ms": 250, "use": "控件较大位移/尺寸变化、勾号描绘（ControlNormalAnimationDuration）",
+                   "source": "raw/xaml_Slider_themeresources.xaml、xaml_RadioButton_themeresources.xaml：ControlNormalAnimationDuration=00:00:00.250"},
+    },
     "easings": {
         "standard": {"css": "cubic-bezier(0,0,0,1)", "use": "Direct Entrance / Direct Exit（Fast-In / Fast-Out）"},
         "point": {"css": "cubic-bezier(0.55,0.55,0,1)", "use": "Point to Point（位移类）"},
@@ -283,9 +293,31 @@ CONTROL_GEOMETRY = [
     {"key": "ContentDialogMaxWidth", "value": None, "type": "Double"},
     {"key": "ContentDialogMinHeight", "value": None, "type": "Double"},
     {"key": "ListViewItemMinHeight", "value": None, "type": "Double"},
+    {"key": "ListViewItemMinWidth", "value": None, "type": "Double"},
     {"key": "ListViewItemCornerRadius", "value": None, "type": "CornerRadius"},
     {"key": "ListViewItemSelectionIndicatorCornerRadius", "value": None, "type": "CornerRadius"},
+    {"key": "ListViewItemCheckBoxCornerRadius", "value": None, "type": "CornerRadius"},
+    {"key": "ListViewItemContentOffsetX", "value": None, "type": "Double"},
     {"key": "ListViewItemDisabledThemeOpacity", "value": None, "type": "Double"},
+    # CheckBox / RadioButton（raw/xaml_CheckBox_themeresources.xaml、xaml_RadioButton_themeresources.xaml）
+    {"key": "CheckBoxSize", "value": None, "type": "Double"},
+    {"key": "CheckBoxGlyphSize", "value": None, "type": "Double"},
+    {"key": "CheckBoxBorderThickness", "value": None, "type": "Double"},
+    {"key": "CheckBoxHeight", "value": None, "type": "Double"},
+    {"key": "CheckBoxMinWidth", "value": None, "type": "Double"},
+    {"key": "RadioButtonCheckGlyphSize", "value": None, "type": "Double"},
+    # NavigationView（raw/xaml_NavigationView_themeresources.xaml）
+    {"key": "NavigationViewItemOnLeftMinHeight", "value": None, "type": "Double"},
+    {"key": "NavigationViewSelectionIndicatorWidth", "value": None, "type": "Double"},
+    {"key": "NavigationViewSelectionIndicatorHeight", "value": None, "type": "Double"},
+    {"key": "NavigationViewSelectionIndicatorRadius", "value": None, "type": "Double"},
+    # ComboBox（raw/xaml_ComboBox_themeresources.xaml；注意 XAML 原键名拼写 Higlight 少一个 h）
+    {"key": "ComboBoxThemeMinWidth", "value": None, "type": "Double"},
+    {"key": "ComboBoxPopupThemeMinWidth", "value": None, "type": "Double"},
+    {"key": "ComboBoxPopupBorderThemeThickness", "value": None, "type": "Thickness"},
+    {"key": "ComboBoxHiglightBorderCornerRadius", "value": None, "type": "CornerRadius"},
+    {"key": "ComboBoxItemCornerRadius", "value": None, "type": "CornerRadius"},
+    {"key": "ComboBoxItemPillCornerRadius", "value": None, "type": "CornerRadius"},
 ]
 CONTROL_GEOMETRY_EXTRA = [
     {"key": "TextControlThemeMinHeight", "value": "32", "type": "Double",
@@ -298,6 +330,16 @@ CONTROL_GEOMETRY_EXTRA = [
      "source": "raw/xaml_Slider_themeresources.xaml：SliderInnerThumbWidth=12（内圆直径，外环 20 由描边近似）"},
     {"key": "SliderThumbCornerRadius", "value": "10", "type": "CornerRadius",
      "source": "raw/xaml_Slider_themeresources.xaml：SliderThumbCornerRadius=10（圆形 thumb）"},
+    {"key": "ComboBoxDropDownGlyphSize", "value": "12", "type": "Double",
+     "source": "raw/xaml_ComboBox_themeresources.xaml：DropDownGlyph Width/Height=12、Margin=0,0,14,0（下拉箭头字形与右内边距）"},
+    {"key": "ComboBoxDropDownGlyphGap", "value": "14", "type": "Double",
+     "source": "raw/xaml_ComboBox_themeresources.xaml：DropDownGlyph Margin 右值 14（箭头距控件右缘）"},
+    {"key": "ListViewItemMaxDropDownHeight", "value": "504", "type": "Double",
+     "source": "raw/xaml_ComboBox_themeresources.xaml：ComboBox MaxDropDownHeight=504（下拉面板最大高，按 15 项一屏）"},
+    {"key": "CheckGlyphStrokeThickness", "value": "2.5", "type": "Double",
+     "source": "raw/xaml_ListViewItem_themeresources.xaml：CheckGlyph Path StrokeThickness=2.5（18.5x17 视箱，Stretch=Fill）"},
+    {"key": "ListItemHeightTwoLine", "value": "64", "type": "Double",
+     "source": "KIT 自定（官方只给 ListViewItemMinHeight=40）：图标+主副两行文本的行高，4 的倍数，与 Win11 设置页实测观感一致"},
 ]
 
 
@@ -409,6 +451,11 @@ def build():
     for name, e in MOTION["easings"].items():
         css.append(f'  --fl-ease-{name}: {e["css"]};')
     css.append('')
+    css.append('  /* 控件级时长档：XAML 用 ControlFaster/Fast/NormalAnimationDuration 命名，'
+               '与上面动效四档数值相同但语义不同，勿混用 */')
+    for name, d in MOTION["control_durations"].items():
+        css.append(f'  --fl-dur-control-{name}: {d["ms"]}ms; /* {d["use"]} */')
+    css.append('')
     css.append('  /* 实测派生（非官方档位）：Win11 官方应用 60fps 录屏反解，方法与原始数字见 VIDEO-ALIGN.md §9 */')
     css.append(f'  --fl-dur-page: {DERIVED_MOTION["durations"]["page"]["value"]};'
                f'  /* {DERIVED_MOTION["durations"]["page"]["use"]} */')
@@ -418,6 +465,9 @@ def build():
                f'  --fl-ease-steps-60: {DERIVED_MOTION["easings"]["steps-60"]["css"]};')
     css.append(f'  --fl-page-shift-drill: {DERIVED_MOTION["shifts"]["drill"]["px"]}px;'
                f'  --fl-page-shift-nav: {DERIVED_MOTION["shifts"]["nav"]["px"]}px;')
+    css.append('  --fl-page-shift-x: var(--fl-page-shift-drill);'
+               '  --fl-page-shift-y: var(--fl-page-shift-nav);'
+               '  /* 按轴取行程：drill=水平 176 / nav=垂直 72，供 motion.js 按方向选轴时引用 */')
     css.append('')
     css.append('  /* 字体栈（Segoe UI Variable → fallback） */')
     css.append(f'  --fl-font: {FONT_STACK};')
@@ -447,6 +497,39 @@ def build():
     css.append('  --fl-slider-track: 4px;   /* SliderTrackThemeHeight */')
     css.append('  --fl-slider-inner: 12px;  /* SliderInnerThumbWidth */')
     css.append('  --fl-slider-radius: 10px; /* SliderThumbCornerRadius */')
+
+    def gx(key, fallback="0"):
+        it = geometry.get(f"xaml:{key}")
+        return it["value"] if it else fallback
+
+    css.append('')
+    css.append('  /* 控件专属几何（逐一取自 raw/xaml_*_themeresources.xaml，勿凭空改写） */')
+    css.append(f'  --fl-check-size: {gx("CheckBoxSize", "20")}px;      /* CheckBoxSize */')
+    css.append(f'  --fl-check-glyph: {gx("CheckBoxGlyphSize", "12")}px;     /* CheckBoxGlyphSize */')
+    css.append(f'  --fl-check-height: {gx("CheckBoxHeight", "32")}px;     /* CheckBoxHeight */')
+    css.append(f'  --fl-check-min-width: {gx("CheckBoxMinWidth", "120")}px; /* CheckBoxMinWidth */')
+    css.append(f'  --fl-check-stroke: {gx("CheckBoxBorderThickness", "1")}px;     /* CheckBoxBorderThickness */')
+    css.append(f'  --fl-radio-glyph: {gx("RadioButtonCheckGlyphSize", "12")}px;     /* RadioButtonCheckGlyphSize */')
+    css.append(f'  --fl-glyph-stroke: {gx("CheckGlyphStrokeThickness", "2.5")}px;    /* ListViewItem CheckGlyph StrokeThickness */')
+    css.append(f'  --fl-radius-checkbox: {gx("ListViewItemCheckBoxCornerRadius", "4")}px;   /* ListViewItemCheckBoxCornerRadius；CheckBox 本体用 --fl-radius-control */')
+    css.append(f'  --fl-radius-indicator: {gx("NavigationViewSelectionIndicatorRadius", "2")}px;  /* NavigationViewSelectionIndicatorRadius */')
+    css.append(f'  --fl-radius-list-indicator: {gx("ListViewItemSelectionIndicatorCornerRadius", "1.5")}px; /* ListViewItemSelectionIndicatorCornerRadius */')
+    css.append(f'  --fl-radius-combo-highlight: {gx("ComboBoxHiglightBorderCornerRadius", "7")}px; /* ComboBoxHiglightBorderCornerRadius（XAML 原键名少一个 h） */')
+    css.append(f'  --fl-radius-combo-item: {gx("ComboBoxItemCornerRadius", "3")}px;      /* ComboBoxItemCornerRadius */')
+    css.append(f'  --fl-radius-combo-pill: {gx("ComboBoxItemPillCornerRadius", "1.5")}px;  /* ComboBoxItemPillCornerRadius */')
+    css.append(f'  --fl-nav-item-height: {gx("NavigationViewItemOnLeftMinHeight", "36")}px; /* NavigationViewItemOnLeftMinHeight */')
+    css.append(f'  --fl-nav-indicator-w: {gx("NavigationViewSelectionIndicatorWidth", "3")}px;  /* NavigationViewSelectionIndicatorWidth */')
+    css.append(f'  --fl-nav-indicator-h: {gx("NavigationViewSelectionIndicatorHeight", "16")}px; /* NavigationViewSelectionIndicatorHeight */')
+    css.append(f'  --fl-list-min-width: {gx("ListViewItemMinWidth", "88")}px; /* ListViewItemMinWidth */')
+    css.append(f'  --fl-list-check-offset: {gx("ListViewItemContentOffsetX", "-40.5").lstrip("-")}px;'
+               f' /* = -ListViewItemContentOffsetX（XAML 为 -40.5，负号表示内容右移；此处取正值使用） */')
+    css.append(f'  --fl-list-item-height-two-line: {gx("ListItemHeightTwoLine", "64")}px; /* KIT 自定：图标+主副两行，官方未单列 */')
+    css.append(f'  --fl-combo-min-width: {gx("ComboBoxThemeMinWidth", "64")}px; /* ComboBoxThemeMinWidth */')
+    css.append(f'  --fl-combo-popup-min-width: {gx("ComboBoxPopupThemeMinWidth", "80")}px; /* ComboBoxPopupThemeMinWidth */')
+    css.append(f'  --fl-combo-popup-stroke: {gx("ComboBoxPopupBorderThemeThickness", "2")}px; /* ComboBoxPopupBorderThemeThickness */')
+    css.append(f'  --fl-combo-max-h: {gx("ListViewItemMaxDropDownHeight", "504")}px; /* MaxDropDownHeight，15 项一屏 */')
+    css.append(f'  --fl-combo-glyph: {gx("ComboBoxDropDownGlyphSize", "12")}px;  /* DropDownGlyph 12x12 */')
+    css.append(f'  --fl-combo-glyph-gap: {gx("ComboBoxDropDownGlyphGap", "14")}px; /* DropDownGlyph Margin 右值 */')
     css.append('')
     css.append('  /* 间距（content-basics） */')
     css.append('  --fl-space-1: 4px;  --fl-space-2: 8px;  --fl-space-3: 12px;')
@@ -522,6 +605,15 @@ def build():
     for r in rows:
         md.append("| " + " | ".join(r) + " |")
     md.append("")
+    md.append("### 控件级时长档（XAML `Control*AnimationDuration`，与上面四档同数值、不同语义）")
+    md.append("出处：`raw/xaml_Common_themeresources_any.xaml`。")
+    md.append("")
+    md.append("| CSS 变量 | 时长 | XAML key | 用途 |")
+    md.append("|---|---|---|---|")
+    for name, d in MOTION["control_durations"].items():
+        key = "Control%sAnimationDuration" % name.capitalize()
+        md.append(f"| `--fl-dur-control-{name}` | {d['ms']}ms | {key} | {d['use']} |")
+    md.append("")
     md.append("规则：" + "；".join(MOTION["rules"][:4]) + "。")
     md.append("")
     md.append("## 动效：实测派生（**非官方档位**）")
@@ -587,7 +679,26 @@ def build():
              "ContentDialogPadding": "ContentDialog 内边距", "ContentDialogMaxWidth": "ContentDialog 最大宽",
              "ContentDialogMinHeight": "ContentDialog 最小高", "ListViewItemMinHeight": "列表项最小高",
              "ListViewItemCornerRadius": "列表项圆角", "ListViewItemSelectionIndicatorCornerRadius": "选中指示条圆角",
-             "ListViewItemDisabledThemeOpacity": "列表项禁用透明度"}
+             "ListViewItemDisabledThemeOpacity": "列表项禁用透明度",
+             "ListViewItemMinWidth": "列表项最小宽", "ListViewItemCheckBoxCornerRadius": "列表项内复选框圆角",
+             "ListViewItemContentOffsetX": "多选时内容偏移（负值=右移）",
+             "CheckBoxSize": "CheckBox 方框尺寸", "CheckBoxGlyphSize": "CheckBox 勾号字号",
+             "CheckBoxBorderThickness": "CheckBox 描边宽", "CheckBoxHeight": "CheckBox 行高",
+             "CheckBoxMinWidth": "CheckBox 最小宽", "RadioButtonCheckGlyphSize": "RadioButton 内点直径",
+             "NavigationViewItemOnLeftMinHeight": "左侧导航项最小高",
+             "NavigationViewSelectionIndicatorWidth": "导航选中条宽",
+             "NavigationViewSelectionIndicatorHeight": "导航选中条高",
+             "NavigationViewSelectionIndicatorRadius": "导航选中条圆角",
+             "ComboBoxThemeMinWidth": "ComboBox 最小宽", "ComboBoxPopupThemeMinWidth": "ComboBox 下拉面板最小宽",
+             "ComboBoxPopupBorderThemeThickness": "ComboBox 下拉面板描边宽",
+             "ComboBoxHiglightBorderCornerRadius": "ComboBox 高亮边框圆角",
+             "ComboBoxItemCornerRadius": "ComboBox 选项圆角",
+             "ComboBoxItemPillCornerRadius": "ComboBox 选项选中条圆角",
+             "ComboBoxDropDownGlyphSize": "ComboBox 下拉箭头尺寸",
+             "ComboBoxDropDownGlyphGap": "ComboBox 下拉箭头右间距",
+             "ListViewItemMaxDropDownHeight": "下拉面板最大高（15 项一屏）",
+             "CheckGlyphStrokeThickness": "勾号描边宽（ListViewItem CheckGlyph）",
+             "ListItemHeightTwoLine": "两行列表项行高（KIT 自定）"}
     for item in CONTROL_GEOMETRY:
         v, _t, s = getval(item["key"])
         if v is not None:

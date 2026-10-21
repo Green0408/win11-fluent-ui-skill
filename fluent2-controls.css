@@ -302,16 +302,21 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
        thumb 是**两层**（照 XAML 模板拆）：
          外框 = ControlSolidFillColorDefault 的实心圆盘（SliderOuterThumbBackground），直径 20，**任何状态下都不变**；
          内点 = 12px 的 accent 圆（SliderInnerThumb，模板里只对这个 Ellipse 做 ScaleTransform）。
-       ⚠ 模板的 VisualState 只动内点：Normal 0.86→12 / PointerOver 1.167→14 / Pressed 0.71→10 / Disabled 1.167→14。
-         所以**别在 thumb 上写 transform: scale()** —— 那会把外框一起放大/缩小（早期版本就是这么错的，
-         用户原话："外框从来都不会变大小"）。
+       模板的 VisualState 只动内点：Normal 0.86→12 / PointerOver 1.167→14 / Pressed 0.71→10 / Disabled 1.167→14。
 
-       伪元素里怎么做到"只缩内点、不动外框"？盒子 = 内点（12/14/10，可过渡），
-       环宽反向补偿（4/3/5），两者相加恒 20：
-         width/height = --fl-slider-dot      （12 → 14 → 10，过渡 250ms）
-         box-shadow   = 0 0 0 --fl-slider-ring（实色外框，ring = (20 - dot) / 2）
-       实测过：`background-size` 在 ::-webkit-slider-thumb 上**不会过渡**（直接跳变），
-       所以不能用"固定 20 盒子 + 背景图圆点"的写法。
+       伪元素没有子元素，怎么"只缩内点、不动外框"？**缩放 + 环宽反向补偿**：
+         transform: scale(--fl-slider-scale)        内点 1 / 1.1667 / 0.8333
+         box-shadow: 0 0 0 --fl-slider-ring 实色     环宽 = (20 / scale − 12) / 2
+       两者相乘恒等于 20，所以 scale 变大时环变窄、外框不动。
+
+       ⚠ 为什么用 transform 而不是改 width/height（这轮返工的根因）：
+         改宽高走 layout，Chromium 对伪元素盒宽会量化取整，实测整个过渡只有
+         12.0 / 13.3 / 13.9 三级台阶 —— 看着就是"跳一下"，完全没有曲线的样子。
+         transform 走合成器，逐帧亚像素插值（实测能拿到 8 级以上连续值）。
+       ⚠ 但**不能直接 scale 了事**：环也会跟着放大（早期版本就这么错，用户原话"外框从来都不会变大小"），
+         必须同时用 ring = (20/scale − 12)/2 反向补偿。
+       ⚠ `background-size` 在 ::-webkit-slider-thumb 上不会过渡（实测直接跳变），
+         "固定 20 盒子 + 背景图圆点"的方案不成立。
 
        注意：填充段**不设 transition** —— 它必须与 thumb 逐帧一致，加过渡会把拖动变成拖影 */
 .fl-slider {
@@ -322,14 +327,15 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   --fl-slider-pct: 0;
   --fl-slider-accent: var(--fl-accent-fill);
   --fl-slider-rest: var(--fl-control-strong-fill);
-  /* 外框直径 20 = 内点 12 + 2 × 环宽 4；三态恒定（布局尺寸，不参与动画） */
+  /* 外框直径 20 = 内点 12 + 2 × 环宽 4；三态恒定 */
   --fl-slider-thumb: 20px;
-  /* 内点直径：rest 12 → hover 14 → pressed 10（模板 0.86 / 1.167 / 0.71 × 基准 14） */
-  --fl-slider-dot: var(--fl-slider-inner);
-  /* 填充宽 = 半 thumb + 比例 ×（轨道宽 - thumb 宽）
-     这里必须用**静止态内点**（--fl-slider-inner）而不是 hover 后的 --fl-slider-dot：
-     thumb 的行程按盒子宽算，若跟随 hover 变化，填充末端会在悬停时平移 1px。
-     直接写 100% × pct 会在两端各偏半个 thumb。 */
+  /* 内点缩放：rest 1 → hover 1.1667(14px) → pressed 0.8333(10px)。
+     **用 transform 缩放而不是改 width**：改宽高走 layout，Chromium 会把伪元素的盒宽
+     量化到整像素，实测只有 12.0 / 13.3 / 13.9 三级台阶（看着像"跳一下"）；
+     transform 走合成器，逐帧亚像素插值，才是曲线该有的样子。 */
+  --fl-slider-scale: 1;
+  /* 填充宽 = 半内点 + 比例 ×（轨道宽 - 内点宽）
+     thumb 盒宽恒 = --fl-slider-inner（缩放不参与布局），所以填充基准也跟着恒定。 */
   --fl-slider-fill: calc(var(--fl-slider-inner) / 2
                    + (100% - var(--fl-slider-inner)) * var(--fl-slider-pct));
 }
@@ -345,7 +351,7 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 }
 .fl-slider:disabled {
   cursor: default;
-  --fl-slider-dot: 14px;                   /* 模板 Disabled 也是 1.167（内点反而更大） */
+  --fl-slider-scale: 1.1667;               /* 模板 Disabled 也是 1.167（内点反而更大） */
   --fl-slider-accent: var(--fl-accent-fill-disabled);
   --fl-slider-rest: var(--fl-control-strong-fill-disabled);
 }
@@ -368,32 +374,35 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 .fl-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   box-sizing: border-box;
-  /* ⚠ 环宽必须在 thumb 自身上算：写在 .fl-slider 上会按"静止态的 dot=12"算死成 4px，
-     hover 时 dot 变 14 而环仍是 4 → 外框变成 22（实测过，正好大一圈）。 */
-  --fl-slider-ring: calc((var(--fl-slider-thumb) - var(--fl-slider-dot)) / 2);
-  /* 盒子 = 内点（12 → 14 → 10）；外框由 box-shadow 的实色环反向补偿，总量恒 20 */
-  width: var(--fl-slider-dot); height: var(--fl-slider-dot);
-  margin-top: calc((var(--fl-slider-track) - var(--fl-slider-dot)) / 2);
+  /* ⚠ 环宽必须在 thumb 自身上算（写在 .fl-slider 上会按静止态算死成 4px，hover 时外框变 22）。
+     外框恒 20 的推导：scale × (内点 + 2 × 环宽) = 20
+       ⇒ 环宽 = (20 / scale − 内点) / 2
+     实测：scale 1.1667 → 环 2.571（缩放后视觉 3.0），puck 仍是 20。 */
+  --fl-slider-ring: calc((var(--fl-slider-thumb) / var(--fl-slider-scale) - var(--fl-slider-inner)) / 2);
+  /* 盒子恒为静止内点（12），尺寸靠 transform 缩放 → 合成器逐帧插值，不经过 layout 取整 */
+  width: var(--fl-slider-inner); height: var(--fl-slider-inner);
+  margin-top: calc((var(--fl-slider-track) - var(--fl-slider-inner)) / 2);
   border: 0; border-radius: var(--fl-slider-radius);
   background: var(--fl-slider-accent);
   box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill); /* 外框 20（SliderOuterThumbBackground） */
-  /* 时长按模板**逐状态**给（XAML 里三个 VisualState 的 KeyTime 不一样，别用一个值糊过去）：
+  transform: scale(var(--fl-slider-scale));
+  transform-origin: 50% 50%;          /* 绕圆心缩放，中心始终落在当前值上 */
+  will-change: transform;
+  /* 时长按模板**逐状态**给（XAML 三个 VisualState 的 KeyTime 不一样，别用一个值糊过去）：
        PointerOver / Pressed：ControlNormalAnimationDuration = 250ms
-       Normal（悬停移开、尺寸回落）：ControlFastAnimationDuration = 167ms
-     CSS 过渡取的是**目标态**的时长，所以基态写 167、hover/active 各自覆盖成 250 就对上了。
-     曲线三个状态都是 ControlFastOutSlowIn = cubic-bezier(0,0,0,1)（= --fl-ease-standard）。 */
+       Normal（悬停移开、缩回）：ControlFastAnimationDuration = 167ms
+     CSS 过渡取的是**目标态**的时长，所以基态写 167、hover/active 各自覆盖成 250。
+     曲线三态都是 ControlFastOutSlowIn = cubic-bezier(0,0,0,1)（= --fl-ease-standard）。 */
   transition:
-    width var(--fl-dur-control-fast) var(--fl-ease-standard),
-    height var(--fl-dur-control-fast) var(--fl-ease-standard),
-    margin-top var(--fl-dur-control-fast) var(--fl-ease-standard),
+    transform var(--fl-dur-control-fast) var(--fl-ease-standard),
     box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);
 }
 .fl-slider:not(:disabled):hover::-webkit-slider-thumb  {
-  --fl-slider-dot: 14px;
+  --fl-slider-scale: 1.1667;                              /* 12 → 14 */
   transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */
 }
 .fl-slider:not(:disabled):active::-webkit-slider-thumb {
-  --fl-slider-dot: 10px;
+  --fl-slider-scale: 0.8333;                              /* 12 → 10 */
   transition-duration: var(--fl-dur-control-normal);      /* 按下 250ms */
 }
 .fl-slider:focus-visible { outline: none; }
@@ -417,22 +426,22 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 }
 .fl-slider::-moz-range-thumb {
   box-sizing: border-box;
-  --fl-slider-ring: calc((var(--fl-slider-thumb) - var(--fl-slider-dot)) / 2);
-  width: var(--fl-slider-dot); height: var(--fl-slider-dot);
+  --fl-slider-ring: calc((var(--fl-slider-thumb) / var(--fl-slider-scale) - var(--fl-slider-inner)) / 2);
+  width: var(--fl-slider-inner); height: var(--fl-slider-inner);
   border: 0; border-radius: var(--fl-slider-radius);
   background: var(--fl-slider-accent);
   box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill);
+  transform: scale(var(--fl-slider-scale));
   transition:
-    width var(--fl-dur-control-fast) var(--fl-ease-standard),
-    height var(--fl-dur-control-fast) var(--fl-ease-standard),
+    transform var(--fl-dur-control-fast) var(--fl-ease-standard),
     box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);
 }
 .fl-slider:not(:disabled):hover::-moz-range-thumb  {
-  --fl-slider-dot: 14px;
+  --fl-slider-scale: 1.1667;
   transition-duration: var(--fl-dur-control-normal);
 }
 .fl-slider:not(:disabled):active::-moz-range-thumb {
-  --fl-slider-dot: 10px;
+  --fl-slider-scale: 0.8333;
   transition-duration: var(--fl-dur-control-normal);
 }
 .fl-slider:focus-visible::-moz-range-thumb {

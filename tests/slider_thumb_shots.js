@@ -91,7 +91,7 @@ async function main() {
     el.value = 40; el.dispatchEvent(new Event("input", { bubbles: true }));
     var r = el.getBoundingClientRect();
     var pct = 0.4;
-    /* thumb 盒宽 20、行程 = 轨道宽 - 20，中心 = 10 + 0.4×(W-20) */
+    /* thumb 盒宽 12（缩放不参与布局）、行程 = 轨道宽 - 12，中心 = 6 + 0.4×(W-12) */
     var cx = r.left + 10 + pct * (r.width - 20);
     return { cx: cx, cy: r.top + r.height / 2, w: r.width, h: r.height };
   })()`);

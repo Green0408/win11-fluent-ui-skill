@@ -99,7 +99,7 @@ async function main() {
     el.style.setProperty("--fl-dur-control-normal", "${DUR_IN}ms");
     el.style.setProperty("--fl-dur-control-fast", "${DUR_OUT}ms");
     var r = el.getBoundingClientRect();
-    return { cx: r.left + 10 + 0.4 * (r.width - 20), cy: r.top + r.height / 2 };
+    return { cx: r.left + 6 + 0.4 * (r.width - 12), cy: r.top + r.height / 2 };
   })()`);
   await sleep(200);
 

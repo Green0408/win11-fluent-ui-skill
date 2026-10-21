@@ -55,8 +55,8 @@ R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走�
 R45 滚动条变粗只许 thumb 自身 hover：禁止把 :hover/:focus-within 挂在容器上（.fl-page:hover 恒真）
 R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::before、JS 必须有 reduced 分支
 R47 指示条拉伸必须"留在按钮内"：峰值来自固定常量，禁止按 |Δ| 派生（会跨过项间隙、跑出按钮）
-R48 滑块 thumb 外框尺寸恒定 + 逐状态时长：只许改内点直径（--fl-slider-dot），禁 transform:scale；
-    基态 167ms / hover·active 250ms（模板 KeyTime 不同），环宽必须在 thumb 内反向补偿
+R48 滑块 thumb：外框恒定（ring = 外框/scale − 内点，反向补偿）+ 只缩内点 + 尺寸动效走 transform（禁过渡 width/height）
+    + 逐状态时长（基态 167ms / hover·active 250ms）
 """
 import re
 import sys
@@ -669,60 +669,73 @@ def main():
             fails.append("R47 fluent2-motion.js: 峰值必须取自固定常量 IND_PEAK_SCALE，"
                          "并按项高做上限钳制（否则改 --fl-nav-item-height 后会长出按钮）")
 
-    # R48 滑块 thumb：外框恒定，只有内点在变
-    #     XAML SliderThumbStyle 是两层：Border（ControlSolidFill，18+2×2 外框）+ Ellipse（accent，12）。
+    # R48 滑块 thumb：外框恒定 + 只缩内点 + 尺寸动效走 transform（不是 width）
+    #     XAML SliderThumbStyle 是两层：Border（ControlSolidFill 外盘）+ Ellipse（accent 内点 12）。
     #     VisualState 只对 **Ellipse** 做 ScaleTransform（0.86 / 1.167 / 0.71），Border 一帧都不动。
-    #     常见错法：把 scale 加在 ::-webkit-slider-thumb 上 —— 外框（box-shadow/底色）跟着一起放大，
-    #     用户看到的就是"悬停整个滑块变大"。
-    #     正确写法：盒子 = 内点，环宽 = (外框 - 内点)/2 反向补偿 → 两者相加恒等于外框。
+    #     三条不变量（各对应一次真实返工）：
+    #       ① 外框不许变：只能缩内点，且要用 ring = (外框/scale − 内点)/2 反向补偿；
+    #       ② 尺寸动效必须走 transform：过渡 width/height 会被 layout 取整成 3 级台阶（"跳一下"）；
+    #       ③ 时长逐状态：缩放回 Normal 用 ControlFast(167)，放大/按下用 ControlNormal(250)。
     if ".fl-slider" in (controls_css or ""):
-        for need in ("--fl-slider-thumb", "--fl-slider-dot", "--fl-slider-ring"):
+        for need in ("--fl-slider-thumb", "--fl-slider-scale", "--fl-slider-ring"):
             if need not in controls_css:
-                fails.append("R48 fluent2-controls.css: 缺 %s（外框 20 / 内点 12·14·10 / 环宽反向补偿）" % need)
-        RING = re.compile(r"--fl-slider-ring\s*:\s*calc\(\s*\(\s*var\(--fl-slider-thumb\)\s*-\s*"
-                          r"var\(--fl-slider-dot\)\s*\)\s*/\s*2\s*\)")
+                fails.append("R48 fluent2-controls.css: 缺 %s（外框 20 / 内点缩放 1·1.1667·0.8333 / 环宽反向补偿）"
+                             % need)
+        RING = re.compile(r"--fl-slider-ring\s*:\s*calc\(\s*\(\s*var\(--fl-slider-thumb\)\s*/\s*"
+                          r"var\(--fl-slider-scale\)\s*-\s*var\(--fl-slider-inner\)\s*\)\s*/\s*2\s*\)")
         ring_on_thumb = False
         for m in re.finditer(r"\.fl-slider[^{]*::-webkit-slider-thumb\s*\{([^}]*)\}", controls_css):
             body, sel = m.group(1), m.group(0).split("{")[0].strip()
+            is_state = bool(re.search(r":(?:hover|active)", sel))
+            is_base = sel == ".fl-slider::-webkit-slider-thumb"   # 焦点环等附加规则只管 box-shadow
             if RING.search(body):
                 ring_on_thumb = True
-            if re.search(r"\btransform\s*:\s*scale", body):
-                fails.append("R48 fluent2-controls.css: %s 不许写 transform: scale —— 会把外框一起放大"
-                             "（模板只对内点做 ScaleTransform）" % sel)
+            # ① 缩放必须来自变量（写死数字 = 没做环宽补偿）
+            if re.search(r"transform\s*:\s*scale\(\s*[\d.]", body):
+                fails.append("R48 fluent2-controls.css: %s 的 transform 必须写成 scale(var(--fl-slider-scale))，"
+                             "不许写死倍数（写死就带不上环宽补偿，外框会跟着变大）" % sel)
+            if is_base and "transform" not in body:
+                fails.append("R48 fluent2-controls.css: %s 必须 transform: scale(var(--fl-slider-scale))"
+                             "（内点尺寸动效走合成器，不走 layout）" % sel)
+            # ② 盒子宽恒定
             for wh in re.finditer(r"\b(?:width|height)\s*:\s*([^;]+);", body):
                 val = wh.group(1).strip()
-                if val != "var(--fl-slider-dot)":
-                    fails.append("R48 fluent2-controls.css: %s 的 width/height 必须是 var(--fl-slider-dot)"
-                                 "（实际是 %s）—— 盒子就是内点，改它等于改内点尺寸" % (sel, val))
+                if val != "var(--fl-slider-inner)":
+                    fails.append("R48 fluent2-controls.css: %s 的 width/height 必须是 var(--fl-slider-inner)"
+                                 "（实际是 %s）—— 盒子恒定，尺寸只靠 transform" % (sel, val))
+            # ③ 不许过渡 width/height/box-shadow 之外的布局属性
+            if is_base and "transition" in body:
+                tr = re.search(r"transition\s*:([^;]*)(?:;|$)", body.replace("\n", " "))
+                if tr and re.search(r"\b(?:width|height|margin)\b", tr.group(1)):
+                    fails.append("R48 fluent2-controls.css: %s 的过渡里不许出现 width/height/margin —— "
+                                 "布局属性会被量化取整，动画变成 3 级台阶（实测 12.0/13.3/13.9）" % sel)
             if "box-shadow" in body and "var(--fl-slider-ring)" not in body:
                 fails.append("R48 fluent2-controls.css: %s 的 box-shadow 必须用 var(--fl-slider-ring) 画外框"
                              "（写死环宽会让外框随状态变大小）" % sel)
-            # 时长要逐状态：模板 PointerOver/Pressed=ControlNormal(250ms)，Normal(缩回)=ControlFast(167ms)
-            if not re.search(r":(?:hover|active)", sel):
-                if "transition" in body and "var(--fl-dur-control-fast)" not in body:
-                    fails.append("R48 fluent2-controls.css: %s 的过渡时长必须是 --fl-dur-control-fast(167ms)"
-                                 "（模板 Normal 态 KeyTime=ControlFast；一个时长糊三个状态就是"
-                                 "\"放大缩小速率一样\"，用户会看出不对）" % sel)
+            # ④ 时长逐状态
+            if is_base and "transition" in body and "var(--fl-dur-control-fast)" not in body:
+                fails.append("R48 fluent2-controls.css: %s 的过渡时长必须是 --fl-dur-control-fast(167ms)"
+                             "（模板 Normal 态 KeyTime=ControlFast；一个时长糊三个状态就是"
+                             "\"放大缩小速率一样\"，用户会看出不对）" % sel)
         if not ring_on_thumb:
             fails.append("R48 fluent2-controls.css: --fl-slider-ring 必须**写在 thumb 规则里**且是 "
-                         "(外框 - 内点)/2 —— 写在 .fl-slider 上会按静止态 dot=12 算死成 4px，"
-                         "hover 时内点变 14、环仍 4，外框就成了 22（真踩过）")
-        for m in re.finditer(r"\.fl-slider[^{]*:(?:hover|active)[^{]*\{([^}]*)\}", controls_css):
-            if re.search(r"--fl-slider-thumb\s*:", m.group(1)):
-                fails.append("R48 fluent2-controls.css: --fl-slider-thumb 不许在 hover/active 里改"
-                             "（外框尺寸三态恒定，只有 --fl-slider-dot 变 12/14/10）")
-        # 反方向：hover / active 的 thumb 规则必须把时长抬到 ControlNormal(250ms)
+                         "(外框/scale − 内点)/2 —— 写在 .fl-slider 上会按静止态算死，hover 时外框变 22（真踩过）")
+        # 状态规则：改缩放、抬时长，且不许动外框直径
         state_rules = [m for m in re.finditer(
             r"\.fl-slider[^{]*:(?:hover|active)[^{]*::-webkit-slider-thumb\s*\{([^}]*)\}", controls_css)]
         if not state_rules:
-            fails.append("R48 fluent2-controls.css: 缺 hover/active 的 thumb 规则（内点尺寸与时长都要在这里改）")
+            fails.append("R48 fluent2-controls.css: 缺 hover/active 的 thumb 规则（缩放与时长都要在这里改）")
         for m in state_rules:
             body = m.group(1)
             sel = m.group(0).split("{")[0].strip()
+            if "--fl-slider-scale" not in body:
+                fails.append("R48 fluent2-controls.css: %s 必须改 --fl-slider-scale（内点缩放）" % sel)
             if not re.search(r"transition-duration\s*:\s*var\(--fl-dur-control-normal\)", body):
-                fails.append("R48 fluent2-controls.css: %s 必须写 "
-                             "transition-duration: var(--fl-dur-control-normal)（250ms）—— "
-                             "CSS 过渡取目标态时长，不写就一直是基态的 167ms，放大与缩小一个速率" % sel)
+                fails.append("R48 fluent2-controls.css: %s 必须写 transition-duration: "
+                             "var(--fl-dur-control-normal)（250ms）—— CSS 过渡取目标态时长，"
+                             "不写就一直是基态的 167ms，放大与缩小一个速率" % sel)
+            if re.search(r"--fl-slider-thumb\s*:", body):
+                fails.append("R48 fluent2-controls.css: %s 不许改 --fl-slider-thumb（外框尺寸三态恒定）" % sel)
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

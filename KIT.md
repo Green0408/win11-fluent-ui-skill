@@ -97,19 +97,26 @@
       用 `transition-duration: var(--fl-dur-control-normal)` 覆盖成 250 —— 放大比缩小慢 1.5 倍。
       一个时长糊三个状态就是"放大缩小一个速率"，观感立刻不对（R48 拦）。
 
-      实现：盒子 = 内点（`--fl-slider-dot`），外框 = `box-shadow: 0 0 0 var(--fl-slider-ring)`，
-      `--fl-slider-ring: calc((外框 - 内点) / 2)`，两者相加恒等于 20 → 内点变大时外框不动。
-      **三个坑**（都踩过）：
-      · 别用 `transform: scale()` —— 会把外框一起放大，观感是"整个滑块变大"（R48 拦）；
+      实现：盒子恒为静止内点 12，**收缩放走合成器**，外框用 `box-shadow` 环反向补偿：
+      `transform: scale(var(--fl-slider-scale))`（1 / 1.1667 / 0.8333）
+      `--fl-slider-ring: calc((外框 / scale − 内点) / 2)`（4 / 2.571 / 6）
+      两者相乘恒等于 20 → 内点变大时环变窄、外框不动。
+      **四个坑**（都踩过）：
+      · **尺寸动效别改 width/height**：layout 会把伪元素盒宽量化取整，整段过渡只剩
+        12.0 / 13.3 / 13.9 三级台阶，看起来像"跳一下"、完全没有曲线（R48 拦，坏例 R48e）；
+        走 transform 实测能拿到 7 级连续值；
+      · 但**也不能直接 scale 了事**：环会跟着放大（"整个滑块变大"，用户原话"外框从来不会变大小"），
+        必须配 ring = (外框/scale − 内点)/2 反向补偿；
       · 别用"固定 20 盒子 + 背景图圆点 + `background-size` 过渡" —— `::-webkit-slider-thumb` 上
-        `background-size` **不会过渡**（实测直接跳变），只能过渡 width/height/box-shadow；
-      · `--fl-slider-ring` 必须**写在 thumb 规则里**：写在 `.fl-slider` 上会按静止态 dot=12 算死成 4px，
-        hover 时内点 14、环仍 4 → 外框变 22（R48 拦，坏例 R48c）；
+        `background-size` **不会过渡**（实测直接跳变）；
+      · `--fl-slider-ring` 必须**写在 thumb 规则里**：写在 `.fl-slider` 上会按静止态算死，
+        hover 时外框变 22（R48 拦，坏例 R48c）；
     - **档位色必须不透明**：`--fl-slider-accent` 不许直接引用 `--fl-accent-fill-hover/-pressed`（那是 alpha 0.9/0.8），必须 `color-mix(in srgb, var(--fl-accent-fill) 90%/80%, var(--fl-text-primary))`。alpha 档位叠在卡片上会透出底下的灰环，观感就是「悬停时滑块变透明」（校验器 R36 会拦）；
     - 填充色与 thumb 同步走四档（Default → hover → pressed → Disabled）；`[dir="rtl"]` 下渐变方向要翻转。
     - 验收：`node tests/slider_thumb_shots.js` → `python tests/slider_thumb_pixels.py`（量三态外框/内点直径，含慢放中间态）；
-      速率：`node tests/slider_thumb_timing.js` → `python tests/slider_thumb_timing.py`（时长放大 4× 后逐帧量，
-      判"放大:缩小 = 1.5"；该曲线尾段极长，视觉到位≈标称的 69%，实测 691/1000 与 465/668）。
+      速率与曲线：`node tests/slider_thumb_timing.js` → `python tests/slider_thumb_timing.py`（时长放大 4× 后逐帧量，
+      判「80% 进度出现在 42% 时长处」「放大:缩小 = 1.5」「直径 ≥5 个不同取值」——
+      实测 0.43 / 0.42、比值 1.52、7 级，与 cubic-bezier(0,0,0,1) 的 RMSE 5%）。
 21. **按钮居中交给 flex，不要抄 XAML 的 `ButtonPadding=11,5,11,6`**：那是 ContentPresenter 做字基线补偿用的 4 值，照搬进 `align-items:center` 的盒子会让内容整体下沉 2px（校验器 R37 会拦上下不对称）。正确写法是 `padding: var(--fl-space-1) var(--fl-btn-pad-h)` + `min-height: var(--fl-control-height)`，再用 CDP 量 `Range` 文本盒中心与按钮盒中心的偏差（应 ≤0.5px）。
 22. **设置页列表用 `.fl-settings`，不要用卡片里堆控件**（这是"设置型工具"最容易做错的地方，堆出来像表单，不像 Windows 设置）：
 

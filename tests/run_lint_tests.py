@@ -110,24 +110,30 @@ BAD_CASES = {
     "R47b": ("fluent2-motion.js",
              "    var peak = Math.min(IND_PEAK_SCALE, cap);",
              "    var peak = Math.min(1.6, cap);"),
-    # 滑块 hover 用 transform: scale → 外框跟着放大（模板只缩内点）
+    # 缩放写死倍数 → 带不上环宽补偿，外框跟着一起变大（模板只缩内点）
     "R48a": ("fluent2-controls.css",
-             '.fl-slider:not(:disabled):hover::-webkit-slider-thumb  {\n  --fl-slider-dot: 14px;\n  transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */\n}',
+             '.fl-slider:not(:disabled):hover::-webkit-slider-thumb  {\n  --fl-slider-scale: 1.1667;                              /* 12 → 14 */\n  transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */\n}',
              ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { transform: scale(1.167); }"),
-    # 滑块 hover 改外框直径 → 外框尺寸不恒定
+    # hover 改外框直径 → 外框尺寸不恒定
     "R48b": ("fluent2-controls.css",
-             '.fl-slider:not(:disabled):hover::-webkit-slider-thumb  {\n  --fl-slider-dot: 14px;\n  transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */\n}',
+             '.fl-slider:not(:disabled):hover::-webkit-slider-thumb  {\n  --fl-slider-scale: 1.1667;                              /* 12 → 14 */\n  transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */\n}',
              ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-thumb: 24px; }"),
-    # hover 没把时长抬到 250ms → 放大/缩小一个速率（模板 KeyTime 是按状态分开的）
+    # hover 没把时长抬到 250ms → 放大/缩小一个速率
     "R48d": ("fluent2-controls.css",
-             '.fl-slider:not(:disabled):hover::-webkit-slider-thumb  {\n  --fl-slider-dot: 14px;\n  transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */\n}',
-             ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-dot: 14px; "
+             '.fl-slider:not(:disabled):hover::-webkit-slider-thumb  {\n  --fl-slider-scale: 1.1667;                              /* 12 → 14 */\n  transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */\n}',
+             ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-scale: 1.1667; "
              "transition-duration: var(--fl-dur-control-fast); }"),
-    # 环宽算在父级 .fl-slider 上 → 按静止态 dot=12 算死成 4px，hover 时外框变 22（真踩过的坑）
+    # 环宽算在父级 .fl-slider 上 → 按静止态算死，hover 时外框变 22（真踩过的坑）
     "R48c": ("fluent2-controls.css",
-             "  --fl-slider-ring: calc((var(--fl-slider-thumb) - var(--fl-slider-dot)) / 2);\n"
-             "  /* 盒子 = 内点（12 → 14 → 10）；外框由 box-shadow 的实色环反向补偿，总量恒 20 */",
-             "  /* 盒子 = 内点（12 → 14 → 10）；外框由 box-shadow 的实色环反向补偿，总量恒 20 */"),
+             "  --fl-slider-ring: calc((var(--fl-slider-thumb) / var(--fl-slider-scale) - "
+             "var(--fl-slider-inner)) / 2);\n  /* 盒子恒为静止内点（12），尺寸靠 transform 缩放 → "
+             "合成器逐帧插值，不经过 layout 取整 */",
+             "  /* 盒子恒为静止内点（12），尺寸靠 transform 缩放 → 合成器逐帧插值，不经过 layout 取整 */"),
+    # 尺寸动效改回过渡 width → layout 取整成 3 级台阶（"跳一下"，不是曲线）
+    "R48e": ("fluent2-controls.css",
+             '  transition:\n    transform var(--fl-dur-control-fast) var(--fl-ease-standard),\n    box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);',
+             "  transition://n    width var(--fl-dur-control-fast) var(--fl-ease-standard),\n"
+             "    box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
     "R43a": ("fluent2-controls.css",

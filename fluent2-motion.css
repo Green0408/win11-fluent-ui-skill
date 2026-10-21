@@ -73,12 +73,12 @@
    方向取六个值之一（forward / back / up / down / left / right），由 motion.js 的 DIR 表解析成符号，
    缺省按「导航项先后序 → 页面栈」推断 —— 点侧栏更上面的一项即自上方进入（详见 KIT 规则 15）。
    位移与淡入拆成两条 animation：位移走 --fl-dur-page + --fl-ease-page（对称加减速），
-   淡入淡出走 83ms + linear —— 对上录屏「内容 ≈83ms 内换掉、其余时间只有位移」的观测。 */
+   淡出 83ms + linear 只挂在**离场页**上。
+   ⚠ 入页不能有淡入：页面在转场期是不透明的，入页只要有一点透明度，底下的旧页文字就会透上来，
+   观感是"两页文字叠在一起"（tests/transition_shots.js 可复现）。WinUI 的 SlideNavigation 也是纯滑动。 */
 .fl-page-in {
-  will-change: transform, opacity;
-  animation:
-    fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,
-    fl-page-in-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
+  will-change: transform;
+  animation: fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both;
 }
 .fl-page-out {
   will-change: transform, opacity;
@@ -95,7 +95,7 @@
   from { transform: none; }
   to   { transform: translate3d(var(--fl-page-to-x, 0px), var(--fl-page-to-y, 0px), 0); }
 }
-@keyframes fl-page-in-fade-kf  { from { opacity: 0; } to { opacity: 1; } }
+/* 入页不需要 fade 关键帧：纯滑动，见上面 .fl-page-in 的注释 */
 @keyframes fl-page-out-fade-kf { from { opacity: 1; } to { opacity: 0; } }
 
 /* ---- 连续型动效：线性推进、无限循环、不保留终态 ----

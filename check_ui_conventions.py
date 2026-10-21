@@ -49,6 +49,7 @@ R38 强调色主题档位不许写反：暗主题 --fl-accent-fill 的相对亮�
 R39 自绘弹层必须用细滚动条：.fl-combo-popup 必须带 fl-scroll，且 CSS 要有 @supports selector(::-webkit-scrollbar) 互斥块
 R40 设置行造型：行高走 --fl-settings-row-h、hover 底色带圆角、分隔线左缩进对齐文字、行内必须有 .fl-settings-text
 R41 转场必须两拍：.fl-page-in 要有 animation-delay、离场页不许与入页同长、转场页不得涂不透明底
+R42 应用外壳：body 锁高度、.fl-shell 有 min-height:0、内容层固定 1fr 行、.fl-page 是滚动容器
 """
 import re
 import sys
@@ -614,6 +615,25 @@ def main():
         if re.search(r"\.fl-page-(in|leaving)[^{]*\{[^}]*background\s*:", motion_css + "\n" + controls_css):
             fails.append("R41: 转场页不得涂不透明背景 —— 会变成硬边擦除，"
                          "与录屏的「旧页淡出 → 新页滑入」不符")
+
+    # R42 应用外壳：左导航固定、只有内容区滚
+    #     这类布局的失败方式很隐蔽：高度链断在任意一层，滚动就"消失"或跑回整页，
+    #     而页面看起来还是对的（只是整页在滚）。三层必须同时成立。
+    if ".fl-shell" in (controls_css or ""):
+        if not re.search(r"body:has\(\.fl-shell\)[^{]*\{[^}]*height\s*:\s*100%", controls_css) and \
+           not re.search(r"body\s*\{[^}]*height\s*:\s*100%", controls_css):
+            fails.append("R42 fluent2-controls.css: body 必须是 height:100% + overflow:hidden"
+                         "（否则整页会滚，左导航跟着跑）")
+        if not re.search(r"\.fl-shell\s*\{[^}]*min-height\s*:\s*0", controls_css):
+            fails.append("R42 fluent2-controls.css: .fl-shell 必须有 min-height:0"
+                         "（flex 子项默认 min-height:auto，会被内容撑破导致内层滚动失效）")
+        if not re.search(r"\.fl-content-layer\s*\{[^}]*grid-template-rows\s*:\s*minmax\(0,\s*1fr\)",
+                         controls_css):
+            fails.append("R42 fluent2-controls.css: .fl-content-layer 必须 grid-template-rows: minmax(0,1fr)"
+                         "（auto 行会被内容撑高，overflow:clip 直接裁掉而不出滚动条）")
+        if not re.search(r"\.fl-page\s*\{[^}]*overflow-y\s*:\s*auto", controls_css):
+            fails.append("R42 fluent2-controls.css: .fl-page 必须是滚动容器（overflow-y: auto），"
+                         "否则内容区不能独立滚动")
 
     # 输出
     print(f"目标：{target}")

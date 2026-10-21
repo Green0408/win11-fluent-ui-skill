@@ -96,6 +96,35 @@ async function main() {
     type, x, y, button: button || "none", clickCount: type === "mousePressed" || type === "mouseReleased" ? 1 : 0,
   });
 
+  /* ---- 0) 外壳布局：整页不滚、只有内容区滚、左导航固定 ---- */
+  const layout = await evaluate(`(function(){
+    var doc = document.documentElement;
+    var page = document.querySelector(".fl-page.fl-current");
+    var nav = document.getElementById("nav");
+    var navTop = nav.getBoundingClientRect().top;
+    page.scrollTop = 240;                     // 只滚内容区
+    var after = {
+      pageScrollTop: page.scrollTop,
+      navTop: nav.getBoundingClientRect().top,
+      winScrollY: window.scrollY
+    };
+    var out = {
+      docScrollable: doc.scrollHeight > window.innerHeight + 1,
+      pageScrollable: page.scrollHeight > page.clientHeight + 1,
+      navFixed: Math.abs(after.navTop - navTop) < 0.5 && after.winScrollY === 0,
+      scrolled: after.pageScrollTop > 0,
+      shellH: document.querySelector(".fl-shell").getBoundingClientRect().height,
+      winH: window.innerHeight
+    };
+    page.scrollTop = 0;
+    return out;
+  })()`);
+  check("整页不滚（文档没有溢出滚动）", layout.docScrollable === false, JSON.stringify(layout));
+  check("内容区可以自己滚", layout.pageScrollable === true && layout.scrolled === true, JSON.stringify(layout));
+  check("滚内容区时左侧栏不动、窗口不滚", layout.navFixed === true, JSON.stringify(layout));
+  check("外壳高度 = 视口高度（不留整页滚动条）",
+    Math.abs(layout.shellH - layout.winH + 32) < 2, `shell=${layout.shellH} win=${layout.winH}（差值为标题栏高度）`);
+
   /* ---- 1) 转场方向：点导航项上/下，读运行时写入的位移符号 ---- */
   const navBox = async (idx) => evaluate(`(function(){
     var a = document.querySelectorAll(".fl-nav-item[data-page]")[${idx}];
@@ -182,14 +211,30 @@ async function main() {
              inX: +inn.getBoundingClientRect().left.toFixed(1) };
   })()`);
   check("drill 第 2 拍：≈240ms 时旧页已退场、新页已在滑（尚未落位）",
-    beat2 && beat2.outGone === true && beat2.inOp > 0.2 && beat2.inX > 260,
+    beat2 && beat2.outGone === true && beat2.inOp > 0.2 && beat2.inX > 244,
     JSON.stringify(beat2));
   await sleep(450);
   const settledX = await evaluate(
     `+document.getElementById("page-detail").getBoundingClientRect().left.toFixed(1)`);
-  check("drill 结束：新页落位（无残留位移）", Math.abs(settledX - 256) <= 1, String(settledX));
+  check("drill 结束：新页落位（无残留位移）", Math.abs(settledX - 240) <= 1, String(settledX));
   await evaluate(`(function(){ document.getElementById("btn-back").click(); })()`);
   await sleep(600);
+
+  /* ---- 1.8) 每个页面各自记滚动位置：切走再回来要回到原处 ---- */
+  await evaluate(`document.getElementById("page-main").scrollTop = 180`);
+  await sleep(120);
+  await clickAt(await navBox(2));                 // 去设置页
+  await sleep(600);
+  const settingsScroll = await evaluate(`document.getElementById("page-settings").scrollTop`);
+  await clickAt(await navBox(0));                 // 回到条目管理
+  await sleep(600);
+  const backScroll = await evaluate(
+    `[document.getElementById("page-main").scrollTop, window.scrollY]`);
+  check("滚到 180 后切走、再回来仍在 180（每页各记各的）",
+    Math.abs(backScroll[0] - 180) <= 2 && backScroll[1] === 0, JSON.stringify(backScroll));
+  check("新进的页面从顶部开始（不继承上一页的滚动位置）", settingsScroll === 0, String(settingsScroll));
+  await evaluate(`document.getElementById("page-main").scrollTop = 0`);
+  await sleep(150);
 
   /* ---- 2) 列表六档：hover / 选中+hover 的 computed background ---- */
   const rowBox = await evaluate(`(function(){

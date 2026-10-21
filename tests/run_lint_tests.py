@@ -44,8 +44,8 @@ BAD_CASES = {
             ".fl-btn:hover { background: var(--fl-control-fill-secondary); }",
             ".fl-btn:hover { transition: background var(--fl-dur-fast) var(--fl-ease-linear); }"),
     "R26": ("fluent2-controls.css",
-            "display: grid; overflow: clip; }",
-            "display: grid; }"),
+            "background: var(--fl-solid-bg-base); overflow: clip;",
+            "background: var(--fl-solid-bg-base);"),
     # ---- R27~R34：控件与方向的结构性规则（针对"只有一种符号 / 只有一半状态"类缺陷）----
     "R27": ("fluent2-motion.js",
             'up:      { axis: "y",  sign: -1 },',
@@ -94,6 +94,10 @@ BAD_CASES = {
     "R40": ("fluent2-controls.css",
             "  min-height: var(--fl-settings-row-h);",
             "  min-height: 56px;"),
+    # 页面不再是滚动容器 → 内容区无法独立滚动
+    "R42": ("fluent2-controls.css",
+            "  overflow-y: auto; overflow-x: hidden;   /* 每个页面各自滚，切页各记各的位置 */",
+            "  overflow: visible;"),
     # 去掉入页延迟 → 两页同时进出，会重影
     "R41": ("fluent2-motion.css",
             "  animation-delay: calc(var(--fl-dur-normal) * 0.8);",

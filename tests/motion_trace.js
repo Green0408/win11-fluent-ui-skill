@@ -115,7 +115,7 @@ async function main() {
   fs.writeFileSync(path.join(OUT, `${TAG}-trace.json`), JSON.stringify(trace, null, 1));
 
   const first = trace.find((p) => p.inX !== null || p.outX !== null) || trace[0];
-  const baseX = 256;                       // 内容层左缘
+  const baseX = 240;                       // 内容层左缘（页内边距已挪到 .fl-page 上）
   console.log(`${TAG}：采样 ${trace.length} 帧（≈${Math.round(trace[0].t)}–${Math.round(trace[trace.length - 1].t)}ms）`);
   console.log("t(ms)\t新页x\t新页y\t新页不透明\t旧页x\t旧页y\t旧页不透明");
   for (const p of trace) {

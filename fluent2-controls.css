@@ -36,9 +36,21 @@ body {
 }
 
 /* ---- 双层系统：Base（导航/命令）+ Content（卡片内容） ---- */
-.fl-shell { display: flex; min-height: 100vh; }
-/* Content layer = 页面叠放容器：所有 .fl-page 放同一网格单元，转场期互相覆盖而不是上下堆叠 */
-.fl-content-layer { flex: 1; padding: var(--fl-space-4); background: var(--fl-solid-bg-base); display: grid; overflow: clip; }
+/* 外壳：整页不滚，只有右侧内容区滚（左导航固定）。
+   用 :has() 给"带 .fl-shell 的页面"开启应用外壳模式 —— 没用到 shell 的普通长页面仍然照常整页滚动。
+   高度必须一路给到确定值（html/body 100% → shell flex:1 + min-height:0），
+   只写 min-height 会让 body 被内容撑高、内层滚动整个失效（这个坑踩过）。 */
+html:has(.fl-shell) { height: 100%; }
+body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+.fl-shell { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+/* Content layer = 页面叠放容器：所有 .fl-page 放同一网格单元，转场期互相覆盖而不是上下堆叠。
+   网格行固定成 1fr（minmax(0,1fr)）：页面必须拿到「确定高度」才能各自成为滚动容器；
+   否则 auto 行会被内容撑高，overflow:clip 直接裁掉而不是出滚动条。 */
+.fl-content-layer {
+  flex: 1; min-width: 0; display: grid;
+  grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  background: var(--fl-solid-bg-base); overflow: clip;
+}
 /* overflow: clip：页面转场会横向平移 ±--fl-page-shift-drill，必须裁掉，否则出现横向滚动条；
    clip 不产生滚动容器（比 hidden 安全）。若页内需要 position:sticky，改 overflow:hidden + overflow-clip-margin。 */
 
@@ -68,6 +80,7 @@ body {
   background: var(--fl-layer-fill, var(--fl-solid-bg-secondary));
   border-right: var(--fl-stroke) solid var(--fl-divider-stroke);
   padding: var(--fl-space-2); display: flex; flex-direction: column; gap: var(--fl-space-1);
+  overflow-y: auto; /* 导航项多时侧栏自己滚，页面本体不动 */
 }
 .fl-nav-item {
   position: relative; display: flex; align-items: center; gap: var(--fl-space-3);
@@ -589,29 +602,29 @@ button.fl-settings-row, a.fl-settings-row {
      `::-webkit-scrollbar-*` 全部失效（标准属性优先）。所以两套写法必须互斥：
        默认（Firefox）用标准属性；支持 webkit 伪元素的引擎里先把它们重置回 auto，再写伪元素样式。
      写成"两套并存"的结果是 Chrome 里悄悄退化成原生样式，而且测不出报错。 */
-.fl-scroll {
+:is(.fl-scroll, .fl-page, .fl-nav) {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--fl-control-strong-fill) 55%, transparent) transparent;
 }
 @supports selector(::-webkit-scrollbar) {
-  .fl-scroll { scrollbar-width: auto; scrollbar-color: auto; }  /* 让位给下面的伪元素写法 */
-  .fl-scroll::-webkit-scrollbar { width: 12px; height: 12px; }
-  .fl-scroll::-webkit-scrollbar-track,
-  .fl-scroll::-webkit-scrollbar-corner { background: transparent; }
-  .fl-scroll::-webkit-scrollbar-button { display: none; }  /* 去掉上下箭头与双箭头 */
-  .fl-scroll::-webkit-scrollbar-thumb {
+  :is(.fl-scroll, .fl-page, .fl-nav) { scrollbar-width: auto; scrollbar-color: auto; }  /* 让位给下面的伪元素写法 */
+  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar { width: 12px; height: 12px; }
+  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-track,
+  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-corner { background: transparent; }
+  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-button { display: none; }  /* 去掉上下箭头与双箭头 */
+  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb {
     background: color-mix(in srgb, var(--fl-control-strong-fill) 55%, transparent);
     background-clip: content-box;
     border: 4px solid transparent;      /* 4px 透明边框 → 视觉 4px */
     border-radius: 999px;
     min-height: 24px;
   }
-  .fl-scroll:hover::-webkit-scrollbar-thumb,
-  .fl-scroll:focus-within::-webkit-scrollbar-thumb {
+  :is(.fl-scroll, .fl-page, .fl-nav):hover::-webkit-scrollbar-thumb,
+  :is(.fl-scroll, .fl-page, .fl-nav):focus-within::-webkit-scrollbar-thumb {
     background: var(--fl-control-strong-fill);
     border-width: 2px;                  /* hover 变粗到 8px */
   }
-  .fl-scroll::-webkit-scrollbar-thumb:active {
+  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:active {
     background: var(--fl-control-strong-fill);
     border-width: 0;
   }
@@ -764,7 +777,13 @@ button.fl-settings-row, a.fl-settings-row {
 
 /* 页面容器：转场由 fluent2-motion.js 控制（禁直接切类，检查器规则 6）
    所有页面占同一网格单元 → 转场期新旧页重叠而非上下堆叠，不产生布局跳变 */
-.fl-page { grid-area: 1 / 1; align-self: start; }
+.fl-page {
+  grid-area: 1 / 1;
+  align-self: stretch; min-height: 0;
+  padding: var(--fl-space-4);
+  overflow-y: auto; overflow-x: hidden;   /* 每个页面各自滚，切页各记各的位置 */
+  scrollbar-gutter: stable;               /* 有无滚动条都留位，切页时内容不横移 */
+}
 /* 页面保持透明：转场是「旧页淡出退场 → 新页滑入」两拍（见 fluent2-motion.css）。
    涂不透明底会变成"整块面板压过去"的硬边擦除，和 Win11 录屏不一样。 */
 .fl-page:not(.fl-current):not(.fl-page-leaving) { display: none; }

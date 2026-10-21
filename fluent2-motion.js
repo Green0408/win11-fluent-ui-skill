@@ -177,7 +177,6 @@
     opts = opts || {};
     var kind = opts.kind === "drill" ? "drill" : "nav";
     var cur = document.querySelector(".fl-page.fl-current");
-    var host = next.parentElement;
     var gen = ++pageGen;
 
     if (!pageStack.length && cur && cur.id) pageStack = [cur.id];
@@ -189,7 +188,6 @@
 
     if (REDUCED) {                 // 无障碍：瞬时切换，不做位移与淡入淡出
       if (cur) cur.classList.remove("fl-current");
-      if (host) host.style.minHeight = "";
       next.classList.add("fl-current");
       recordStack(pageId, shift.isBack);
       M.stagger(next);
@@ -201,9 +199,8 @@
       cur.classList.add("fl-page-leaving", "fl-page-out"); // 保留渲染，播离场动画
     }
     next.classList.add("fl-current", "fl-page-in");
-    if (host) { // 锁高度 = max(旧页, 新页)：旧页移除的瞬间容器不收缩，避免二次跳变
-      host.style.minHeight = Math.max(cur ? cur.offsetHeight : 0, next.offsetHeight) + "px";
-    }
+    /* 不再锁容器高度：内容层现在是固定高度（1fr 网格行），每页各自滚动，
+       旧页移除时容器不会收缩 —— 高度锁在这里反而会把容器撑出外壳。 */
     /* 入场元素必须等新页真正开始滑入再跑，否则它们会在「页面还不可见」的 83ms 里播完 */
     global.setTimeout(function () { if (gen === pageGen) M.stagger(next); }, PAGE_GAP);
     recordStack(pageId, shift.isBack);
@@ -213,7 +210,6 @@
     }, PAGE_ANIM_OUT);
     onAnimEnd(next, gen, PAGE_MS + PAGE_GAP, function () {
       next.classList.remove("fl-page-in");
-      if (host) host.style.minHeight = "";
     }, PAGE_ANIM);
     return next;
   };

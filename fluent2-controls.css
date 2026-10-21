@@ -298,8 +298,22 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
          rest=AccentFillColorDefault、PointerOver=AccentFillColorSecondary、
          Pressed=AccentFillColorTertiary、Disabled=AccentFillColorDisabled
        轨道底 SliderTrackFill=ControlStrongFillColorDefault（Disabled 走 ControlStrongFillColorDisabled）
-       微动效：hover scale 1.167 / pressed 0.833，ControlNormalAnimationDuration 250ms + FastOutSlowIn
-       注意：填充段**不设 transition** —— 它必须与 thumb 逐帧一致，加过渡会把拖动变成拖影 ---- */
+
+       thumb 是**两层**（照 XAML 模板拆）：
+         外框 = ControlSolidFillColorDefault 的实心圆盘（SliderOuterThumbBackground），直径 20，**任何状态下都不变**；
+         内点 = 12px 的 accent 圆（SliderInnerThumb，模板里只对这个 Ellipse 做 ScaleTransform）。
+       ⚠ 模板的 VisualState 只动内点：Normal 0.86→12 / PointerOver 1.167→14 / Pressed 0.71→10 / Disabled 1.167→14。
+         所以**别在 thumb 上写 transform: scale()** —— 那会把外框一起放大/缩小（早期版本就是这么错的，
+         用户原话："外框从来都不会变大小"）。
+
+       伪元素里怎么做到"只缩内点、不动外框"？盒子 = 内点（12/14/10，可过渡），
+       环宽反向补偿（4/3/5），两者相加恒 20：
+         width/height = --fl-slider-dot      （12 → 14 → 10，过渡 250ms）
+         box-shadow   = 0 0 0 --fl-slider-ring（实色外框，ring = (20 - dot) / 2）
+       实测过：`background-size` 在 ::-webkit-slider-thumb 上**不会过渡**（直接跳变），
+       所以不能用"固定 20 盒子 + 背景图圆点"的写法。
+
+       注意：填充段**不设 transition** —— 它必须与 thumb 逐帧一致，加过渡会把拖动变成拖影 */
 .fl-slider {
   -webkit-appearance: none; appearance: none;
   width: 100%; height: var(--fl-control-height);
@@ -308,8 +322,14 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   --fl-slider-pct: 0;
   --fl-slider-accent: var(--fl-accent-fill);
   --fl-slider-rest: var(--fl-control-strong-fill);
+  /* 外框直径 20 = 内点 12 + 2 × 环宽 4；三态恒定（布局尺寸，不参与动画） */
+  --fl-slider-thumb: 20px;
+  /* 内点直径：rest 12 → hover 14 → pressed 10（模板 0.86 / 1.167 / 0.71 × 基准 14） */
+  --fl-slider-dot: var(--fl-slider-inner);
   /* 填充宽 = 半 thumb + 比例 ×（轨道宽 - thumb 宽）
-     thumb 中心的实际行程是「轨道宽 - thumb 宽」，直接写 100% × pct 会在两端各偏半个 thumb */
+     这里必须用**静止态内点**（--fl-slider-inner）而不是 hover 后的 --fl-slider-dot：
+     thumb 的行程按盒子宽算，若跟随 hover 变化，填充末端会在悬停时平移 1px。
+     直接写 100% × pct 会在两端各偏半个 thumb。 */
   --fl-slider-fill: calc(var(--fl-slider-inner) / 2
                    + (100% - var(--fl-slider-inner)) * var(--fl-slider-pct));
 }
@@ -325,6 +345,7 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 }
 .fl-slider:disabled {
   cursor: default;
+  --fl-slider-dot: 14px;                   /* 模板 Disabled 也是 1.167（内点反而更大） */
   --fl-slider-accent: var(--fl-accent-fill-disabled);
   --fl-slider-rest: var(--fl-control-strong-fill-disabled);
 }
@@ -346,19 +367,31 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 }
 .fl-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: var(--fl-slider-inner); height: var(--fl-slider-inner);
-  margin-top: calc((var(--fl-slider-track) - var(--fl-slider-inner)) / 2);
+  box-sizing: border-box;
+  /* ⚠ 环宽必须在 thumb 自身上算：写在 .fl-slider 上会按"静止态的 dot=12"算死成 4px，
+     hover 时 dot 变 14 而环仍是 4 → 外框变成 22（实测过，正好大一圈）。 */
+  --fl-slider-ring: calc((var(--fl-slider-thumb) - var(--fl-slider-dot)) / 2);
+  /* 盒子 = 内点（12 → 14 → 10）；外框由 box-shadow 的实色环反向补偿，总量恒 20 */
+  width: var(--fl-slider-dot); height: var(--fl-slider-dot);
+  margin-top: calc((var(--fl-slider-track) - var(--fl-slider-dot)) / 2);
   border: 0; border-radius: var(--fl-slider-radius);
   background: var(--fl-slider-accent);
-  box-shadow: 0 0 0 var(--fl-space-1) var(--fl-control-solid-fill); /* 外环 20px 近似 SliderOuterThumbBackground */
-  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard);
+  box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill); /* 外框 20（SliderOuterThumbBackground） */
+  /* 只过渡"内点直径"与随之变化的环宽；颜色按模板是离散跳变（DiscreteObjectKeyFrame），不参与过渡 */
+  transition:
+    width var(--fl-dur-control-normal) var(--fl-ease-standard),
+    height var(--fl-dur-control-normal) var(--fl-ease-standard),
+    margin-top var(--fl-dur-control-normal) var(--fl-ease-standard),
+    box-shadow var(--fl-dur-control-normal) var(--fl-ease-standard);
 }
-.fl-slider:not(:disabled):hover::-webkit-slider-thumb  { transform: scale(1.167); } /* 14px */
-.fl-slider:not(:disabled):active::-webkit-slider-thumb { transform: scale(0.833); } /* 10px */
+.fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-dot: 14px; }
+.fl-slider:not(:disabled):active::-webkit-slider-thumb { --fl-slider-dot: 10px; }
 .fl-slider:focus-visible { outline: none; }
+/* 焦点环要画在外框之外：先保留外框那一圈，再加两层细环 */
 .fl-slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
-              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+  box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill),
+              0 0 0 calc(var(--fl-slider-ring) + var(--fl-stroke)) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-slider-ring) + var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
 
 /* Firefox：填充段用原生的 ::-moz-range-progress，几何由引擎算，不需要渐变 */
@@ -373,16 +406,23 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   background: var(--fl-slider-accent);
 }
 .fl-slider::-moz-range-thumb {
-  width: var(--fl-slider-inner); height: var(--fl-slider-inner);
+  box-sizing: border-box;
+  --fl-slider-ring: calc((var(--fl-slider-thumb) - var(--fl-slider-dot)) / 2);
+  width: var(--fl-slider-dot); height: var(--fl-slider-dot);
   border: 0; border-radius: var(--fl-slider-radius);
   background: var(--fl-slider-accent);
-  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard);
+  box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill);
+  transition:
+    width var(--fl-dur-control-normal) var(--fl-ease-standard),
+    height var(--fl-dur-control-normal) var(--fl-ease-standard),
+    box-shadow var(--fl-dur-control-normal) var(--fl-ease-standard);
 }
-.fl-slider:not(:disabled):hover::-moz-range-thumb  { transform: scale(1.167); }
-.fl-slider:not(:disabled):active::-moz-range-thumb { transform: scale(0.833); }
+.fl-slider:not(:disabled):hover::-moz-range-thumb  { --fl-slider-dot: 14px; }
+.fl-slider:not(:disabled):active::-moz-range-thumb { --fl-slider-dot: 10px; }
 .fl-slider:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
-              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+  box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill),
+              0 0 0 calc(var(--fl-slider-ring) + var(--fl-stroke)) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-slider-ring) + var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
 
 /* ---- 表盘（连续型动效的宿主）：指针绕表盘圆心旋转 ----

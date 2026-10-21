@@ -55,6 +55,7 @@ R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走�
 R45 滚动条变粗只许 thumb 自身 hover：禁止把 :hover/:focus-within 挂在容器上（.fl-page:hover 恒真）
 R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::before、JS 必须有 reduced 分支
 R47 指示条拉伸必须"留在按钮内"：峰值来自固定常量，禁止按 |Δ| 派生（会跨过项间隙、跑出按钮）
+R48 滑块 thumb 外框尺寸恒定：只许改内点直径（--fl-slider-dot / background-size），禁 transform:scale 与改 width/height
 """
 import re
 import sys
@@ -543,9 +544,13 @@ def main():
         fill_var = re.search(r"--fl-slider-fill\s*:\s*calc\(([^;]*)\)", controls_css)
         if not fill_var:
             fails.append("R35 fluent2-controls.css: 缺 --fl-slider-fill 的 calc 定义")
+        elif "var(--fl-slider-dot)" in fill_var.group(1):
+            fails.append("R35 fluent2-controls.css: --fl-slider-fill 不得引用 --fl-slider-dot"
+                         "（那是随状态变的 12/14/10，悬停时填充末端会平移 1px）—— 用静止态 --fl-slider-inner")
         elif "var(--fl-slider-inner)" not in fill_var.group(1):
             fails.append("R35 fluent2-controls.css: --fl-slider-fill 必须含半 thumb 补偿"
-                         "（calc(inner/2 + (100% - inner) × pct)）；直接写 100% × pct 会在两端偏半个 thumb")
+                         "（calc(--fl-slider-inner/2 + (100% - --fl-slider-inner) × pct)）；"
+                         "直接写 100% × pct 会在两端偏半个 thumb")
         slider_body = re.search(r"\.fl-slider\s*\{([^}]*)\}", controls_css)
         if slider_body and re.search(r"transition\s*:[^;]*\bbackground", slider_body.group(1)):
             fails.append("R35 fluent2-controls.css: 滑块填充段不得加 background 过渡"
@@ -662,6 +667,43 @@ def main():
         if "IND_PEAK_SCALE" not in seg:
             fails.append("R47 fluent2-motion.js: 峰值必须取自固定常量 IND_PEAK_SCALE，"
                          "并按项高做上限钳制（否则改 --fl-nav-item-height 后会长出按钮）")
+
+    # R48 滑块 thumb：外框恒定，只有内点在变
+    #     XAML SliderThumbStyle 是两层：Border（ControlSolidFill，18+2×2 外框）+ Ellipse（accent，12）。
+    #     VisualState 只对 **Ellipse** 做 ScaleTransform（0.86 / 1.167 / 0.71），Border 一帧都不动。
+    #     常见错法：把 scale 加在 ::-webkit-slider-thumb 上 —— 外框（box-shadow/底色）跟着一起放大，
+    #     用户看到的就是"悬停整个滑块变大"。
+    #     正确写法：盒子 = 内点，环宽 = (外框 - 内点)/2 反向补偿 → 两者相加恒等于外框。
+    if ".fl-slider" in (controls_css or ""):
+        for need in ("--fl-slider-thumb", "--fl-slider-dot", "--fl-slider-ring"):
+            if need not in controls_css:
+                fails.append("R48 fluent2-controls.css: 缺 %s（外框 20 / 内点 12·14·10 / 环宽反向补偿）" % need)
+        RING = re.compile(r"--fl-slider-ring\s*:\s*calc\(\s*\(\s*var\(--fl-slider-thumb\)\s*-\s*"
+                          r"var\(--fl-slider-dot\)\s*\)\s*/\s*2\s*\)")
+        ring_on_thumb = False
+        for m in re.finditer(r"\.fl-slider[^{]*::-webkit-slider-thumb\s*\{([^}]*)\}", controls_css):
+            body, sel = m.group(1), m.group(0).split("{")[0].strip()
+            if RING.search(body):
+                ring_on_thumb = True
+            if re.search(r"\btransform\s*:\s*scale", body):
+                fails.append("R48 fluent2-controls.css: %s 不许写 transform: scale —— 会把外框一起放大"
+                             "（模板只对内点做 ScaleTransform）" % sel)
+            for wh in re.finditer(r"\b(?:width|height)\s*:\s*([^;]+);", body):
+                val = wh.group(1).strip()
+                if val != "var(--fl-slider-dot)":
+                    fails.append("R48 fluent2-controls.css: %s 的 width/height 必须是 var(--fl-slider-dot)"
+                                 "（实际是 %s）—— 盒子就是内点，改它等于改内点尺寸" % (sel, val))
+            if "box-shadow" in body and "var(--fl-slider-ring)" not in body:
+                fails.append("R48 fluent2-controls.css: %s 的 box-shadow 必须用 var(--fl-slider-ring) 画外框"
+                             "（写死环宽会让外框随状态变大小）" % sel)
+        if not ring_on_thumb:
+            fails.append("R48 fluent2-controls.css: --fl-slider-ring 必须**写在 thumb 规则里**且是 "
+                         "(外框 - 内点)/2 —— 写在 .fl-slider 上会按静止态 dot=12 算死成 4px，"
+                         "hover 时内点变 14、环仍 4，外框就成了 22（真踩过）")
+        for m in re.finditer(r"\.fl-slider[^{]*:(?:hover|active)[^{]*\{([^}]*)\}", controls_css):
+            if re.search(r"--fl-slider-thumb\s*:", m.group(1)):
+                fails.append("R48 fluent2-controls.css: --fl-slider-thumb 不许在 hover/active 里改"
+                             "（外框尺寸三态恒定，只有 --fl-slider-dot 变 12/14/10）")
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

@@ -690,7 +690,7 @@ async function main() {
   check("轨道是双段渐变，且 LTR/RTL 两个方向都在（不是整条单色）",
     /to right/.test(trackAll) && /to left/.test(trackAll) && /var\(--fl-slider-fill\)/.test(trackAll),
     String(trackAll).replace(/\s+/g, " ").slice(0, 80));
-  check("填充宽走半 thumb 补偿 calc（含 100% 与 thumb 宽）",
+  check("填充宽走半 thumb 补偿 calc（含 100% 与静止态内点 12）",
     /100%/.test(sl.fill40) && /12px/.test(sl.fill40), sl.fill40);
 
   /* 像素判不出「填充宽到底多宽」（被 4px 外环遮住），所以在这里读渐变解析后的 px 停点：

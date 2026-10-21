@@ -110,6 +110,19 @@ BAD_CASES = {
     "R47b": ("fluent2-motion.js",
              "    var peak = Math.min(IND_PEAK_SCALE, cap);",
              "    var peak = Math.min(1.6, cap);"),
+    # 滑块 hover 用 transform: scale → 外框跟着放大（模板只缩内点）
+    "R48a": ("fluent2-controls.css",
+             ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-dot: 14px; }",
+             ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { transform: scale(1.167); }"),
+    # 滑块 hover 改外框直径 → 外框尺寸不恒定
+    "R48b": ("fluent2-controls.css",
+             ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-dot: 14px; }",
+             ".fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-thumb: 24px; }"),
+    # 环宽算在父级 .fl-slider 上 → 按静止态 dot=12 算死成 4px，hover 时外框变 22（真踩过的坑）
+    "R48c": ("fluent2-controls.css",
+             "  --fl-slider-ring: calc((var(--fl-slider-thumb) - var(--fl-slider-dot)) / 2);\n"
+             "  /* 盒子 = 内点（12 → 14 → 10）；外框由 box-shadow 的实色环反向补偿，总量恒 20 */",
+             "  /* 盒子 = 内点（12 → 14 → 10）；外框由 box-shadow 的实色环反向补偿，总量恒 20 */"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
     "R43a": ("fluent2-controls.css",

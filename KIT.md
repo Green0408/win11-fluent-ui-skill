@@ -81,10 +81,28 @@
 18. **勾选框**的勾必须是 `.fl-check-glyph` 的 SVG（`pathLength="1"` + `stroke-dashoffset`），**禁止**用文本字符 "✓"。半选用原生 `:indeterminate`（由 JS 设 `input.indeterminate = true`），不要自造 `data-indeterminate`。
 19. **下拉**首选 `.fl-combo`（自绘：有 Acrylic 弹层、项状态、开合动效、完整键盘）。`.fl-select` 只作无 JS 回退 —— 原生 `<option>` 面板由操作系统绘制，暗色主题会漏白底且无法承载项状态。自绘弹层必须 portal 到 `body` 且 `position: fixed`（内容区有 `overflow: clip`）。
 20. **滑块**的已填充段（thumb 左侧、accent 色）靠 `--fl-slider-pct`（0–1）驱动，由 `M.slider.auto()` 在 `input` 时写入 —— **没有这个变量，轨道就是整条同色**（Win11 是左 accent 右灰）。
-    - 填充宽 = `calc(12px / 2 + (100% - 12px) * var(--fl-slider-pct))`：减 12px 是因为 thumb 圆心行程比轨道短一个 thumb 宽，不补偿会让两端各溢出 6px；
-    - 填充段**禁止**加 `transition: background`（值跟随加过渡会变成拖影，是新的抖动源；校验器 R35 会拦）；thumb 的 `transform` 缩放保留 250ms；
+    - 填充宽 = `calc(12px / 2 + (100% - 12px) * var(--fl-slider-pct))`：减 12px 是因为 thumb 圆心行程比轨道短一个 thumb 宽，不补偿会让两端各溢出 6px。**必须用静止态 `--fl-slider-inner`**，不能跟着 hover 后的内点尺寸走（否则悬停时填充末端平移 1px）；
+    - 填充段**禁止**加 `transition: background`（值跟随加过渡会变成拖影，是新的抖动源；校验器 R35 会拦）；
+    - **thumb 是两层，外框尺寸三态恒定**（XAML `SliderThumbStyle`：Border 外盘 + Ellipse 内点，VisualState 只对 Ellipse 做 ScaleTransform）：
+
+| 态 | 内点 | 环宽（反向补偿） | 外框 |
+|---|---|---|---|
+| Normal | 12 | 4 | 20 |
+| PointerOver | **14** | 3 | 20 |
+| Pressed | **10** | 5 | 20 |
+| Disabled | 14 | 3 | 20 |
+
+      实现：盒子 = 内点（`--fl-slider-dot`），外框 = `box-shadow: 0 0 0 var(--fl-slider-ring)`，
+      `--fl-slider-ring: calc((外框 - 内点) / 2)`，两者相加恒等于 20 → 内点变大时外框不动。
+      **三个坑**（都踩过）：
+      · 别用 `transform: scale()` —— 会把外框一起放大，观感是"整个滑块变大"（R48 拦）；
+      · 别用"固定 20 盒子 + 背景图圆点 + `background-size` 过渡" —— `::-webkit-slider-thumb` 上
+        `background-size` **不会过渡**（实测直接跳变），只能过渡 width/height/box-shadow；
+      · `--fl-slider-ring` 必须**写在 thumb 规则里**：写在 `.fl-slider` 上会按静止态 dot=12 算死成 4px，
+        hover 时内点 14、环仍 4 → 外框变 22（R48 拦，坏例 R48c）；
     - **档位色必须不透明**：`--fl-slider-accent` 不许直接引用 `--fl-accent-fill-hover/-pressed`（那是 alpha 0.9/0.8），必须 `color-mix(in srgb, var(--fl-accent-fill) 90%/80%, var(--fl-text-primary))`。alpha 档位叠在卡片上会透出底下的灰环，观感就是「悬停时滑块变透明」（校验器 R36 会拦）；
     - 填充色与 thumb 同步走四档（Default → hover → pressed → Disabled）；`[dir="rtl"]` 下渐变方向要翻转。
+    - 验收：`node tests/slider_thumb_shots.js` → `python tests/slider_thumb_pixels.py`（量三态外框/内点直径，含慢放中间态）。
 21. **按钮居中交给 flex，不要抄 XAML 的 `ButtonPadding=11,5,11,6`**：那是 ContentPresenter 做字基线补偿用的 4 值，照搬进 `align-items:center` 的盒子会让内容整体下沉 2px（校验器 R37 会拦上下不对称）。正确写法是 `padding: var(--fl-space-1) var(--fl-btn-pad-h)` + `min-height: var(--fl-control-height)`，再用 CDP 量 `Range` 文本盒中心与按钮盒中心的偏差（应 ≤0.5px）。
 22. **设置页列表用 `.fl-settings`，不要用卡片里堆控件**（这是"设置型工具"最容易做错的地方，堆出来像表单，不像 Windows 设置）：
 

@@ -14,7 +14,7 @@
 | 细滚动条 | `.fl-scroll`（12 命中区 / 4 视觉 / hover 8 / 圆角 999 / 无箭头；Firefox 走标准属性 + `@supports` 互斥） | KIT 自定（Win11 滚动条形态；浏览器默认 17px 方块） |
 | 下拉（无 JS 回退） | `.fl-select`（原生 `<select>` 套 TextBox 外观；面板由 OS 绘制，暗色会漏白） | 同上 |
 | 开关 | `.fl-switch`（轨道 40×20、旋钮 12、开态位移 20px、hover 14 / pressed 17） | XAML ToggleSwitch（KnobTranslateTransform X=20、SplineDoubleKeyFrame 14/17） |
-| 滑块 | `.fl-slider`（轨道 4、内圆 12、圆角 10；hover 1.167 / pressed 0.833，250ms；左段 accent 已填充段 + thumb 同步四档色；`M.slider.auto()` 写入 `--fl-slider-pct`） | XAML Slider（SliderTrackThemeHeight / SliderInnerThumbWidth / SliderThumbCornerRadius / SliderTrackFill / **SliderTrackValueFill** / SliderThumbBackground 的 PointerOver·Pressed·Disabled 四档） |
+| 滑块 | `.fl-slider`（轨道 4、内点 12、外框恒 20、圆角 10；hover 内点 14 / pressed 10，外框不变，250ms；左段 accent 已填充段 + thumb 同步四档色；`M.slider.auto()` 写入 `--fl-slider-pct`） | XAML Slider（SliderTrackThemeHeight / SliderInnerThumbWidth / SliderThumbCornerRadius / SliderOuterThumbBackground / **SliderTrackValueFill** / SliderThumbBackground 的 PointerOver·Pressed·Disabled 四档 + SliderThumbStyle 的 VisualState 只缩内点） |
 | 复选/单选 | `.fl-check` / `.fl-radio`（20×20、圆角 4、描边 1；勾号为 SVG 描画 12px/描边 2.5、167ms；单选内点 12 + hover 1.167/pressed 0.833；含半选/禁用） | XAML CheckBoxSize/GlyphSize/BorderThickness + RadioButtonCheckGlyphSize + ListViewItem CheckGlyph StrokeThickness |
 | 列表（结构） | `.fl-list` + `.fl-listitem` + `.fl-list-content`（勾选列 + 图标 20 + 主副标题 + 尾部区域；行高 40/64 两档；`minmax(0,1fr)` 保省略号） | XAML ListViewItemMinHeight/MinWidth/CornerRadius |
 | 列表（状态） | 六档：rest / hover / pressed / selected / selected+hover / selected+pressed（后者比前者更淡，官方反色档）；选中条 3×16 圆角 1.5；禁用 0.3 | XAML ListViewItemPresenter 六组 Background brush + SelectionIndicatorCornerRadius |

@@ -630,11 +630,16 @@ button.fl-settings-row, a.fl-settings-row {
     border-radius: 999px;
     min-height: 28px;
   }
-  /* 只认「指针落在 thumb 上」。容器 hover 一定不能写，见上方注释 */
+  /* 只认「指针落在 thumb 上」。容器 hover 一定不能写，见上方注释。
+     ⚠ 悬停态的规则会**整体接管**该部件的绘制（不是常规层叠）：这里必须把
+       `background-clip` 与**完整的 border 简写**再写一遍。
+       只写 `border-width: 2px` 是无效的 —— 没有 border-style 就等于没有边框，
+       thumb 会回弹成整个 12px 命中区（实测 6px → 12px），这是「悬停突然变粗」的真因。 */
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:hover,
   :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:active {
     background: var(--fl-text-secondary);   /* 暗 77% 白 / 亮 62% 黑，再深一档 */
-    border-width: 2px;                      /* 视觉 8px */
+    background-clip: content-box;
+    border: 2px solid transparent;          /* 12 - 2×2 = 视觉 8px */
   }
 }
 

@@ -82,6 +82,10 @@ BAD_CASES = {
     "R37": ("fluent2-controls.css",
             "  padding: var(--fl-space-1) var(--fl-btn-pad-h);",
             "  padding: var(--fl-space-3) var(--fl-btn-pad-h) var(--fl-space-2) var(--fl-btn-pad-h);"),
+    # 暗主题的 accent 换成亮主题的深蓝 → 两档亮度相等，R38 应判"写反"
+    "R38": ("fluent2-tokens.css",
+            "  --fl-accent-fill: #60CDFF;",
+            "  --fl-accent-fill: #005FB8;"),
 }
 
 # 处方：按模块名整块删除（与 FLUENT-COMPOSE.md 的四种处方一致）

@@ -76,6 +76,7 @@
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。
 - **实测派生（非官方档，来自 60fps 录屏反解）**：页面转场 283ms（`--fl-dur-page`）、drill 176px、nav 72px、`--fl-ease-page` = cubic-bezier(0.6,0,0.3,1)、连续型 `--fl-dur-sweep` 60s / `--fl-dur-tick` 1s。官方四档仍是 83/167/250/333，检索官方规范时不要引用这一行。
+- 强调色（系统色，可整体替换）：`--fl-accent-fill` **暗主题 `#60CDFF`（SystemAccentColorLight2，配黑字）/ 亮主题 `#005FB8`（SystemAccentColorDark1，配白字）** —— 暗色用浅蓝、亮色用深蓝，由 `TextOnAccentFillColorPrimary`（暗=#000000 / 亮=#FFFFFF）反证。改色只动 `extract_tokens.py` 的 `ACCENT`，不要手改 `fluent2-tokens.css`。
 - accent 状态档位（XAML brush Opacity）：`--fl-accent-fill-hover` = Default @0.9、`--fl-accent-fill-pressed` = Default @0.8。状态反馈用档位色过渡，禁用 `filter: brightness()`。**例外：滑块**的轨道填充与 thumb 不许用这两个 alpha 档（会透出底层，见规则 20）。
 - 字阶：Caption 12/16、Body 14/20、Body Strong 14/20 Semibold、Body Large 18/24、Subtitle 20/28、Title 28/36、Title Large 40/52、Display 68/92。
 - 控件：高 32px；Button padding 11,5,11,6；TextBox padding 10,5,6,6；列表项 min-height 40；ContentDialog padding 24 / max-width 548 / min-height 184；Switch 轨道 40×20、旋钮 12（hover 14 / pressed 17）、开态位移 **20px**（XAML `KnobTranslateTransform X=20`）；Slider 轨道 4 / 内圆 12 / 圆角 10（hover 1.167、pressed 0.833，250ms）；轨道**左段为 accent 已填充段**（`SliderTrackValueFill`，宽 = 半 thumb + 比例×(轨道宽-12)，由 `M.slider.auto()` 写 `--fl-slider-pct`），填充与 thumb 同步四档变色（Default→Secondary 0.9→Tertiary 0.8→Disabled）。

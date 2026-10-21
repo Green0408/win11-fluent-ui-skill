@@ -211,6 +211,27 @@ async function main() {
   })()`);
   check("勾号是 <svg> 且带 dash 过渡", glyph.tag.toLowerCase() === "svg" && glyph.dash !== "none", JSON.stringify(glyph));
 
+  /* ---- 4.4) 强调色的主题档位：暗主题必须比亮主题浅（XAML 暗=Light2 / 亮=Dark1）---- */
+  const themeAccent = await evaluate(`(function(){
+    var root = document.documentElement;
+    var prev = root.getAttribute("data-theme");
+    function lum(h){
+      h = (h || "").trim().replace("#", "");
+      var c = [0, 2, 4].map(function (i) {
+        var v = parseInt(h.substr(i, 2), 16) / 255;
+        return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    }
+    function val(){ return getComputedStyle(root).getPropertyValue("--fl-accent-fill").trim(); }
+    root.setAttribute("data-theme", "dark");  var d = val();
+    root.setAttribute("data-theme", "light"); var l = val();
+    root.setAttribute("data-theme", prev || "dark");
+    return { dark: d, light: l, ld: +lum(d).toFixed(3), ll: +lum(l).toFixed(3) };
+  })()`);
+  check("强调色：暗主题比亮主题更浅（XAML 暗=Light2 / 亮=Dark1，不是写反）",
+    themeAccent.ld > themeAccent.ll + 0.05, JSON.stringify(themeAccent));
+
   /* ---- 4.5) 按钮文字必须居中：用 Range 量文本盒，和按钮盒比中心 ----
      曾经的 padding 是「上 12 / 下 8」（误把 XAML ButtonPadding 11,5,11,6 的语义套进 flex 盒），
      文字整体下沉 2px。这类偏移肉眼"觉得怪"但说不清，必须用数值锁。 */

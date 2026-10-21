@@ -45,6 +45,7 @@ R34 弹层不得被裁：.fl-combo-popup 必须 position: fixed，且 JS 有 por
 R35 滑块必须有填充段且做半 thumb 补偿：轨道双段渐变 + --fl-slider-fill 走 calc(inner/2 + (100%-inner)×pct) + 禁 background 过渡
 R36 滑块档位色不得用 alpha：--fl-slider-accent 不许直接引用 --fl-accent-fill-hover/-pressed，须用 color-mix 不透明混色
 R37 按钮纵向内边距必须对称：.fl-btn 的 padding 四值里 top 必须等于 bottom（否则 flex 居中下文字整体偏移）
+R38 强调色主题档位不许写反：暗主题 --fl-accent-fill 的相对亮度必须高于亮主题（XAML：暗=Light2、亮=Dark1）
 """
 import re
 import sys
@@ -224,6 +225,29 @@ def main():
         fail(9, m.start() if m else 0, "<html> 必须带 data-theme（light/dark 双模式）")
     if tokens_css and '[data-theme="light"]' not in tokens_css:
         fails.append('R9: fluent2-tokens.css 缺少 [data-theme="light"] 主题块')
+
+    # R38 强调色的主题档位不许写反
+    #     XAML：暗主题 AccentFillColorDefault = SystemAccentColor**Light2**、亮主题 = **Dark1**，
+    #     即「暗色用浅蓝、亮色用深蓝」。写反了暗色主题的蓝会发闷，且黑字对比不足 —— 纯观感缺陷，
+    #     只能靠「相对亮度」这种可量化的不变量来锁。
+    def _accent_block(sel):
+        b = re.search(re.escape(sel) + r"[^{]*\{([^}]*)\}", tokens_css or "")
+        if not b:
+            return None
+        h = re.search(r"--fl-accent-fill\s*:\s*#([0-9A-Fa-f]{6})", b.group(1))
+        return h.group(1) if h else None
+
+    dark_hex, light_hex = _accent_block(':root, [data-theme="dark"]'), _accent_block('[data-theme="light"]')
+    if dark_hex and light_hex:
+        def _lum(hx):
+            ch = [int(hx[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+            ch = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in ch]
+            return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+        ld, ll = _lum(dark_hex), _lum(light_hex)
+        if ld <= ll:
+            fails.append(f"R38 fluent2-tokens.css: 强调色主题档位写反了"
+                         f"（暗主题 #{dark_hex} 亮度 {ld:.3f} ≤ 亮主题 #{light_hex} 亮度 {ll:.3f}）；"
+                         f"XAML 规定暗主题=SystemAccentColorLight2、亮主题=Dark1，即暗色必须更浅")
 
     # R10 出场残留
     for chunk, pos, _kind in inline:

@@ -789,8 +789,6 @@ button.fl-settings-row, a.fl-settings-row {
   border-radius: var(--fl-radius-overlay);
   box-shadow: var(--fl-shadow-flyout);
 }
-/* 向上翻时的入场方向随之取反（.fl-overlay 默认向下 8px） */
-.fl-combo-popup[data-drop="up"]:not(.fl-open) { transform: translateY(-8px) scale(0.98); }
 
 .fl-combo-item {
   position: relative;

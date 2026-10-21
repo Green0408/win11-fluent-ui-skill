@@ -25,6 +25,27 @@
 4. **字号**只用 `.fl-caption/.fl-body/.fl-body-strong/.fl-body-large/.fl-subtitle/.fl-title/.fl-title-large/.fl-display` 字阶类。
 5. **焦点**用 `:focus-visible` 双描边（controls.css 已内置）；`:focus`（非 visible）不画框。
 6. **浮层**（flyout/dialog/contextmenu）隐藏态必须 visibility/pointer-events（motion.css `.fl-overlay` 已内置），只 opacity:0 会挡交互。隐藏所用的 `visibility` 必须**延迟**切换（`visibility 0s … var(--fl-dur-*)`），否则关闭瞬间就 hidden、出场动画看不见。
+
+6b. **弹出层有两类，动画不一样，别混用**（各自有录屏依据）：
+
+| | 下拉列表（ComboBox 弹层） | 菜单（更多选项 / 上下文菜单） |
+|---|---|---|
+| 依据 | `2026-10-21 23-13-35.mp4`（Win11 设置页实测） | Learn《Animating pop-up UI (XAML)》 |
+| 动作 | **从顶边向下揭示**（clip-path），内容不被拉伸 | 淡入 + 垂直 **50px** 平移（无缩放） |
+| 淡入 | **没有**（首帧文字对比度已 97%） | 有，与位移同长 |
+| 时长 | 入场 **167ms**（ControlFast）+ FastOutSlowIn | 入场 250ms / 出场 167ms |
+| 关闭 | **瞬变**（录屏 f275 还在、f276 全没有） | 167ms 滑回 + 淡出 |
+| 方向 | 向上翻（`[data-drop=up]`）时从**底边**往上揭示 | 弹层在上方 → 从下方升上来 |
+
+    下拉列表实测细节（60fps、1920×1080）：
+    · 顶边**全程不动**（y=527），底边 667 → 770，8 帧（≈133ms）扫完；
+    · 首帧里"5 分钟 / 10 分钟"就是正常字号 → 是**揭示**不是 `scaleY`（拉伸会把文字压扁）；
+    · 宽度不变、没有位移、没有可见透明度过渡。
+    实现：`.fl-overlay.fl-combo-popup` 用 `clip-path: inset(-24px -24px calc(100% + 24px) -24px)` → `inset(-24px)`
+    （四周留 -24px 让阴影不被裁掉），关闭 `transition: none` 硬切。
+    菜单则是 `.fl-overlay.fl-flyout`（`--fl-popup-shift: 50px` + `--fl-popup-dir`）。
+    **对话框 / ToolTip 只许淡入淡出**（基类 `.fl-overlay` 不带 transform）。
+
 7. **海拔**语义（layering 文档）：dialog/window=128、flyout=32、tooltip=16、card=8、control=2、layer=1。CSS 阴影 `--fl-shadow-e*` 是 KIT 换算近似（官方只给 elevation 值，无 CSS 定义），勿改作他用。
 8. **材质**：Mica≈`--fl-solid-bg-base` 纯色基底；Acrylic=浮层 `backdrop-filter: blur(60px) saturate(125%)`（只用于瞬态轻触消失表面）；Smoke=`--fl-smoke` 模态遮罩（恒半透明黑）。三者均为网页近似，已在 tokens 注释登记。
 9. **明暗双主题**：`<html data-theme="dark|light">`，切换走 `M.toggleTheme()`。两主题都必须渲染正确。

@@ -473,7 +473,7 @@
   }
 
   /* flyout（⋯ 溢出菜单） */
-  if ($("btn-more")) $("btn-more").addEventListener("click", function (e) { e.stopPropagation(); M.flyout.toggle("flyout-more"); });
+  if ($("btn-more")) $("btn-more").addEventListener("click", function (e) { e.stopPropagation(); M.flyout.toggle("flyout-more", e.currentTarget); });
 
   /* ContentDialog：删除确认（不可撤销操作才用对话框） */
   if ($("btn-delete")) $("btn-delete").addEventListener("click", function () { M.dialog.show("dialog-delete"); });
@@ -489,10 +489,16 @@
   function showContext(e) {
     var flyout = $("flyout-more");
     if (!flyout) return;
-    M.flyout.show("flyout-more");
+    /* 先定位再开：滑入方向要按"菜单相对鼠标"判断，位置得先落好 */
     flyout.style.top = e.clientY + "px";
     flyout.style.left = e.clientX + "px";
     flyout.style.right = "auto";
+    M.flyout.show("flyout-more", {
+      getBoundingClientRect: function () {
+        return { top: e.clientY, height: 0, left: e.clientX, width: 0,
+                 right: e.clientX, bottom: e.clientY };
+      }
+    }, { place: false });
   }
 
   /* 入场编排：当前页 stagger */

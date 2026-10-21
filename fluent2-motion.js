@@ -520,8 +520,8 @@
       popup.style.minWidth = Math.max(parseFloat(global.getComputedStyle(root).minWidth) || 0, r.width) + "px";
       /* 水平钳制：按钮贴着右边缘时，弹层比按钮宽就会伸到视口外，右侧滚动条直接被窗口裁掉
          （表现是"看不到滚动条 / 内容像溢出了"）。左右各留 8px。
-         量宽度必须用 offsetWidth：此时还没加 .fl-open，入场态带 scale(0.98)，
-         getBoundingClientRect 会少算 2%（337 → 330），钳制就不会生效。 */
+         量宽度必须用 offsetWidth：此时还没加 .fl-open，入场态带位移变换，
+         getBoundingClientRect 拿到的是"动画起点"的位置/尺寸，钳制会算偏。 */
       var w = popup.offsetWidth;
       var margin = 8;
       var left = Math.min(r.left, global.innerWidth - margin - w);
@@ -710,19 +710,44 @@
     }
   };
 
-  /* 浮层（flyout / contextmenu）：开 = point 入、关 = soft 出（官方 Consistent：同入口同方式开合）
+  /* 浮层（flyout / contextmenu）：开 = 淡入 + 50px 垂直滑入、关 = 淡出 + 滑回
+     （官方 pop-up 动画只有 fade + 平移，没有 scale；见 fluent2-motion.css 的说明）。
+     滑入方向看放置关系：弹层在触发元素下方 → 从上方滑下来（dir -1），在上方 → 从下方升上来（dir +1）。
      显隐与延迟隐藏由 .fl-overlay 的 transition（含 visibility 0s 延迟）承担，这里只切状态类 */
-  function setOverlay(el, open) {
+  /* 把 .fl-flyout 摆到触发元素旁边：优先正下方、右对齐；下方放不下就翻到上方。
+     顺带算出滑入方向（菜单在触发元素上方 → dir +1，从下方升上来）。 */
+  function placeFlyout(el, anchor) {
+    var a = anchor.getBoundingClientRect();
+    var w = el.offsetWidth, h = el.offsetHeight, m = 8;
+    var below = a.bottom + 4, above = a.top - h - 4;
+    var top = (below + h > global.innerHeight - m && above > m) ? above : below;
+    el.style.right = "auto";
+    el.style.bottom = "auto";
+    el.style.top = top + "px";
+    el.style.left = Math.max(m, Math.min(a.right - w, global.innerWidth - m - w)) + "px";
+    el.dataset.drop = (top + h / 2) < (a.top + a.height / 2) ? "up" : "down";
+  }
+  function setOverlay(el, open, anchor, opts) {
     if (!el) return el;
+    if (open && anchor && anchor.getBoundingClientRect) {
+      if (!opts || opts.place !== false) {
+        placeFlyout(el, anchor);      // 自己定位（按钮触发的菜单）
+      } else {
+        /* 页面已经摆好了位置（右键菜单跟着鼠标走），这里只按相对高低定方向 */
+        var pr = el.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+        var above = (pr.top + pr.height / 2) < (ar.top + ar.height / 2);
+        el.dataset.drop = above ? "up" : "down";
+      }
+    }
     el.classList.toggle("fl-open", !!open);
     return el;
   }
   M.flyout = {
-    show: function (id) { return setOverlay(document.getElementById(id), true); },
+    show: function (id, anchor, opts) { return setOverlay(document.getElementById(id), true, anchor, opts); },
     hide: function (id) { return setOverlay(document.getElementById(id), false); },
-    toggle: function (id) {
+    toggle: function (id, anchor, opts) {
       var el = document.getElementById(id);
-      return el ? setOverlay(el, !el.classList.contains("fl-open")) : el;
+      return el ? setOverlay(el, !el.classList.contains("fl-open"), anchor, opts) : el;
     }
   };
 

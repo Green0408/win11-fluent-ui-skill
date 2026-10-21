@@ -133,25 +133,76 @@
 }
 
 /* ---- 浮层（flyout / dialog / contextmenu）开合 ----
-   入场 Fade 83ms（录屏《时钟》小面板实测 ≈67ms，落 83 档）；出场同档 soft 曲线。
+   官方规范（Learn《Animating pop-up UI (XAML)》/《弹出 UI 动画指南》）：
+     · 弹出层 = **淡入 + 垂直平移**，移动距离建议 **50px**；**没有缩放**；
+       方向看放置关系：出现在触发元素**下方**就向下滑入，在上方就向上滑入
+       （"给弹出元素和触发元素之间一个视觉联系"）。
+     · ToolTip / 对话框**只用淡入淡出**，不许用弹出动画。
+   两类弹出层**动画不同**（实测两段不同的录屏得出，别混用）：
+     .fl-combo-popup（下拉列表）= **从顶边向下揭示**（内容不拉伸、不淡入），关闭是**瞬变**
+       —— 依据 `2026-10-21 23-13-35.mp4`：顶边固定在 y=527，底边 8 帧内 667→770，
+          首帧文字对比度已 97%（没有可见淡入），关闭单帧完成；
+     .fl-flyout（更多选项 / 上下文菜单）= 淡入 + 垂直 50px 平移
+   入场用 FastOutSlowIn（0,0,0,1），出场用 SlowOutFastIn（1,0,1,1）= --fl-ease-soft；
+   位移 50px 属于"较大的位移"，用时长的 Normal 档 250ms，出场收紧到 Fast 档 167ms。
    关键：visibility 走 0s 过渡 + 延迟，让出场动画播完才真正隐藏（否则关闭瞬间就 hidden，动画看不见）。 */
 .fl-overlay {
   transition: opacity var(--fl-dur-fast) var(--fl-ease-standard),
-              transform var(--fl-dur-fast) var(--fl-ease-standard),
               visibility 0s var(--fl-ease-linear);
   opacity: 1;
-  transform: none;
   visibility: visible;
   pointer-events: auto;
 }
 .fl-overlay:not(.fl-open) {
   transition: opacity var(--fl-dur-fast) var(--fl-ease-soft),
-              transform var(--fl-dur-fast) var(--fl-ease-soft),
               visibility 0s var(--fl-ease-linear) var(--fl-dur-fast);
   opacity: 0;
-  transform: translateY(8px) scale(0.98);
   visibility: hidden;
   pointer-events: none;
+}
+/* 向上展开（[data-drop="up"]，弹层在触发元素上方）时改为从下方升上来 */
+.fl-overlay.fl-flyout[data-drop="up"] { --fl-popup-dir: 1; }
+/* 弹出层：从触发元素那一侧滑出来，滑回去 */
+.fl-overlay.fl-flyout {
+  --fl-popup-shift: 50px;   /* 官方建议的移动距离 */
+  --fl-popup-dir: -1;       /* -1 = 弹出层在触发元素下方（从上方滑入）；+1 = 在上方（从下方滑入）。JS 按放置关系写 */
+  transform: translateY(0);
+  transition: opacity var(--fl-dur-control-normal) var(--fl-ease-standard),
+              transform var(--fl-dur-control-normal) var(--fl-ease-standard),
+              visibility 0s var(--fl-ease-linear);
+}
+.fl-overlay.fl-flyout:not(.fl-open) {
+  transform: translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir)));
+  transition: opacity var(--fl-dur-control-fast) var(--fl-ease-soft),
+              transform var(--fl-dur-control-fast) var(--fl-ease-soft),
+              visibility 0s var(--fl-ease-linear) var(--fl-dur-control-fast);
+}
+
+/* ---- 下拉列表（ComboBox 弹层）：从顶边向下"揭示" ----
+   录屏实测（2026-10-21 23-13-35.mp4，Win11 设置页 专注周期 下拉）：
+     · 弹层**顶边固定**（y=527 全程不动），底边 667 → 770 在 8 帧（≈133ms）内扫下去；
+     · 揭示的是**内容**：首帧里"5 分钟/10 分钟"就是正常字号，没有被拉伸 —— 所以不是 scaleY；
+     · 首帧文字对比度已达 97%，**没有可见的淡入**；整段几乎没有中间透明度；
+     · 关闭是**单帧**（f275 还在 → f276 全没了），没有退场动画。
+   实现：`clip-path: inset()` 从"只剩顶边"到"完整"，内容不参与布局（不重排、不拉伸）；
+   四周留 -24px 让阴影不被裁掉。向上翻（data-drop=up）时改成从底边往上揭示。 */
+.fl-overlay.fl-combo-popup,
+.fl-overlay.fl-combo-popup:not(.fl-open) { opacity: 1; }   /* 不淡入，只揭示 */
+.fl-overlay.fl-combo-popup {
+  clip-path: inset(-24px);
+  transition: clip-path var(--fl-dur-control-fast) var(--fl-ease-standard),
+              visibility 0s var(--fl-ease-linear);
+}
+.fl-overlay.fl-combo-popup:not(.fl-open) {
+  clip-path: inset(-24px -24px calc(100% + 24px) -24px);
+  /* 关闭瞬变：录屏里没有退场动画，硬切 */
+  transition: none;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* 向上翻：底边固定，往上揭示 */
+.fl-overlay.fl-combo-popup[data-drop="up"]:not(.fl-open) {
+  clip-path: inset(calc(100% + 24px) -24px -24px -24px);
 }
 
 /* Smoke 模态遮罩：恒半透明黑（官方不分主题），83ms fade，同样延迟隐藏 */

@@ -232,7 +232,7 @@
   /* 二级下钻与返回（drill = 水平；返回方向取反） */
   if ($("btn-drill")) $("btn-drill").addEventListener("click", function () { M.transitionTo("page-c", { kind: "drill" }); });
   if ($("btn-back")) $("btn-back").addEventListener("click", function () { M.back("drill"); });
-  if ($("btn-more")) $("btn-more").addEventListener("click", function (e) { e.stopPropagation(); M.flyout.toggle("flyout-more"); });
+  if ($("btn-more")) $("btn-more").addEventListener("click", function (e) { e.stopPropagation(); M.flyout.toggle("flyout-more", e.currentTarget); });
   if ($("btn-primary")) $("btn-primary").addEventListener("click", function () { M.dialog.show("dialog-test"); });
   if ($("btn-dialog-ok")) $("btn-dialog-ok").addEventListener("click", function () { M.dialog.hide("dialog-test"); M.toast("已确认"); });
   if ($("btn-dialog-cancel")) $("btn-dialog-cancel").addEventListener("click", function () { M.dialog.hide("dialog-test"); });

@@ -134,6 +134,26 @@ BAD_CASES = {
              '  transition:\n    transform var(--fl-dur-control-fast) var(--fl-ease-standard),\n    box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);',
              "  transition://n    width var(--fl-dur-control-fast) var(--fl-ease-standard),\n"
              "    box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);"),
+    # 下拉列表改回位移 → 应该是「揭示」
+    "R49d": ("fluent2-motion.css",
+             "  clip-path: inset(-24px);\n  transition: clip-path var(--fl-dur-control-fast) var(--fl-ease-standard),",
+             "  transform: translateY(0);\n  transition: transform var(--fl-dur-control-fast) var(--fl-ease-standard),"),
+    # 下拉列表关闭加了退场动画 → 录屏里是单帧瞬变
+    "R49e": ("fluent2-motion.css",
+             "  /* 关闭瞬变：录屏里没有退场动画，硬切 */\n  transition: none;",
+             "  transition: clip-path var(--fl-dur-control-fast) var(--fl-ease-soft);"),
+    # 弹出层加回 scale → 不再是官方的 fade + 平移
+    "R49a": ("fluent2-motion.css",
+             "  transform: translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir)));",
+             "  transform: translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir))) scale(0.98);"),
+    # 位移写死 8px（旧实现）→ 与官方建议的 50px 不符
+    "R49b": ("fluent2-motion.css",
+             "  --fl-popup-shift: 50px;   /* 官方建议的移动距离 */",
+             "  --fl-popup-shift: 8px;"),
+    # 对话框也带上了位移 → 对话框只许淡入淡出
+    "R49c": ("fluent2-motion.css",
+             "  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;",
+             "  opacity: 1;\n  transform: translateY(50px);\n  visibility: visible;\n  pointer-events: auto;"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
     "R43a": ("fluent2-controls.css",

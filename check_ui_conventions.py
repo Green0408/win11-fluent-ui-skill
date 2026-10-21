@@ -57,6 +57,8 @@ R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::be
 R47 指示条拉伸必须"留在按钮内"：峰值来自固定常量，禁止按 |Δ| 派生（会跨过项间隙、跑出按钮）
 R48 滑块 thumb：外框恒定（ring = 外框/scale − 内点，反向补偿）+ 只缩内点 + 尺寸动效走 transform（禁过渡 width/height）
     + 逐状态时长（基态 167ms / hover·active 250ms）
+R49 弹出层动画必须是「淡入 + 垂直 50px 平移」（官方 pop-up 动画没有缩放）：距离走变量、方向按放置关系、
+    入场 250ms/出场 167ms；对话框与 ToolTip 不许平移（只用淡入淡出）
 """
 import re
 import sys
@@ -736,6 +738,57 @@ def main():
                              "不写就一直是基态的 167ms，放大与缩小一个速率" % sel)
             if re.search(r"--fl-slider-thumb\s*:", body):
                 fails.append("R48 fluent2-controls.css: %s 不许改 --fl-slider-thumb（外框尺寸三态恒定）" % sel)
+
+    # R49 弹出层开合动画：**下拉列表与菜单是两套**（各自有录屏依据）
+    #     下拉列表（.fl-combo-popup，依据 2026-10-21 23-13-35.mp4）：顶边固定、底边扫下去，
+    #       内容是"被揭示"而不是被拉伸（不是 scaleY）；不淡入；关闭单帧瞬变。
+    #     菜单（.fl-flyout，依据 Learn《Animating pop-up UI (XAML)》）：淡入 + 垂直 50px 平移，没有缩放；
+    #       方向按放置关系；入场 250ms / 出场 167ms。
+    #     对话框 / ToolTip 只许淡入淡出（基类 .fl-overlay 不许带 transform）。
+    if motion_css and "fl-overlay" in motion_css:
+        # —— 菜单（flyout）——
+        pop = re.search(r"\.fl-overlay\.fl-flyout\s*\{([^}]*)\}", motion_css)
+        closed = re.search(r"\.fl-overlay\.fl-flyout:not\(\.fl-open\)\s*\{([^}]*)\}", motion_css)
+        if not pop or not closed:
+            fails.append("R49 fluent2-motion.css: 菜单（.fl-flyout）必须有独立的开合规则")
+        else:
+            if "--fl-popup-shift" not in pop.group(1) or "50px" not in pop.group(1):
+                fails.append("R49 fluent2-motion.css: 菜单位移必须走 --fl-popup-shift: 50px（官方建议 50px）")
+            if "translateY(calc(var(--fl-popup-shift)" not in closed.group(1):
+                fails.append("R49 fluent2-motion.css: 菜单关态必须 translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir)))"
+                             "（方向由 JS 按放置关系写 --fl-popup-dir）")
+            for body, name in ((pop.group(1), "开态"), (closed.group(1), "关态")):
+                if "scale" in body:
+                    fails.append("R49 fluent2-motion.css: 菜单%s不许有 scale —— 官方 pop-up 动画只有 fade + 平移" % name)
+            if "var(--fl-dur-control-normal)" not in pop.group(1):
+                fails.append("R49 fluent2-motion.css: 菜单入场时长要用 --fl-dur-control-normal(250ms)")
+            if "var(--fl-dur-control-fast)" not in closed.group(1):
+                fails.append("R49 fluent2-motion.css: 菜单出场时长要用 --fl-dur-control-fast(167ms)")
+        if not re.search(r"\.fl-overlay[^{]*\[data-drop=[\"']up[\"']\][^{]*\{[^}]*--fl-popup-dir\s*:\s*1", motion_css):
+            fails.append("R49 fluent2-motion.css: 菜单向上展开时必须 --fl-popup-dir: 1（从下方升上来）")
+        # —— 下拉列表（reveal）——
+        bodies = re.findall(r"\.fl-overlay\.fl-combo-popup[^{]*\{([^}]*)\}", motion_css)
+        if not bodies:
+            fails.append("R49 fluent2-motion.css: 下拉列表（.fl-combo-popup）必须有独立开合规则")
+        else:
+            reveal = [b for b in bodies if "clip-path" in b]
+            if not reveal:
+                fails.append("R49 fluent2-motion.css: 下拉列表必须用 clip-path 揭示"
+                             "（录屏：顶边固定、底边扫下去；位移或 scaleY 都不对）")
+            if any(("transform" in b and "translate" in b) or "scale(" in b for b in bodies):
+                fails.append("R49 fluent2-motion.css: 下拉列表不许用位移/缩放 —— 它是「揭示」")
+            closed_body = next((b for b in bodies if "calc(100%" in b), None)
+            if closed_body is None or "transition: none" not in closed_body:
+                fails.append("R49 fluent2-motion.css: 下拉列表关闭必须瞬变（transition: none）"
+                             "—— 录屏里 f275 还在、f276 全没了，没有退场动画")
+            if not re.search(r"\.fl-overlay\.fl-combo-popup\[data-drop=[\"']up[\"']\][^{]*\{[^}]*"
+                             r"clip-path\s*:\s*inset\(calc\(100%", motion_css):
+                fails.append("R49 fluent2-motion.css: 下拉列表向上翻时必须从底边往上揭示"
+                             "（[data-drop=\"up\"] 的 clip-path 要把 100% 放在上边）")
+        # —— 基类不许带位移（对话框/ToolTip 只淡入淡出）——
+        base = re.search(r"\n\.fl-overlay\s*\{([^}]*)\}", motion_css)
+        if base and "transform" in base.group(1):
+            fails.append("R49 fluent2-motion.css: 基类 .fl-overlay 不许带 transform —— 对话框/ToolTip 只许淡入淡出")
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

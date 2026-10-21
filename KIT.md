@@ -116,6 +116,26 @@
     - 视觉：命中区 12px、静止画 4px（4px 透明 border + `background-clip: content-box` 裁出）、hover 收到 2px border → 视觉 8px、thumb 圆角 999、**去掉 `::-webkit-scrollbar-button`**；
     - 这条容易漏：只有"超过 15 项（MaxDropDownHeight 504 ÷ 项高 32）"才看得见滚动条，演示数据通常到不了这个量。
 
+24. **布局：左导航固定、只有右侧内容区滚**（不是整页滚）。三层缺一不可，任何一层断掉都会退回"整页滚动"：
+
+    ```css
+    html:has(.fl-shell) { height: 100%; }
+    body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+    .fl-shell    { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+    .fl-content-layer { flex: 1; display: grid;
+                        grid-template-rows: minmax(0, 1fr);   /* 页面必须拿到确定高度 */
+                        overflow: clip; }                     /* 转场横向位移仍要裁 */
+    .fl-page     { align-self: stretch; min-height: 0;
+                   overflow-y: auto; scrollbar-gutter: stable; padding: var(--fl-space-4); }
+    ```
+
+    - `min-height: 0` 有两层含义：`.fl-shell` 上防 flex 子项被内容撑破；`.fl-page` 上防 grid 项撑破行高；
+    - 内边距放在 `.fl-page` 而不是 `.fl-content-layer`：否则滚动条会缩进到 padding 里面，看着像"悬浮的条"；
+    - **每页各自滚**（不是内容层统一滚）→ 切页时各页自己记住滚动位置，返回还在原处，且新页天然从顶部开始；
+    - 一旦改成统一滚动容器，就必须自己存/取每个页的 `scrollTop`，还要处理转场期间"旧页还在淡出但滚动位置被改"的问题；
+    - `scrollbar-gutter: stable` 让长短页切换时不横移 12px；
+    - 用了 `:has()` 守卫：没用到 `.fl-shell` 的普通长页面照旧整页滚动。校验器 **R42** 锁这四层。
+
 ## 官方关键数值速查（详见 official-values.md）
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。

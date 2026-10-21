@@ -140,6 +140,8 @@ async function main() {
       var layer = document.querySelector(".fl-content-layer");
       return {
         in: r(inn), out: r(out),
+        inOp: inn ? +getComputedStyle(inn).opacity : null,
+        outOp: out ? +getComputedStyle(out).opacity : null,
         minH: layer ? layer.style.minHeight : "",
         scrollY: window.scrollY,
         inFromX: inn ? inn.style.getPropertyValue("--fl-page-from-x") : "",
@@ -162,7 +164,7 @@ async function main() {
 
   console.log("前置：", JSON.stringify(before));
   frames.forEach((f, i) => console.log(
-    `f${i}`, JSON.stringify({ in: f.in && [f.in.x, f.in.y, f.in.w, f.in.h], out: f.out && [f.out.x, f.out.y, f.out.w, f.out.h], minH: f.minH, fromX: f.inFromX, fromY: f.inFromY })));
+    `f${i}`, JSON.stringify({ in: f.in && [f.in.x, f.in.y], out: f.out && [f.out.x, f.out.y], inOp: f.inOp, outOp: f.outOp, minH: f.minH })));
   console.log("终态：", JSON.stringify(after));
   console.log("帧输出：", path.join(OUT, `${TAG}-f*.png`));
 

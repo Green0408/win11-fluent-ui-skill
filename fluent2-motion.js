@@ -19,6 +19,7 @@
   var STEP = 83;    // 官方 Fade 档（ms），stagger 步进
   var CAP = 333;    // 官方最大时长档（ms），stagger 上限
   var PAGE_MS = 283; // 页面转场：实测派生档（tokens --fl-dur-page），非官方 83/167/250/333
+  var PAGE_GAP = 83; // 转场两拍之间的间隔：旧页淡出 83ms 之后新页才开始滑入（= --fl-dur-fast）
   var PAGE_ANIM = "fl-page-in-slide-kf"; // 结算只认位移那条，不认 83ms 的 fade
   var PAGE_ANIM_OUT = "fl-page-out-slide-kf";
 
@@ -203,13 +204,14 @@
     if (host) { // 锁高度 = max(旧页, 新页)：旧页移除的瞬间容器不收缩，避免二次跳变
       host.style.minHeight = Math.max(cur ? cur.offsetHeight : 0, next.offsetHeight) + "px";
     }
-    M.stagger(next); // 入场页的元素分批入场与页面入场同步启动（否则隐藏页里的 .fl-entrance 永不显形）
+    /* 入场元素必须等新页真正开始滑入再跑，否则它们会在「页面还不可见」的 83ms 里播完 */
+    global.setTimeout(function () { if (gen === pageGen) M.stagger(next); }, PAGE_GAP);
     recordStack(pageId, shift.isBack);
 
     onAnimEnd(cur, gen, PAGE_MS, function () {
       if (cur) cur.classList.remove("fl-page-leaving", "fl-page-out");
     }, PAGE_ANIM_OUT);
-    onAnimEnd(next, gen, PAGE_MS, function () {
+    onAnimEnd(next, gen, PAGE_MS + PAGE_GAP, function () {
       next.classList.remove("fl-page-in");
       if (host) host.style.minHeight = "";
     }, PAGE_ANIM);

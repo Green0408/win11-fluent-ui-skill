@@ -765,16 +765,7 @@ button.fl-settings-row, a.fl-settings-row {
 /* 页面容器：转场由 fluent2-motion.js 控制（禁直接切类，检查器规则 6）
    所有页面占同一网格单元 → 转场期新旧页重叠而非上下堆叠，不产生布局跳变 */
 .fl-page { grid-area: 1 / 1; align-self: start; }
-/* 转场期两页必须**不透明**且整层高：.fl-content-layer 用 overflow:clip 把两页叠在同一格，
-   页面本身是透明的，滑动过程中新旧两页的文字会直接叠在一起（看起来像重影/脏屏）。
-   背景取层底色 → 视觉上等价于"整块页面滑动"，与 WinUI 的 SlideNavigation 一致。
-   z-index：入页永远盖在离场页上（否则返回时入页在 DOM 里靠前，会被离场页压住）。 */
-.fl-page-in,
-.fl-page-leaving {
-  align-self: stretch;
-  background: var(--fl-solid-bg-base);
-}
-.fl-page-in { z-index: 1; }
-.fl-page-leaving { z-index: 0; }
+/* 页面保持透明：转场是「旧页淡出退场 → 新页滑入」两拍（见 fluent2-motion.css）。
+   涂不透明底会变成"整块面板压过去"的硬边擦除，和 Win11 录屏不一样。 */
 .fl-page:not(.fl-current):not(.fl-page-leaving) { display: none; }
 .fl-page-leaving { pointer-events: none; } /* 离场页不拦截新页的点击 */

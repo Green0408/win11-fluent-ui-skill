@@ -135,40 +135,49 @@ async function main() {
   check("点上方导航项 → 仍自下方进入（+shift-y，不允许反向）",
     /^var\(--fl-page-shift-y\)$/.test(up.fromY), JSON.stringify(up));
 
-  /* ---- 1.5) drill 转场：入页必须不透明、且只有位移没有淡入 ----
-     两页叠在同一格里，页面一旦透明，滑动过程中新旧两页的文字会叠在一起（看起来像重影）。 */
+  /* ---- 1.5) drill 转场是「两拍」：旧页先淡出退场，新页再滑入 ----
+     录屏实测（设置应用逐帧）：旧页在 ≈80-170ms 内消失干净，此时新页才开始从行程起点进来。
+     两页同时淡入淡出会让新旧文字在中途各半透明地叠在一起，观感是重影。 */
   const drillBtn = await evaluate(`(function(){
     var b = document.querySelector("[data-kind='drill'][data-page]");
     var r = b.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   })()`);
   await clickAt(drillBtn);
-  await sleep(90);
-  const drillState = await evaluate(`(function(){
+  const beat = await evaluate(`(function(){
     var inn = document.querySelector(".fl-page.fl-page-in");
     var out = document.querySelector(".fl-page.fl-page-leaving");
-    if (!inn || !out) return null;
-    var ci = getComputedStyle(inn), co = getComputedStyle(out);
+    if (!inn) return null;
     return {
-      inBg: ci.backgroundColor, inOpacity: ci.opacity,
-      inAnims: ci.animationName, zIn: ci.zIndex, zOut: co.zIndex,
+      inOp: +getComputedStyle(inn).opacity,
       inX: +inn.getBoundingClientRect().left.toFixed(1),
-      outX: +out.getBoundingClientRect().left.toFixed(1)
+      outBg: out ? getComputedStyle(out).backgroundColor : null,
+      inDelay: getComputedStyle(inn).animationDelay
     };
   })()`);
-  check("drill 转场：入页不透明（否则两页文字叠影）",
-    drillState && !/rgba\(0, 0, 0, 0\)|transparent/.test(drillState.inBg) &&
-      parseFloat(drillState.inOpacity) === 1,
-    JSON.stringify(drillState && { bg: drillState.inBg, opacity: drillState.inOpacity }));
-  check("drill 转场：入页只有位移动画，没有淡入",
-    drillState && /slide/.test(drillState.inAnims) && !/fade/.test(drillState.inAnims),
-    drillState && drillState.inAnims);
-  check("drill 转场：入页压住离场页，且自右向左推进",
-    drillState && +drillState.zIn > +drillState.zOut && drillState.inX > drillState.outX,
-    drillState && JSON.stringify({ zIn: drillState.zIn, zOut: drillState.zOut, inX: drillState.inX, outX: drillState.outX }));
-  await sleep(420);
+  check("drill 第 1 拍：新页还没出现（opacity 0），旧页仍在",
+    beat && beat.inOp === 0 && beat.outBg === "rgba(0, 0, 0, 0)",
+    JSON.stringify(beat));
+  check("drill 入页有 83ms 延迟（等旧页退场完再进来）",
+    beat && parseFloat(beat.inDelay) > 0, beat && beat.inDelay);
+
+  await sleep(120);
+  const beat2 = await evaluate(`(function(){
+    var inn = document.querySelector(".fl-page.fl-page-in");
+    var out = document.querySelector(".fl-page.fl-page-leaving");
+    if (!inn) return null;
+    return { outGone: !out, inOp: +getComputedStyle(inn).opacity,
+             inX: +inn.getBoundingClientRect().left.toFixed(1) };
+  })()`);
+  check("drill 第 2 拍：≈120ms 时旧页已退场、新页已在滑（尚未落位）",
+    beat2 && beat2.outGone === true && beat2.inOp > 0.2 && beat2.inX > 260,
+    JSON.stringify(beat2));
+  await sleep(450);
+  const settledX = await evaluate(
+    `+document.getElementById("page-detail").getBoundingClientRect().left.toFixed(1)`);
+  check("drill 结束：新页落位（无残留位移）", Math.abs(settledX - 256) <= 1, String(settledX));
   await evaluate(`(function(){ document.getElementById("btn-back").click(); })()`);
-  await sleep(500);
+  await sleep(600);
 
   /* ---- 2) 列表六档：hover / 选中+hover 的 computed background ---- */
   const rowBox = await evaluate(`(function(){

@@ -72,19 +72,23 @@
    行程按轴取：x 轴 var(--fl-page-shift-x)=176px、y 轴 var(--fl-page-shift-y)=72px；
    方向取六个值之一（forward / back / up / down / left / right），由 motion.js 的 DIR 表解析成符号，
    缺省按「导航项先后序 → 页面栈」推断 —— 点侧栏更上面的一项即自上方进入（详见 KIT 规则 15）。
-   位移与淡入拆成两条 animation：位移走 --fl-dur-page + --fl-ease-page（对称加减速），
-   淡出 83ms + linear 只挂在**离场页**上。
-   ⚠ 入页不能有淡入：页面在转场期是不透明的，入页只要有一点透明度，底下的旧页文字就会透上来，
-   观感是"两页文字叠在一起"（tests/transition_shots.js 可复现）。WinUI 的 SlideNavigation 也是纯滑动。 */
+   位移与淡入拆成两条 animation。
+   节奏按录屏实测（2026-10-21 设置应用逐帧）：**两拍，不是同时** ——
+     t=0 … 83ms   旧页滑动 + 淡出（实测旧页在 ≈80-170ms 内就消失干净）
+     t=83 … 366ms 新页从行程起点滑入（延迟 = 旧页淡出结束，避免两页文字在中间撞在一起）
+   早期版本让两页同时淡入淡出，导致中途「新旧两页文字各半透明叠在一起」，观感是重影。 */
 .fl-page-in {
-  will-change: transform;
-  animation: fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both;
+  will-change: transform, opacity;
+  animation:
+    fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,
+    fl-page-in-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
+  animation-delay: var(--fl-dur-fast);
 }
 .fl-page-out {
   will-change: transform, opacity;
   pointer-events: none; /* 离场页不再接收交互 */
   animation:
-    fl-page-out-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,
+    fl-page-out-slide-kf var(--fl-dur-fast) var(--fl-ease-standard) both,
     fl-page-out-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
 }
 @keyframes fl-page-in-slide-kf {
@@ -95,7 +99,7 @@
   from { transform: none; }
   to   { transform: translate3d(var(--fl-page-to-x, 0px), var(--fl-page-to-y, 0px), 0); }
 }
-/* 入页不需要 fade 关键帧：纯滑动，见上面 .fl-page-in 的注释 */
+@keyframes fl-page-in-fade-kf  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fl-page-out-fade-kf { from { opacity: 1; } to { opacity: 0; } }
 
 /* ---- 连续型动效：线性推进、无限循环、不保留终态 ----

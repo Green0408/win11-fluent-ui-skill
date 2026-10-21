@@ -1,0 +1,267 @@
+/* fluent2-controls.css —— WinUI 3 / Fluent 控件几何与状态
+   几何数值出处：microsoft-ui-xaml *_themeresources.xaml（raw/ 缓存）与 learn.microsoft.com 设计文档
+   规则：颜色只用 --fl-* 变量；圆角只用 --fl-radius-*；字号只用 .fl-* 字阶类；时长/缓动只用 --fl-dur-* / --fl-ease-* */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { scrollbar-gutter: stable; } /* 内容高度变化时滚动条不再消放 → 不产生横向抖动 */
+body {
+  font-family: var(--fl-font);
+  font-size: var(--fl-font-size-body);
+  line-height: 20px;
+  background: var(--fl-solid-bg-base); /* Mica 网页近似：纯色基底层 */
+  color: var(--fl-text-primary);
+}
+
+/* ---- 字阶（Type ramp，learn.../typography；勿手写 font-size） ---- */
+.fl-caption          { font-size: var(--fl-font-size-caption);      line-height: var(--fl-line-caption);      font-weight: var(--fl-weight-regular); }
+.fl-body             { font-size: var(--fl-font-size-body);         line-height: var(--fl-line-body);         font-weight: var(--fl-weight-regular); }
+.fl-body-strong      { font-size: var(--fl-font-size-body);         line-height: var(--fl-line-body);         font-weight: var(--fl-weight-semibold); }
+.fl-body-large       { font-size: var(--fl-font-size-body-large);   line-height: var(--fl-line-body-large);   font-weight: var(--fl-weight-regular); }
+.fl-body-large-strong{ font-size: var(--fl-font-size-body-large);   line-height: var(--fl-line-body-large);   font-weight: var(--fl-weight-semibold); }
+.fl-subtitle         { font-size: var(--fl-font-size-subtitle);     line-height: var(--fl-line-subtitle);     font-weight: var(--fl-weight-semibold); }
+.fl-title            { font-size: var(--fl-font-size-title);        line-height: var(--fl-line-title);        font-weight: var(--fl-weight-semibold); }
+.fl-title-large      { font-size: var(--fl-font-size-title-large);  line-height: var(--fl-line-title-large);  font-weight: var(--fl-weight-semibold); }
+.fl-display          { font-size: var(--fl-font-size-display);      line-height: var(--fl-line-display);      font-weight: var(--fl-weight-semibold); }
+.fl-text-secondary   { color: var(--fl-text-secondary); }
+.fl-text-tertiary    { color: var(--fl-text-tertiary); }
+.fl-text-disabled    { color: var(--fl-text-disabled); }
+
+/* ---- 焦点：官方双描边（inner 1px 贴边 + outer 2px 在外），:focus（非 visible）不画框 ---- */
+:focus { outline: none; }
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+}
+
+/* ---- 双层系统：Base（导航/命令）+ Content（卡片内容） ---- */
+.fl-shell { display: flex; min-height: 100vh; }
+/* Content layer = 页面叠放容器：所有 .fl-page 放同一网格单元，转场期互相覆盖而不是上下堆叠 */
+.fl-content-layer { flex: 1; padding: var(--fl-space-4); background: var(--fl-solid-bg-base); display: grid; }
+
+/* 卡片：Content layer 表面，elevation 8（hover 提升视觉），8px 圆角（浮层级容器） */
+.fl-card {
+  background: var(--fl-card-bg);
+  border: var(--fl-stroke) solid var(--fl-card-stroke);
+  border-radius: var(--fl-radius-overlay);
+  box-shadow: var(--fl-shadow-card);
+  padding: var(--fl-space-4);
+}
+.fl-card.fl-hoverable { cursor: default; transition: background var(--fl-dur-fast) var(--fl-ease-linear); }
+.fl-card.fl-hoverable:hover { background: var(--fl-card-bg-secondary); }
+
+/* ---- 标题栏（titlebar 模块） ---- */
+.fl-titlebar {
+  display: flex; align-items: center; gap: var(--fl-space-2);
+  height: var(--fl-control-height); padding: 0 var(--fl-space-2);
+  background: var(--fl-solid-bg-base); color: var(--fl-text-primary);
+  border-bottom: var(--fl-stroke) solid var(--fl-divider-stroke);
+}
+
+/* ---- NavigationView 左导航（nav 模块） ----
+   结构/选择规则出处：learn.../design/basics/navigation-basics（顶层页、>5 项、不频繁切换） */
+.fl-nav {
+  width: var(--fl-nav-width, 240px); flex-shrink: 0;
+  background: var(--fl-layer-fill, var(--fl-solid-bg-secondary));
+  border-right: var(--fl-stroke) solid var(--fl-divider-stroke);
+  padding: var(--fl-space-2); display: flex; flex-direction: column; gap: var(--fl-space-1);
+}
+.fl-nav-item {
+  position: relative; display: flex; align-items: center; gap: var(--fl-space-3);
+  min-height: var(--fl-control-height); padding: 0 var(--fl-space-2) 0 var(--fl-space-4);
+  border-radius: var(--fl-radius-control); color: var(--fl-text-primary);
+  text-decoration: none; cursor: pointer; border: 0; background: transparent; width: 100%;
+  font: inherit; text-align: left;
+  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+}
+.fl-nav-item:hover { background: var(--fl-subtle-fill-hover); }
+.fl-nav-item:active { background: var(--fl-subtle-fill-pressed); color: var(--fl-text-secondary); }
+.fl-nav-item[aria-current="page"] { background: var(--fl-subtle-fill-hover); font-weight: var(--fl-weight-semibold); }
+/* 选中指示条：3px 圆角胶囊（ListViewItemSelectionIndicatorCornerRadius=1 的控件化形态） */
+.fl-nav-item[aria-current="page"]::before {
+  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: calc(var(--fl-space-1) - 1px); height: var(--fl-space-4);
+  border-radius: var(--fl-stroke); background: var(--fl-accent-fill);
+}
+
+/* ---- 按钮（Button XAML：Padding 11,5,11,6；Rest elevation 2 / Pressed 1；圆角 4） ---- */
+.fl-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--fl-space-2);
+  min-height: var(--fl-control-height);
+  padding: var(--fl-btn-padding, var(--fl-space-3) var(--fl-btn-pad-h) var(--fl-space-2) var(--fl-btn-pad-h));
+  border-radius: var(--fl-radius-control);
+  border: var(--fl-stroke) solid var(--fl-control-stroke);
+  background: var(--fl-control-fill-default);
+  color: var(--fl-text-primary);
+  font: inherit;
+  box-shadow: var(--fl-shadow-e2); /* Control elevation 2 (Rest) */
+  cursor: pointer; text-decoration: none;
+  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+}
+.fl-btn:hover { background: var(--fl-control-fill-secondary); }
+/* 官方控件状态海拔：Rest/Hover=2、Pressed=1（阴影瞬时切换，不做过渡，1px 级无感） */
+.fl-btn:active { background: var(--fl-control-fill-tertiary); box-shadow: var(--fl-shadow-e1); }
+.fl-btn:disabled, .fl-btn[aria-disabled="true"] {
+  background: var(--fl-control-fill-disabled);
+  border-color: var(--fl-control-stroke); color: var(--fl-text-disabled); box-shadow: none;
+}
+.fl-btn-accent {
+  background: var(--fl-accent-fill); border-color: var(--fl-control-stroke-on-accent);
+  color: var(--fl-text-on-accent-primary);
+}
+/* accent 状态档位：XAML AccentFillColorSecondaryBrush=Default@0.9、TertiaryBrush=Default@0.8
+   （用档位色过渡，不用 filter:brightness —— filter 无法平滑过渡，是「点击瞬跳」的来源） */
+.fl-btn-accent:hover { background: var(--fl-accent-fill-hover); }
+.fl-btn-accent:active { background: var(--fl-accent-fill-pressed); box-shadow: var(--fl-shadow-e1); }
+.fl-btn-subtle { background: var(--fl-control-fill-transparent, transparent); border-color: transparent; box-shadow: none; }
+.fl-btn-subtle:hover { background: var(--fl-subtle-fill-hover); }
+.fl-btn-subtle:active { background: var(--fl-subtle-fill-pressed); }
+
+/* ---- 文本输入（TextBox XAML：MinHeight 32、Padding 10,5,6,6） ---- */
+.fl-input, .fl-select {
+  min-height: var(--fl-control-height);
+  padding: var(--fl-text-pad-t) var(--fl-text-pad-r) var(--fl-text-pad-b) var(--fl-text-pad-l);
+  border-radius: var(--fl-radius-control);
+  border: var(--fl-stroke) solid var(--fl-control-stroke);
+  border-bottom-color: var(--fl-control-strong-fill); /* Win11 底边加重 */
+  background: var(--fl-control-fill-default);
+  color: var(--fl-text-primary); font: inherit;
+  transition: border-color var(--fl-dur-fast) var(--fl-ease-linear), background var(--fl-dur-fast) var(--fl-ease-linear);
+}
+.fl-input::placeholder { color: var(--fl-text-tertiary); }
+.fl-input:hover, .fl-select:hover { background: var(--fl-control-fill-secondary); }
+.fl-input:focus-visible, .fl-select:focus-visible {
+  border-bottom-color: var(--fl-accent-fill);
+  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+}
+.fl-input:disabled { background: var(--fl-control-fill-disabled); color: var(--fl-text-disabled); }
+
+/* ---- ToggleSwitch（knob 12x12，on=accent） ---- */
+.fl-switch { display: inline-flex; align-items: center; gap: var(--fl-space-2); cursor: pointer; }
+.fl-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.fl-switch .fl-switch-track {
+  width: 40px; height: 20px; border-radius: var(--fl-space-3);
+  border: var(--fl-stroke) solid var(--fl-control-strong-fill);
+  background: var(--fl-control-fill-default); position: relative;
+  transition: background var(--fl-dur-normal) var(--fl-ease-point), border-color var(--fl-dur-normal) var(--fl-ease-point);
+}
+.fl-switch .fl-switch-track::after {
+  content: ""; position: absolute; top: 50%; left: var(--fl-space-1); transform: translateY(-50%);
+  width: var(--fl-space-3); height: var(--fl-space-3); border-radius: 50%;
+  background: var(--fl-text-secondary); transition: transform var(--fl-dur-normal) var(--fl-ease-point), background var(--fl-dur-normal) var(--fl-ease-point);
+}
+.fl-switch input:checked + .fl-switch-track { background: var(--fl-accent-fill); border-color: var(--fl-accent-fill); }
+.fl-switch input:checked + .fl-switch-track::after { transform: translate(var(--fl-space-4), -50%); background: var(--fl-text-on-accent-primary); }
+.fl-switch input:focus-visible + .fl-switch-track {
+  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+}
+
+/* ---- CheckBox / Radio（20x20，圆角 4） ---- */
+.fl-check, .fl-radio { display: inline-flex; align-items: center; gap: var(--fl-space-2); cursor: pointer; }
+.fl-check input, .fl-radio input { position: absolute; opacity: 0; width: 0; height: 0; }
+.fl-check .fl-box, .fl-radio .fl-box {
+  width: 20px; height: 20px; flex-shrink: 0; border-radius: var(--fl-radius-control);
+  border: var(--fl-stroke) solid var(--fl-control-strong-fill);
+  background: var(--fl-control-fill-default);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background var(--fl-dur-fast) var(--fl-ease-linear), border-color var(--fl-dur-fast) var(--fl-ease-linear);
+}
+.fl-radio .fl-box { border-radius: 50%; }
+.fl-check input:checked + .fl-box, .fl-radio input:checked + .fl-box { background: var(--fl-accent-fill); border-color: var(--fl-accent-fill); color: var(--fl-text-on-accent-primary); }
+.fl-check input:checked + .fl-box::after { content: "✓"; font-size: var(--fl-font-size-caption); line-height: 1; }
+.fl-radio input:checked + .fl-box::after { content: ""; width: var(--fl-space-2); height: var(--fl-space-2); border-radius: 50%; background: var(--fl-text-on-accent-primary); }
+.fl-check input:focus-visible + .fl-box, .fl-radio input:focus-visible + .fl-box {
+  box-shadow: 0 0 0 var(--fl-stroke) var(--fl-focus-stroke-inner),
+              0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
+}
+
+/* ---- 列表项（ListViewItem：MinHeight 40、圆角 4、禁用透明度 0.3） ---- */
+.fl-listitem {
+  display: flex; align-items: center; gap: var(--fl-space-3);
+  min-height: var(--fl-list-item-height);
+  padding: 0 var(--fl-space-3);
+  border-radius: var(--fl-radius-control); cursor: pointer;
+  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+}
+.fl-listitem:hover { background: var(--fl-subtle-fill-hover); }
+.fl-listitem:active { background: var(--fl-subtle-fill-pressed); }
+.fl-listitem[aria-selected="true"] { background: var(--fl-subtle-fill-hover); position: relative; }
+.fl-listitem[aria-selected="true"]::before {
+  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: calc(var(--fl-space-1) - 1px); height: var(--fl-space-4);
+  border-radius: var(--fl-stroke); background: var(--fl-accent-fill);
+}
+.fl-listitem[aria-disabled="true"] { opacity: 0.3; /* ListViewItemDisabledThemeOpacity */ }
+
+/* ---- Acrylic 浮层（flyout / contextmenu 模块）----
+   官方：Acrylic 只用于瞬态轻触消失表面；elevation 32；圆角 8 */
+.fl-flyout {
+  position: absolute; min-width: 160px;
+  background: var(--fl-acrylic-bg);
+  -webkit-backdrop-filter: blur(60px) saturate(125%); /* Acrylic 网页近似 */
+  backdrop-filter: blur(60px) saturate(125%);
+  border: var(--fl-stroke) solid var(--fl-card-stroke);
+  border-radius: var(--fl-radius-overlay);
+  box-shadow: var(--fl-shadow-flyout);
+  padding: var(--fl-space-1);
+  z-index: 30;
+}
+.fl-flyout-item {
+  display: block; width: 100%; text-align: left;
+  min-height: var(--fl-control-height); padding: 0 var(--fl-space-3);
+  border: 0; background: transparent; color: var(--fl-text-primary);
+  font: inherit; border-radius: var(--fl-radius-control); cursor: pointer;
+  transition: background var(--fl-dur-fast) var(--fl-ease-linear);
+}
+.fl-flyout-item:hover { background: var(--fl-subtle-fill-hover); }
+
+/* ---- ContentDialog（dialog 模块）----
+   官方：Padding 24、MaxWidth 548、MinHeight 184；Smoke 遮罩；elevation 128；圆角 8 */
+.fl-dialog {
+  width: min(548px, calc(100vw - var(--fl-space-12)));
+  min-height: 184px;
+  background: var(--fl-solid-bg-secondary);
+  border: var(--fl-stroke) solid var(--fl-card-stroke);
+  border-radius: var(--fl-radius-overlay);
+  box-shadow: var(--fl-shadow-dialog);
+  padding: var(--fl-space-6);
+  position: fixed; left: 50%; top: 50%;
+  translate: -50% -50%; /* 居中用独立 translate 属性：transform 留给 .fl-overlay 的开合动效，两者互不覆盖 */
+  z-index: 50;
+}
+/* 回退：不支持 translate 属性的浏览器改用 transform 居中（此时需显式把打开态摆正） */
+@supports not (translate: -50% -50%) {
+  .fl-dialog { transform: translate(-50%, -50%); } /* fl-lint-ignore */
+  .fl-dialog.fl-overlay.fl-open { transform: translate(-50%, -50%); } /* fl-lint-ignore */
+  .fl-dialog.fl-overlay:not(.fl-open) { transform: translate(-50%, calc(-50% + 8px)) scale(0.98); } /* fl-lint-ignore */
+}
+.fl-dialog-title { margin: 0 0 var(--fl-space-3); }
+.fl-dialog-actions { display: flex; gap: var(--fl-space-2); justify-content: flex-end; margin-top: var(--fl-space-6); }
+.fl-smoke-backdrop { position: fixed; inset: 0; background: var(--fl-smoke); z-index: 40; }
+
+/* ---- InfoBar（infobar 模块）---- */
+.fl-infobar {
+  display: flex; align-items: flex-start; gap: var(--fl-space-3);
+  padding: var(--fl-space-3) var(--fl-space-4);
+  border-radius: var(--fl-radius-control);
+  background: var(--fl-card-bg); border: var(--fl-stroke) solid var(--fl-card-stroke);
+}
+.fl-infobar[data-severity="success"] { border-left: calc(var(--fl-space-1) - 1px) solid var(--fl-success); }
+.fl-infobar[data-severity="caution"] { border-left: calc(var(--fl-space-1) - 1px) solid var(--fl-caution); }
+.fl-infobar[data-severity="critical"] { border-left: calc(var(--fl-space-1) - 1px) solid var(--fl-critical); }
+
+/* ---- 命令栏（toolbar 模块）：核心高频命令在画布，其余收进命令栏 ---- */
+.fl-toolbar { display: flex; align-items: center; gap: var(--fl-space-2); padding: var(--fl-space-2) 0; }
+
+/* ---- 主题切换 ---- */
+[data-theme="dark"] .fl-only-light { display: none; }
+[data-theme="light"] .fl-only-dark { display: none; }
+
+/* 页面容器：转场由 fluent2-motion.js 控制（禁直接切类，检查器规则 6）
+   所有页面占同一网格单元 → 转场期新旧页重叠而非上下堆叠，不产生布局跳变 */
+.fl-page { grid-area: 1 / 1; align-self: start; }
+.fl-page:not(.fl-current):not(.fl-page-leaving) { display: none; }
+.fl-page-leaving { pointer-events: none; } /* 离场页不拦截新页的点击 */

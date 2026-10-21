@@ -1,0 +1,156 @@
+/* fluent2-tokens.css —— 由 extract_tokens.py 从官方源生成，勿手改；重新生成：python extract_tokens.py
+   颜色出处：microsoft-ui-xaml Common_themeresources_any.xaml (MIT)；动效/字阶/间距/海拔出处：learn.microsoft.com，详见 official-values.md */
+
+:root {
+  --fl-accent: #0078D4; /* XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色，暗色填充用 Dark1 档、亮色填充用 Light2 档，可整体替换 */
+  --fl-dur-fast: 83ms;
+  --fl-dur-normal: 167ms;
+  --fl-dur-gentle: 250ms;
+  --fl-dur-slow: 333ms;
+  --fl-ease-standard: cubic-bezier(0,0,0,1);
+  --fl-ease-point: cubic-bezier(0.55,0.55,0,1);
+  --fl-ease-soft: cubic-bezier(1,0,1,1);
+  --fl-ease-strong-1: cubic-bezier(0.85,0,0,1);
+  --fl-ease-strong-2: cubic-bezier(0.85,0,0.75,1);
+  --fl-ease-linear: linear;
+
+  /* 字体栈（Segoe UI Variable → fallback） */
+  --fl-font: "Segoe UI Variable Display","Segoe UI Variable","Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+
+  /* 字阶（Type ramp：size/line 出自 learn.../typography，与 XAML TextBlock 字号交叉一致） */
+  --fl-font-size-caption: 12px;  --fl-line-caption: 16px;
+  --fl-font-size-body: 14px;  --fl-line-body: 20px;
+  --fl-font-size-body-strong: 14px;  --fl-line-body-strong: 20px;
+  --fl-font-size-body-large: 18px;  --fl-line-body-large: 24px;
+  --fl-font-size-body-large-strong: 18px;  --fl-line-body-large-strong: 24px;
+  --fl-font-size-subtitle: 20px;  --fl-line-subtitle: 28px;
+  --fl-font-size-title: 28px;  --fl-line-title: 36px;
+  --fl-font-size-title-large: 40px;  --fl-line-title-large: 52px;
+  --fl-font-size-display: 68px;  --fl-line-display: 92px;
+  --fl-weight-regular: 400;  --fl-weight-semibold: 600; /* wght 轴 Regular/Semibold */
+  --fl-btn-pad-h: 11px;  --fl-btn-pad-t: 5px;  --fl-btn-pad-b: 6px; /* ButtonPadding */
+  --fl-text-pad-l: 10px; --fl-text-pad-t: 5px; --fl-text-pad-r: 6px; --fl-text-pad-b: 6px; /* TextControlThemePadding */
+  --fl-control-fill-transparent: transparent;
+  --fl-nav-width: 240px; /* KIT 自定：NavigationView 收起态之外的常用宽度，官方未单列 */
+
+  /* 圆角（XAML ControlCornerRadius / OverlayCornerRadius） */
+  --fl-radius-control: 4px;
+  --fl-radius-overlay: 8px;
+  --fl-stroke: 1px; /* 官方描边宽一律 1px */
+  --fl-control-height: 32px; /* 官方控件标准高度 */
+  --fl-list-item-height: 40px; /* ListViewItemMinHeight */
+
+  /* 间距（content-basics） */
+  --fl-space-1: 4px;  --fl-space-2: 8px;  --fl-space-3: 12px;
+  --fl-space-4: 16px; --fl-space-6: 24px; --fl-space-8: 32px; --fl-space-12: 48px;
+
+  /* 海拔阴影：官方只给 elevation 值，CSS 阴影为 KIT 换算近似（blur≈elevation*0.5px，非官方 CSS 定义） */
+  --fl-shadow-e1: 0 0 1px rgba(0,0,0,.10); /* elevation 1 */
+  --fl-shadow-e2: 0 1px 1px rgba(0,0,0,.07); /* elevation 2 */
+  --fl-shadow-e8: 0 2px 4px rgba(0,0,0,.08), 0 0 1px rgba(0,0,0,.08); /* elevation 8 */
+  --fl-shadow-e16: 0 4px 8px rgba(0,0,0,.10), 0 0 1px rgba(0,0,0,.08); /* elevation 16 */
+  --fl-shadow-e32: 0 8px 16px rgba(0,0,0,.12), 0 0 1px rgba(0,0,0,.08); /* elevation 32 */
+  --fl-shadow-e128: 0 32px 64px rgba(0,0,0,.19), 0 2px 21px rgba(0,0,0,.15); /* elevation 128 */
+  --fl-shadow-card: var(--fl-shadow-e8);
+  --fl-shadow-flyout: var(--fl-shadow-e32);
+  --fl-shadow-dialog: var(--fl-shadow-e128);
+}
+
+:root, [data-theme="dark"] { /* dark（XAML Default 主题字典） */
+  --fl-accent-fill: #005FB8; /* AccentFillColorDefault：暗主题=SystemAccentColorDark1 档、亮主题=Light2 档 */
+  --fl-accent-fill-hover: #005FB8E6; /* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity 0.9 */
+  --fl-accent-fill-pressed: #005FB8CC; /* AccentFillColorTertiaryBrush = AccentFillColorDefault @Opacity 0.8 */
+  --fl-text-primary: #FFFFFF; /* TextFillColorPrimary */
+  --fl-text-secondary: #FFFFFFC5; /* TextFillColorSecondary */
+  --fl-text-tertiary: #FFFFFF87; /* TextFillColorTertiary */
+  --fl-text-disabled: #FFFFFF5D; /* TextFillColorDisabled */
+  --fl-text-on-accent-primary: #000000; /* TextOnAccentFillColorPrimary */
+  --fl-text-on-accent-secondary: #00000080; /* TextOnAccentFillColorSecondary */
+  --fl-text-on-accent-disabled: #FFFFFF87; /* TextOnAccentFillColorDisabled */
+  --fl-control-fill-default: #FFFFFF0F; /* ControlFillColorDefault */
+  --fl-control-fill-secondary: #FFFFFF15; /* ControlFillColorSecondary */
+  --fl-control-fill-tertiary: #FFFFFF08; /* ControlFillColorTertiary */
+  --fl-control-fill-disabled: #FFFFFF0B; /* ControlFillColorDisabled */
+  --fl-control-fill-input-active: #1E1E1EB3; /* ControlFillColorInputActive */
+  --fl-control-strong-fill: #FFFFFF8B; /* ControlStrongFillColorDefault */
+  --fl-control-strong-fill-disabled: #FFFFFF3F; /* ControlStrongFillColorDisabled */
+  --fl-control-solid-fill: #454545; /* ControlSolidFillColorDefault */
+  --fl-control-stroke: #FFFFFF12; /* ControlStrokeColorDefault */
+  --fl-control-stroke-secondary: #FFFFFF18; /* ControlStrokeColorSecondary */
+  --fl-control-stroke-on-accent: #FFFFFF14; /* ControlStrokeColorOnAccentDefault */
+  --fl-control-stroke-on-accent-secondary: #00000023; /* ControlStrokeColorOnAccentSecondary */
+  --fl-subtle-fill-hover: #FFFFFF0F; /* SubtleFillColorSecondary */
+  --fl-subtle-fill-pressed: #FFFFFF0A; /* SubtleFillColorTertiary */
+  --fl-subtle-fill-disabled: #FFFFFF00; /* SubtleFillColorDisabled */
+  --fl-card-bg: #FFFFFF0D; /* CardBackgroundFillColorDefault */
+  --fl-card-bg-secondary: #FFFFFF08; /* CardBackgroundFillColorSecondary */
+  --fl-card-stroke: #00000019; /* CardStrokeColorDefault */
+  --fl-layer-fill: #3A3A3A4C; /* LayerFillColorDefault */
+  --fl-smoke: #0000004D; /* SmokeFillColorDefault */
+  --fl-solid-bg-base: #202020; /* SolidBackgroundFillColorBase */
+  --fl-solid-bg-base-alt: #0A0A0A; /* SolidBackgroundFillColorBaseAlt */
+  --fl-solid-bg-secondary: #1C1C1C; /* SolidBackgroundFillColorSecondary */
+  --fl-solid-bg-tertiary: #282828; /* SolidBackgroundFillColorTertiary */
+  --fl-solid-bg-quarternary: #2C2C2C; /* SolidBackgroundFillColorQuarternary */
+  --fl-divider-stroke: #FFFFFF15; /* DividerStrokeColorDefault */
+  --fl-focus-stroke-outer: #FFFFFF; /* FocusStrokeColorOuter */
+  --fl-focus-stroke-inner: #000000B3; /* FocusStrokeColorInner */
+  --fl-success: #6CCB5F; /* SystemFillColorSuccess */
+  --fl-caution: #FCE100; /* SystemFillColorCaution */
+  --fl-critical: #FF99A4; /* SystemFillColorCritical */
+  --fl-success-bg: #393D1B; /* SystemFillColorSuccessBackground */
+  --fl-caution-bg: #433519; /* SystemFillColorCautionBackground */
+  --fl-critical-bg: #442726; /* SystemFillColorCriticalBackground */
+  --fl-accent-fill-disabled: #FFFFFF28; /* AccentFillColorDisabled */
+  --fl-acrylic-bg: var(--fl-solid-bg-secondary); /* Acrylic 网页近似：纯色 + backdrop-filter blur(60px) saturate(125%)，见 fluent2-controls.css */
+}
+
+[data-theme="light"] { /* light（XAML Light 主题字典） */
+  --fl-accent-fill: #0067C0; /* AccentFillColorDefault：暗主题=SystemAccentColorDark1 档、亮主题=Light2 档 */
+  --fl-accent-fill-hover: #0067C0E6; /* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity 0.9 */
+  --fl-accent-fill-pressed: #0067C0CC; /* AccentFillColorTertiaryBrush = AccentFillColorDefault @Opacity 0.8 */
+  --fl-text-primary: #000000E4; /* TextFillColorPrimary */
+  --fl-text-secondary: #0000009E; /* TextFillColorSecondary */
+  --fl-text-tertiary: #00000072; /* TextFillColorTertiary */
+  --fl-text-disabled: #0000005C; /* TextFillColorDisabled */
+  --fl-text-on-accent-primary: #FFFFFF; /* TextOnAccentFillColorPrimary */
+  --fl-text-on-accent-secondary: #FFFFFFB3; /* TextOnAccentFillColorSecondary */
+  --fl-text-on-accent-disabled: #FFFFFF; /* TextOnAccentFillColorDisabled */
+  --fl-control-fill-default: #FFFFFFB3; /* ControlFillColorDefault */
+  --fl-control-fill-secondary: #F9F9F980; /* ControlFillColorSecondary */
+  --fl-control-fill-tertiary: #F9F9F94D; /* ControlFillColorTertiary */
+  --fl-control-fill-disabled: #F9F9F94D; /* ControlFillColorDisabled */
+  --fl-control-fill-input-active: #FFFFFF; /* ControlFillColorInputActive */
+  --fl-control-strong-fill: #00000072; /* ControlStrongFillColorDefault */
+  --fl-control-strong-fill-disabled: #00000051; /* ControlStrongFillColorDisabled */
+  --fl-control-solid-fill: #FFFFFF; /* ControlSolidFillColorDefault */
+  --fl-control-stroke: #0000000F; /* ControlStrokeColorDefault */
+  --fl-control-stroke-secondary: #00000029; /* ControlStrokeColorSecondary */
+  --fl-control-stroke-on-accent: #FFFFFF14; /* ControlStrokeColorOnAccentDefault */
+  --fl-control-stroke-on-accent-secondary: #00000066; /* ControlStrokeColorOnAccentSecondary */
+  --fl-subtle-fill-hover: #00000009; /* SubtleFillColorSecondary */
+  --fl-subtle-fill-pressed: #00000006; /* SubtleFillColorTertiary */
+  --fl-subtle-fill-disabled: #FFFFFF00; /* SubtleFillColorDisabled */
+  --fl-card-bg: #FFFFFFB3; /* CardBackgroundFillColorDefault */
+  --fl-card-bg-secondary: #F6F6F680; /* CardBackgroundFillColorSecondary */
+  --fl-card-stroke: #0000000F; /* CardStrokeColorDefault */
+  --fl-layer-fill: #FFFFFF80; /* LayerFillColorDefault */
+  --fl-smoke: #0000004D; /* SmokeFillColorDefault */
+  --fl-solid-bg-base: #F3F3F3; /* SolidBackgroundFillColorBase */
+  --fl-solid-bg-base-alt: #DADADA; /* SolidBackgroundFillColorBaseAlt */
+  --fl-solid-bg-secondary: #EEEEEE; /* SolidBackgroundFillColorSecondary */
+  --fl-solid-bg-tertiary: #F9F9F9; /* SolidBackgroundFillColorTertiary */
+  --fl-solid-bg-quarternary: #FFFFFF; /* SolidBackgroundFillColorQuarternary */
+  --fl-divider-stroke: #0000000F; /* DividerStrokeColorDefault */
+  --fl-focus-stroke-outer: #000000E4; /* FocusStrokeColorOuter */
+  --fl-focus-stroke-inner: #FFFFFFB3; /* FocusStrokeColorInner */
+  --fl-success: #0F7B0F; /* SystemFillColorSuccess */
+  --fl-caution: #9D5D00; /* SystemFillColorCaution */
+  --fl-critical: #C42B1C; /* SystemFillColorCritical */
+  --fl-success-bg: #DFF6DD; /* SystemFillColorSuccessBackground */
+  --fl-caution-bg: #FFF4CE; /* SystemFillColorCautionBackground */
+  --fl-critical-bg: #FDE7E9; /* SystemFillColorCriticalBackground */
+  --fl-accent-fill-disabled: #00000037; /* AccentFillColorDisabled */
+  --fl-acrylic-bg: var(--fl-solid-bg-secondary); /* Acrylic 网页近似：纯色 + backdrop-filter blur(60px) saturate(125%)，见 fluent2-controls.css */
+}
+

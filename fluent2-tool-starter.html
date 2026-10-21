@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工具名 — Windows 11 Fluent</title>
+<link rel="stylesheet" href="fluent2-tokens.css">
+<link rel="stylesheet" href="fluent2-controls.css">
+<link rel="stylesheet" href="fluent2-motion.css">
+</head>
+<body>
+
+<!-- 模块：titlebar —— 网页工具可整块删除（浏览器已有标题栏）；保留时可放工具名与主题切换 -->
+<header class="fl-titlebar">
+  <span class="fl-body-strong" id="app-title">工具名</span>
+  <span style="flex:1"></span>
+  <button class="fl-btn fl-btn-subtle" id="btn-theme" type="button" aria-label="切换明暗主题">◐</button>
+</header>
+
+<div class="fl-shell">
+
+  <!-- 模块：nav —— NavigationView 左导航（顶层页、>5 项、不频繁切换时用；单页工具整块删除） -->
+  <nav class="fl-nav" id="nav" aria-label="主导航">
+    <a class="fl-nav-item" href="#" data-page="page-main" aria-current="page">条目管理</a>
+    <a class="fl-nav-item" href="#" data-page="page-grid">图库视图</a>
+    <a class="fl-nav-item" href="#" data-page="page-settings">设置</a>
+  </nav>
+
+  <main class="fl-content-layer">
+
+    <!-- 页面：page-main（列表 + 详情）。转场必须走 M.transitionTo() -->
+    <section class="fl-page fl-current" id="page-main">
+
+      <!-- 模块：infobar —— InfoBar 通知条（severity: success / caution / critical） -->
+      <div class="fl-infobar" id="infobar" data-severity="caution" role="status">
+        <span class="fl-body" id="infobar-text">这是一条 InfoBar 通知（caution）。</span>
+        <span style="flex:1"></span>
+        <button class="fl-btn fl-btn-subtle" id="btn-infobar-close" type="button" aria-label="关闭通知">✕</button>
+      </div>
+
+      <!-- 模块：toolbar —— 命令栏（高频命令可上画布，其余收进「⋯」flyout） -->
+      <div class="fl-toolbar" id="toolbar">
+        <button class="fl-btn fl-btn-accent" id="btn-new" type="button">新建</button>
+        <button class="fl-btn" id="btn-refresh" type="button">刷新</button>
+        <input class="fl-input" id="search" type="search" placeholder="搜索…">
+        <span style="flex:1"></span>
+        <button class="fl-btn fl-btn-subtle" id="btn-more" type="button" aria-haspopup="true">⋯</button>
+      </div>
+
+      <!-- 模块：list-detail —— 列表 + 详情（条目管理型核心模块） -->
+      <div style="display:flex; gap: var(--fl-space-3); align-items:flex-start;">
+        <div id="list" style="flex:1; min-width: 240px;" role="listbox" aria-label="条目列表">
+          <div class="fl-listitem fl-entrance" role="option" aria-selected="true" tabindex="0" data-detail="示例条目甲|这是示例条目甲的详情内容。">
+            <span class="fl-body-strong">示例条目甲</span><span style="flex:1"></span><span class="fl-caption fl-text-secondary">3 项</span>
+          </div>
+          <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" data-detail="示例条目乙|这是示例条目乙的详情内容。">
+            <span class="fl-body-strong">示例条目乙</span><span style="flex:1"></span><span class="fl-caption fl-text-secondary">1 项</span>
+          </div>
+          <div class="fl-listitem fl-entrance" role="option" aria-selected="false" tabindex="0" data-detail="示例条目丙|这是示例条目丙的详情内容。">
+            <span class="fl-body-strong">示例条目丙</span><span style="flex:1"></span><span class="fl-caption fl-text-secondary">0 项</span>
+          </div>
+        </div>
+        <div class="fl-card" id="detail" style="flex:1.2;">
+          <h2 class="fl-subtitle fl-dialog-title" id="detail-title">示例条目甲</h2>
+          <p class="fl-body" id="detail-body">这是示例条目甲的详情内容。</p>
+          <div class="fl-toolbar">
+            <button class="fl-btn" id="btn-edit" type="button">编辑</button>
+            <button class="fl-btn fl-btn-subtle" id="btn-delete" type="button">删除</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模块：settings-panel —— 属性/设置面板（设置型工具用；与 list-detail 二选一或并存） -->
+      <div class="fl-card" id="settings-panel" style="margin-top: var(--fl-space-3);">
+        <h3 class="fl-body-strong" style="margin:0 0 var(--fl-space-3);">面板设置</h3>
+        <label class="fl-switch"><input type="checkbox" id="set-switch" checked><span class="fl-switch-track"></span><span class="fl-body">开关设置项</span></label>
+        <label class="fl-check"><input type="checkbox" id="set-check" checked><span class="fl-box"></span><span class="fl-body">勾选设置项</span></label>
+        <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-a" checked><span class="fl-box"></span><span class="fl-body">选项 A</span></label>
+        <label class="fl-radio"><input type="radio" name="set-radio" id="set-radio-b"><span class="fl-box"></span><span class="fl-body">选项 B</span></label>
+        <div style="margin-top: var(--fl-space-3);">
+          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">下拉设置项</span>
+          <select class="fl-select" id="set-select"><option>选项一</option><option>选项二</option></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- 页面：page-grid（网格卡片，图库型）。删除 list-detail 保留此页，或反之 -->
+    <section class="fl-page" id="page-grid">
+      <h2 class="fl-subtitle">图库视图</h2>
+      <div id="grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap: var(--fl-space-3);">
+        <div class="fl-card fl-hoverable fl-entrance" tabindex="0"><span class="fl-body-strong">卡片一</span><p class="fl-caption">卡片说明文字。</p></div>
+        <div class="fl-card fl-hoverable fl-entrance" tabindex="0"><span class="fl-body-strong">卡片二</span><p class="fl-caption">卡片说明文字。</p></div>
+        <div class="fl-card fl-hoverable fl-entrance" tabindex="0"><span class="fl-body-strong">卡片三</span><p class="fl-caption">卡片说明文字。</p></div>
+      </div>
+    </section>
+
+    <!-- 页面：page-settings（设置型） -->
+    <section class="fl-page" id="page-settings">
+      <h2 class="fl-subtitle">设置</h2>
+      <div class="fl-card">
+        <label class="fl-switch"><input type="checkbox" id="pref-switch"><span class="fl-switch-track"></span><span class="fl-body">跟随系统主题</span></label>
+        <div style="margin-top: var(--fl-space-3);">
+          <span class="fl-caption" style="display:block; margin-bottom: var(--fl-space-2);">默认视图</span>
+          <select class="fl-select" id="pref-view"><option>列表</option><option>网格</option></select>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- 模块：flyout —— 「⋯」溢出菜单（Acrylic 浮层：瞬态轻触消失） -->
+<div class="fl-flyout fl-overlay" id="flyout-more" role="menu" style="position:fixed; top:64px; right:16px;">
+  <button class="fl-flyout-item" type="button" role="menuitem">重命名</button>
+  <button class="fl-flyout-item" type="button" role="menuitem">复制</button>
+  <button class="fl-flyout-item" type="button" role="menuitem">导出</button>
+</div>
+
+<!-- 模块：dialog —— ContentDialog（Smoke 遮罩；仅用于不可撤销且后果重大的操作确认） -->
+<div class="fl-dialog fl-overlay" id="dialog-delete" role="dialog" aria-modal="true" aria-labelledby="dialog-delete-title">
+  <h2 class="fl-subtitle fl-dialog-title" id="dialog-delete-title">确认删除？</h2>
+  <p class="fl-body">此操作不可撤销，确定要删除该条目吗？</p>
+  <div class="fl-dialog-actions">
+    <button class="fl-btn" id="btn-dialog-cancel" type="button">取消</button>
+    <button class="fl-btn fl-btn-accent" id="btn-dialog-ok" type="button">删除</button>
+  </div>
+</div>
+
+<script src="fluent2-motion.js"></script>
+<script>
+/* 业务接线：全部做存在性保护，删除模块后无需改这里 */
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* 主题切换（titlebar） */
+  if ($("btn-theme")) $("btn-theme").addEventListener("click", function () { M.toggleTheme(); });
+
+  /* 导航转场：只走 M.transitionTo() */
+  document.querySelectorAll(".fl-nav-item[data-page]").forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      M.transitionTo(a.getAttribute("data-page"));
+      document.querySelectorAll(".fl-nav-item").forEach(function (x) { x.removeAttribute("aria-current"); });
+      a.setAttribute("aria-current", "page");
+    });
+  });
+
+  /* InfoBar 关闭 */
+  if ($("btn-infobar-close")) $("btn-infobar-close").addEventListener("click", function () { $("infobar").remove(); });
+
+  /* 列表选择 → 详情（list-detail） */
+  function selectItem(item) {
+    document.querySelectorAll("#list .fl-listitem").forEach(function (x) { x.setAttribute("aria-selected", "false"); });
+    if (!item) return;
+    item.setAttribute("aria-selected", "true");
+    var parts = (item.getAttribute("data-detail") || "|").split("|");
+    if ($("detail-title")) $("detail-title").textContent = parts[0];
+    if ($("detail-body")) $("detail-body").textContent = parts[1] || "";
+  }
+  document.querySelectorAll("#list .fl-listitem").forEach(function (item) {
+    item.addEventListener("click", function () { selectItem(item); });
+    item.addEventListener("contextmenu", function (e) { e.preventDefault(); showContext(e); });
+    item.addEventListener("keydown", function (e) { if (e.key === "Enter") selectItem(item); });
+  });
+  selectItem(document.querySelector('#list .fl-listitem[aria-selected="true"]'));
+
+  /* flyout（⋯ 溢出菜单） */
+  if ($("btn-more")) $("btn-more").addEventListener("click", function (e) { e.stopPropagation(); M.flyout.toggle("flyout-more"); });
+
+  /* ContentDialog：删除确认（不可撤销操作才用对话框） */
+  if ($("btn-delete")) $("btn-delete").addEventListener("click", function () { M.dialog.show("dialog-delete"); });
+  if ($("btn-dialog-cancel")) $("btn-dialog-cancel").addEventListener("click", function () { M.dialog.hide("dialog-delete"); });
+  if ($("btn-dialog-ok")) $("btn-dialog-ok").addEventListener("click", function () { M.dialog.hide("dialog-delete"); M.toast("已删除"); });
+
+  /* 全局点击关闭浮层（轻触消失） */
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".fl-flyout") && !e.target.closest("#btn-more")) M.flyout.hide("flyout-more");
+  });
+
+  /* 右键菜单（contextmenu 模块）：复用 flyout 定位到鼠标处 */
+  function showContext(e) {
+    var flyout = $("flyout-more");
+    if (!flyout) return;
+    M.flyout.show("flyout-more");
+    flyout.style.top = e.clientY + "px";
+    flyout.style.left = e.clientX + "px";
+    flyout.style.right = "auto";
+  }
+
+  /* 入场编排：当前页 stagger */
+  M.stagger(document.querySelector(".fl-page.fl-current") || document.body);
+})();
+</script>
+</body>
+</html>

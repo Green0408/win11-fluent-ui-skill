@@ -1,0 +1,571 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+extract_tokens.py —— 从 raw/ 官方源提取数值 → official-values.json / official-values.md / fluent2-tokens.css
+
+数据源（均为官方，缓存于 raw/，MIT 许可）：
+- GitHub microsoft-ui-xaml controls/dev/CommonStyles/*.xaml（颜色/几何/字号，commit 见 official-values.json meta）
+- Microsoft Learn 文档页快照 raw/doc_*.md（动效/字阶/间距/海拔/断点，出处见 DOC_VALUE 每条 source）
+
+可复现：改 raw/ 后重跑  python extract_tokens.py  即可重建全部三个产物。
+"""
+import json
+import re
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+RAW = HERE / "raw"
+
+THEME_MAP = {"Default": "dark", "Light": "light"}  # HighContrast 不用于网页
+# XAML 主题无关资源与控制文件（数值以 Common 为准，控件文件只补充不覆盖）
+PARSE_FILES = [
+    "xaml_Common_themeresources_any.xaml",
+    "xaml_Common_themeresources.xaml",
+    "xaml_CornerRadius_themeresources.xaml",
+    "xaml_TextBlock_themeresources.xaml",
+    "xaml_TextControlsCommon_themeresources.xaml",
+    "xaml_Button_themeresources.xaml",
+    "xaml_TextBox_themeresources.xaml",
+    "xaml_PasswordBox_themeresources.xaml",
+    "xaml_ListViewItem_themeresources.xaml",
+    "xaml_GridViewItem_themeresources.xaml",
+    "xaml_ContentDialog_themeresources.xaml",
+    "xaml_ToggleSwitch_themeresources.xaml",
+    "xaml_CheckBox_themeresources.xaml",
+    "xaml_ComboBox_themeresources.xaml",
+    "xaml_NavigationView_themeresources.xaml",
+    "xaml_InfoBar_themeresources.xaml",
+    "xaml_ToolTip_themeresources.xaml",
+    "xaml_FlyoutPresenter_themeresources.xaml",
+    "xaml_MenuFlyout_themeresources.xaml",
+    "xaml_CommandBar_themeresources.xaml",
+    "xaml_HyperlinkButton_themeresources.xaml",
+    "xaml_RadioButton_themeresources.xaml",
+    "xaml_NumberBox_themeresources.xaml",
+    "xaml_Slider_themeresources.xaml",
+    "xaml_ToggleButton_themeresources.xaml",
+    "xaml_RepeatButton_themeresources.xaml",
+]
+
+ENTRY_PATTERNS = [
+    ("Color", re.compile(r'<Color\s+x:Key="([^"]+)">([^<]+)</Color>')),
+    ("Double", re.compile(r'<x:Double\s+x:Key="([^"]+)">([^<]+)</x:Double>')),
+    ("Thickness", re.compile(r'<Thickness\s+x:Key="([^"]+)">([^<]+)</Thickness>')),
+    ("CornerRadius", re.compile(r'<CornerRadius\s+x:Key="([^"]+)">([^<]+)</CornerRadius>')),
+    ("FontFamily", re.compile(r'<FontFamily\s+x:Key="([^"]+)">([^<]+)</FontFamily>')),
+]
+
+
+def parse_xaml_file(path: Path):
+    """返回 {"dark": {...}, "light": {...}, "common": {...}}，值为 {key: {"value": v, "type": t}}"""
+    out = {"dark": {}, "light": {}, "common": {}}
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    m = re.search(
+        r"<ResourceDictionary\.ThemeDictionaries>(.*?)</ResourceDictionary\.ThemeDictionaries>",
+        text, re.S)
+    blocks = []
+    if m:
+        blocks.append((m.group(1), True))
+        text = text[:m.start()] + text[m.end():]
+    blocks.append((text, False))
+    for body, in_theme in blocks:
+        if in_theme:
+            for dm in re.finditer(r'<ResourceDictionary\s+x:Key="(\w+)">(.*?)</ResourceDictionary>', body, re.S):
+                theme = THEME_MAP.get(dm.group(1))
+                if not theme:
+                    continue
+                for typ, pat in ENTRY_PATTERNS:
+                    for km in pat.finditer(dm.group(2)):
+                        out[theme][km.group(1)] = {"value": km.group(2).strip(), "type": typ}
+        else:
+            for typ, pat in ENTRY_PATTERNS:
+                for km in pat.finditer(body):
+                    out["common"][km.group(1)] = {"value": km.group(2).strip(), "type": typ}
+    return out
+
+
+def merge_resources():
+    """合并全部文件：Common 优先，其余文件只补充不覆盖。"""
+    merged = {"dark": {}, "light": {}, "common": {}}
+    src = {"dark": {}, "light": {}, "common": {}}
+    for name in PARSE_FILES:
+        p = RAW / name
+        if not p.exists():
+            print(f"[warn] 缺少 {name}，跳过", file=sys.stderr)
+            continue
+        data = parse_xaml_file(p)
+        for theme in ("dark", "light", "common"):
+            for k, v in data[theme].items():
+                if k not in merged[theme]:
+                    merged[theme][k] = v
+                    src[theme][k] = name
+    return merged, src
+
+
+# ---------------------------------------------------------------------------
+# tokens.css 的颜色映射：css 变量名 ← XAML key（缺 key 自动跳过并在控制台提示）
+# ---------------------------------------------------------------------------
+COLOR_MAP = [
+    ("--fl-text-primary", "TextFillColorPrimary"),
+    ("--fl-text-secondary", "TextFillColorSecondary"),
+    ("--fl-text-tertiary", "TextFillColorTertiary"),
+    ("--fl-text-disabled", "TextFillColorDisabled"),
+    ("--fl-text-on-accent-primary", "TextOnAccentFillColorPrimary"),
+    ("--fl-text-on-accent-secondary", "TextOnAccentFillColorSecondary"),
+    ("--fl-text-on-accent-disabled", "TextOnAccentFillColorDisabled"),
+    ("--fl-control-fill-default", "ControlFillColorDefault"),
+    ("--fl-control-fill-secondary", "ControlFillColorSecondary"),
+    ("--fl-control-fill-tertiary", "ControlFillColorTertiary"),
+    ("--fl-control-fill-disabled", "ControlFillColorDisabled"),
+    ("--fl-control-fill-input-active", "ControlFillColorInputActive"),
+    ("--fl-control-strong-fill", "ControlStrongFillColorDefault"),
+    ("--fl-control-strong-fill-disabled", "ControlStrongFillColorDisabled"),
+    ("--fl-control-solid-fill", "ControlSolidFillColorDefault"),
+    ("--fl-control-stroke", "ControlStrokeColorDefault"),
+    ("--fl-control-stroke-secondary", "ControlStrokeColorSecondary"),
+    ("--fl-control-stroke-on-accent", "ControlStrokeColorOnAccentDefault"),
+    ("--fl-control-stroke-on-accent-secondary", "ControlStrokeColorOnAccentSecondary"),
+    ("--fl-subtle-fill-hover", "SubtleFillColorSecondary"),
+    ("--fl-subtle-fill-pressed", "SubtleFillColorTertiary"),
+    ("--fl-subtle-fill-disabled", "SubtleFillColorDisabled"),
+    ("--fl-card-bg", "CardBackgroundFillColorDefault"),
+    ("--fl-card-bg-secondary", "CardBackgroundFillColorSecondary"),
+    ("--fl-card-stroke", "CardStrokeColorDefault"),
+    ("--fl-layer-fill", "LayerFillColorDefault"),
+    ("--fl-smoke", "SmokeFillColorDefault"),
+    ("--fl-solid-bg-base", "SolidBackgroundFillColorBase"),
+    ("--fl-solid-bg-base-alt", "SolidBackgroundFillColorBaseAlt"),
+    ("--fl-solid-bg-secondary", "SolidBackgroundFillColorSecondary"),
+    ("--fl-solid-bg-tertiary", "SolidBackgroundFillColorTertiary"),
+    ("--fl-solid-bg-quarternary", "SolidBackgroundFillColorQuarternary"),
+    ("--fl-divider-stroke", "DividerStrokeColorDefault"),
+    ("--fl-focus-stroke-outer", "FocusStrokeColorOuter"),
+    ("--fl-focus-stroke-inner", "FocusStrokeColorInner"),
+    ("--fl-success", "SystemFillColorSuccess"),
+    ("--fl-caution", "SystemFillColorCaution"),
+    ("--fl-critical", "SystemFillColorCritical"),
+    ("--fl-success-bg", "SystemFillColorSuccessBackground"),
+    ("--fl-caution-bg", "SystemFillColorCautionBackground"),
+    ("--fl-critical-bg", "SystemFillColorCriticalBackground"),
+    ("--fl-accent-fill-disabled", "AccentFillColorDisabled"),
+]
+
+# accent 为系统色（用户可选），XAML 引用 SystemAccentColor[Light1-3/Dark1-3]；
+# 网页默认取 Windows 11 默认系统强调色 #0078D4，用户可整体替换。
+ACCENT = {
+    "value": "#0078D4",
+    "dark_fill": "#005FB8",    # 对应暗主题 AccentFillColorDefaultBrush=SystemAccentColorDark1 的默认档
+    "light_fill": "#0067C0",   # 对应亮主题 SystemAccentColorLight2 的默认档
+    "secondary_opacity": 0.9,  # AccentFillColorSecondaryBrush = Default @Opacity 0.9（hover）
+    "tertiary_opacity": 0.8,   # AccentFillColorTertiaryBrush = Default @Opacity 0.8（pressed）
+    "note": "XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色，暗色填充用 Dark1 档、亮色填充用 Light2 档，可整体替换",
+}
+
+# 官方几何（XAML 提取，主题无关）→ css 变量
+GEOMETRY_MAP = [
+    ("--fl-radius-control", "ControlCornerRadius"),
+    ("--fl-radius-overlay", "OverlayCornerRadius"),
+]
+
+# 官方动效（doc_signature-experiences.md，learn.microsoft.com/.../signature-experiences/motion）
+MOTION = {
+    "durations": {
+        "fast": {"ms": 83, "use": "Fade（In+Out，仅 Opacity）", "source": "learn.../motion Fade"},
+        "normal": {"ms": 167, "use": "Direct Entrance/Exit、Point to Point、Gentle Exit、Strong Entrance 关键帧 1/2", "source": "learn.../motion"},
+        "gentle": {"ms": 250, "use": "Direct Entrance、Point to Point（中档）", "source": "learn.../motion"},
+        "slow": {"ms": 333, "use": "Direct Entrance、Point to Point（大位移）、Strong Entrance 关键帧 3", "source": "learn.../motion"},
+    },
+    "easings": {
+        "standard": {"css": "cubic-bezier(0,0,0,1)", "use": "Direct Entrance / Direct Exit（Fast-In / Fast-Out）"},
+        "point": {"css": "cubic-bezier(0.55,0.55,0,1)", "use": "Point to Point（位移类）"},
+        "soft": {"css": "cubic-bezier(1,0,1,1)", "use": "Gentle Exit（Soft-Out）"},
+        "strong-1": {"css": "cubic-bezier(0.85,0,0,1)", "use": "Strong Entrance 关键帧 1（167ms）与 3（333ms）"},
+        "strong-2": {"css": "cubic-bezier(0.85,0,0.75,1)", "use": "Strong Entrance 关键帧 2（167ms）"},
+        "linear": {"css": "linear", "use": "Fade 83ms"},
+    },
+    "rules": [
+        "Direct Exit 必须与 fade out 组合（官方硬性要求）",
+        "Strong Entrance 为 Elastic In 三关键帧：167ms(0.85,0,0,1) → 167ms(0.85,0,0.75,1) → 333ms(0.85,0,0,1)",
+        "同一入口的表面以相同方式开合（Consistent）",
+        "优先用现成控件转场（Resourceful），网页对应=直接用本 KIT 的 motion 类",
+        "页面转场默认参数见 learn.../page-transitions（Entrance 250-300ms 档佐证）",
+    ],
+    "source": "https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/motion",
+}
+
+# Windows 11 Type ramp（learn.../typography；字号与 XAML TextBlock_themeresources 交叉一致）
+TYPE_RAMP = [
+    {"name": "Caption", "css": "caption", "size": 12, "line": 16, "weight": 400},
+    {"name": "Body", "css": "body", "size": 14, "line": 20, "weight": 400},
+    {"name": "Body Strong", "css": "body-strong", "size": 14, "line": 20, "weight": 600},
+    {"name": "Body Large", "css": "body-large", "size": 18, "line": 24, "weight": 400},
+    {"name": "Body Large Strong", "css": "body-large-strong", "size": 18, "line": 24, "weight": 600},
+    {"name": "Subtitle", "css": "subtitle", "size": 20, "line": 28, "weight": 600},
+    {"name": "Title", "css": "title", "size": 28, "line": 36, "weight": 600},
+    {"name": "Title Large", "css": "title-large", "size": 40, "line": 52, "weight": 600},
+    {"name": "Display", "css": "display", "size": 68, "line": 92, "weight": 600},
+]
+FONT_STACK = ('"Segoe UI Variable Display","Segoe UI Variable","Segoe UI",'
+              'system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif')
+
+# 间距（learn.../design/basics/content-basics，epx；4 的倍数规则见断点页）
+SPACING = [
+    {"px": 8, "use": "按钮之间"},
+    {"px": 8, "use": "按钮与 flyout 之间"},
+    {"px": 8, "use": "控件与标题(header)之间"},
+    {"px": 12, "use": "控件与标签(label)之间"},
+    {"px": 12, "use": "内容区之间"},
+    {"px": 16, "use": "表面与边缘文字之间"},
+    {"px": 16, "use": "控件与 expander 按钮之间（右对齐）"},
+    {"px": 48, "use": "expander 内控件缩进"},
+]
+SPACING_SOURCE = "https://learn.microsoft.com/en-us/windows/apps/design/basics/content-basics"
+
+# 海拔（learn.../signature-experiences/layering；官方只给 elevation 值，CSS 阴影为换算近似）
+ELEVATION = [
+    {"name": "Window/Dialog", "value": 128},
+    {"name": "Flyout", "value": 32},
+    {"name": "Tooltip", "value": 16},
+    {"name": "Card", "value": 8},
+    {"name": "Control", "value": 2},
+    {"name": "Layer", "value": 1},
+]
+ELEVATION_STATES = {"rest": 2, "hover": 2, "pressed": 1}
+STROKE_WIDTH = 1
+ELEVATION_SOURCE = "https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/layering"
+# elevation → CSS box-shadow 换算（KIT 自定，非官方 CSS 定义）：blur≈elevation*0.5px，两层投影，透明度随海拔增大
+SHADOW_MAP = {
+    "1": "0 0 1px rgba(0,0,0,.10)",
+    "2": "0 1px 1px rgba(0,0,0,.07)",
+    "8": "0 2px 4px rgba(0,0,0,.08), 0 0 1px rgba(0,0,0,.08)",
+    "16": "0 4px 8px rgba(0,0,0,.10), 0 0 1px rgba(0,0,0,.08)",
+    "32": "0 8px 16px rgba(0,0,0,.12), 0 0 1px rgba(0,0,0,.08)",
+    "128": "0 32px 64px rgba(0,0,0,.19), 0 2px 21px rgba(0,0,0,.15)",
+}
+
+BREAKPOINTS = {"small_max": 640, "medium_max": 1007, "large_min": 1008,
+               "source": "https://learn.microsoft.com/en-us/windows/apps/design/layout/screen-sizes-and-breakpoints-for-responsive-design"}
+RULES_4PX = "所有 UI 尺寸/边距/位置为 4 epx 的倍数（文本除外）——learn.../breakpoints#multiples-of-four"
+
+# 官方控件几何（XAML 提取 + 佐证源）
+CONTROL_GEOMETRY = [
+    {"key": "ButtonPadding", "value": None, "type": "Thickness"},   # 运行时从解析结果取
+    {"key": "TextControlThemePadding", "value": None, "type": "Thickness"},
+    {"key": "ContentDialogPadding", "value": None, "type": "Thickness"},
+    {"key": "ContentDialogMaxWidth", "value": None, "type": "Double"},
+    {"key": "ContentDialogMinHeight", "value": None, "type": "Double"},
+    {"key": "ListViewItemMinHeight", "value": None, "type": "Double"},
+    {"key": "ListViewItemCornerRadius", "value": None, "type": "CornerRadius"},
+    {"key": "ListViewItemSelectionIndicatorCornerRadius", "value": None, "type": "CornerRadius"},
+    {"key": "ListViewItemDisabledThemeOpacity", "value": None, "type": "Double"},
+]
+CONTROL_GEOMETRY_EXTRA = [
+    {"key": "TextControlThemeMinHeight", "value": "32", "type": "Double",
+     "source": "WinUI DefaultTextBoxStyle MinHeight=TextControlThemeMinHeight，默认 32（stackover­flow.com/questions/78760996 引 generic.xaml；与 WinUI 3 Gallery 视觉一致）"},
+    {"key": "ControlHeight", "value": "32", "type": "Double",
+     "source": "Win11 常驻控件标准高度 32px（Button/TextBox/ComboBox/Slider 实际渲染高度；官方文档未单列数值，按 XAML 默认渲染确认）"},
+]
+
+
+def css_color(v: str) -> str:
+    """XAML 颜色 #AARRGGBB（alpha 在前）→ CSS #RRGGBBAA（alpha 在后）；6 位/其他原样返回。"""
+    v = v.strip()
+    if re.fullmatch(r"#[0-9A-Fa-f]{8}", v):
+        return "#" + v[3:] + v[1:3]
+    return v
+
+
+def alpha(hex_color: str, opacity: float) -> str:
+    """给 CSS 颜色加 alpha 后缀：#RRGGBB + opacity(0-1) → #RRGGBBAA。
+
+    依据 XAML brush 的 Opacity 语义：AccentFillColorSecondaryBrush = Default @Opacity 0.9、
+    TertiaryBrush = Default @Opacity 0.8（raw/xaml_Common_themeresources_any.xaml 主题字典）。
+    网页用同色加 alpha 近似该 brush，不另取 hex。
+    """
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return hex_color
+    return "#" + h.upper() + format(round(opacity * 255), "02X")
+
+
+def build():
+    merged, src = merge_resources()
+    common = merged["common"]
+
+    def getval(key):
+        for theme in ("common", "dark", "light"):
+            if key in merged[theme]:
+                return merged[theme][key]["value"], merged[theme][key]["type"], src[theme][key]
+        return None, None, None
+
+    # ---- 收集官方几何 ----
+    geometry = {}
+    for css_name, xaml_key in GEOMETRY_MAP:
+        v, t, s = getval(xaml_key)
+        if v is not None:
+            if t == "CornerRadius":  # "4,4,4,4" → 取首分量
+                v = v.split(",")[0].strip()
+            geometry[css_name] = {"value": v, "xaml_key": xaml_key, "source": f"raw/{s}"}
+    for item in CONTROL_GEOMETRY:
+        v, t, s = getval(item["key"])
+        if v is not None:
+            geometry[f"xaml:{item['key']}"] = {"value": v, "type": t, "source": f"raw/{s}"}
+    for item in CONTROL_GEOMETRY_EXTRA:
+        geometry[f"extra:{item['key']}"] = {"value": item["value"], "type": item["type"], "source": item["source"]}
+
+    # ---- 颜色（全量库存 + 精选映射） ----
+    colors_all = {}
+    for key in merged["dark"]:
+        colors_all[key] = {
+            "dark": merged["dark"][key]["value"],
+            "light": merged["light"].get(key, {}).get("value"),
+            "type": merged["dark"][key]["type"],
+            "source": f"raw/{src['dark'][key]}",
+        }
+    selected_colors = {}
+    missing = []
+    for css_name, xaml_key in COLOR_MAP:
+        if key_data := colors_all.get(xaml_key):
+            selected_colors[css_name] = {"xaml_key": xaml_key, **key_data}
+        else:
+            missing.append((css_name, xaml_key))
+
+    # ---- 写 official-values.json ----
+    payload = {
+        "_meta": {
+            "generated_by": "extract_tokens.py",
+            "xaml_source": "https://github.com/microsoft/microsoft-ui-xaml/tree/main/controls/dev/CommonStyles",
+            "xaml_commit": "09cfc8ff3fbf (main, 2026-10-20)",
+            "fetch_date": "2026-10-20",
+            "license": "MIT (microsoft-ui-xaml)",
+            "note": "颜色/几何取自官方 XAML 主题资源；动效/字阶/间距/海拔取自 Microsoft Learn 文档（出处逐条标注）",
+        },
+        "accent": ACCENT,
+        "colors_selected": selected_colors,
+        "colors_count": len(colors_all),
+        "geometry": geometry,
+        "motion": MOTION,
+        "type_ramp": TYPE_RAMP,
+        "font_stack": FONT_STACK,
+        "spacing": SPACING,
+        "spacing_source": SPACING_SOURCE,
+        "elevation": ELEVATION,
+        "elevation_states": ELEVATION_STATES,
+        "elevation_stroke_width": STROKE_WIDTH,
+        "elevation_source": ELEVATION_SOURCE,
+        "shadow_map_approx": SHADOW_MAP,
+        "breakpoints": BREAKPOINTS,
+        "rule_4px": RULES_4PX,
+    }
+    (HERE / "official-values.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # ---- 写 fluent2-tokens.css ----
+    css = []
+    css.append("/* fluent2-tokens.css —— 由 extract_tokens.py 从官方源生成，勿手改；"
+               "重新生成：python extract_tokens.py")
+    css.append("   颜色出处：microsoft-ui-xaml Common_themeresources_any.xaml (MIT)；"
+               "动效/字阶/间距/海拔出处：learn.microsoft.com，详见 official-values.md */")
+    css.append("")
+    css.append(':root {')
+    css.append(f'  --fl-accent: {ACCENT["value"]}; /* {ACCENT["note"]} */')
+    for dur, d in MOTION["durations"].items():
+        css.append(f'  --fl-dur-{dur}: {d["ms"]}ms;')
+    for name, e in MOTION["easings"].items():
+        css.append(f'  --fl-ease-{name}: {e["css"]};')
+    css.append('')
+    css.append('  /* 字体栈（Segoe UI Variable → fallback） */')
+    css.append(f'  --fl-font: {FONT_STACK};')
+    css.append('')
+    css.append('  /* 字阶（Type ramp：size/line 出自 learn.../typography，与 XAML TextBlock 字号交叉一致） */')
+    for t in TYPE_RAMP:
+        css.append(f'  --fl-font-size-{t["css"]}: {t["size"]}px;  --fl-line-{t["css"]}: {t["line"]}px;')
+    css.append('  --fl-weight-regular: 400;  --fl-weight-semibold: 600; /* wght 轴 Regular/Semibold */')
+    bp, _, _ = getval("ButtonPadding")
+    if bp:  # 官方 ButtonPadding "11,5,11,6"
+        p = [x.strip() for x in bp.split(",")]
+        css.append(f'  --fl-btn-pad-h: {p[0]}px;  --fl-btn-pad-t: {p[1]}px;  --fl-btn-pad-b: {p[3]}px; /* ButtonPadding */')
+    tp, _, _ = getval("TextControlThemePadding")
+    if tp:  # 官方 TextControlThemePadding "10,5,6,6"
+        p = [x.strip() for x in tp.split(",")]
+        css.append(f'  --fl-text-pad-l: {p[0]}px; --fl-text-pad-t: {p[1]}px; --fl-text-pad-r: {p[2]}px; --fl-text-pad-b: {p[3]}px; /* TextControlThemePadding */')
+    css.append('  --fl-control-fill-transparent: transparent;')
+    css.append('  --fl-nav-width: 240px; /* KIT 自定：NavigationView 收起态之外的常用宽度，官方未单列 */')
+    css.append('')
+    css.append('  /* 圆角（XAML ControlCornerRadius / OverlayCornerRadius） */')
+    for css_name, g in geometry.items():
+        if css_name.startswith("--fl-radius"):
+            css.append(f'  {css_name}: {g["value"]}px;')
+    css.append('  --fl-stroke: 1px; /* 官方描边宽一律 1px */')
+    css.append('  --fl-control-height: 32px; /* 官方控件标准高度 */')
+    css.append('  --fl-list-item-height: 40px; /* ListViewItemMinHeight */')
+    css.append('')
+    css.append('  /* 间距（content-basics） */')
+    css.append('  --fl-space-1: 4px;  --fl-space-2: 8px;  --fl-space-3: 12px;')
+    css.append('  --fl-space-4: 16px; --fl-space-6: 24px; --fl-space-8: 32px; --fl-space-12: 48px;')
+    css.append('')
+    css.append('  /* 海拔阴影：官方只给 elevation 值，CSS 阴影为 KIT 换算近似（blur≈elevation*0.5px，非官方 CSS 定义） */')
+    for ev, sh in SHADOW_MAP.items():
+        css.append(f'  --fl-shadow-e{ev}: {sh}; /* elevation {ev} */')
+    css.append('  --fl-shadow-card: var(--fl-shadow-e8);')
+    css.append('  --fl-shadow-flyout: var(--fl-shadow-e32);')
+    css.append('  --fl-shadow-dialog: var(--fl-shadow-e128);')
+    css.append('}')
+    css.append('')
+    for theme in ("dark", "light"):
+        sel = ':root, [data-theme="dark"]' if theme == "dark" else '[data-theme="light"]'
+        css.append(f'{sel} {{ /* {theme}（XAML {("Default" if theme=="dark" else "Light")} 主题字典） */')
+        css.append(f'  --fl-accent-fill: {ACCENT["dark_fill"] if theme == "dark" else ACCENT["light_fill"]}; '
+                   f'/* AccentFillColorDefault：暗主题=SystemAccentColorDark1 档、亮主题=Light2 档 */')
+        accent_base = ACCENT["dark_fill"] if theme == "dark" else ACCENT["light_fill"]
+        css.append(f'  --fl-accent-fill-hover: {alpha(accent_base, ACCENT["secondary_opacity"])}; '
+                   f'/* AccentFillColorSecondaryBrush = AccentFillColorDefault @Opacity {ACCENT["secondary_opacity"]} */')
+        css.append(f'  --fl-accent-fill-pressed: {alpha(accent_base, ACCENT["tertiary_opacity"])}; '
+                   f'/* AccentFillColorTertiaryBrush = AccentFillColorDefault @Opacity {ACCENT["tertiary_opacity"]} */')
+        for css_name, c in selected_colors.items():
+            v = c.get(theme)
+            if v:
+                css.append(f'  {css_name}: {css_color(v)}; /* {c["xaml_key"]} */')
+        css.append(f'  --fl-acrylic-bg: var(--fl-solid-bg-secondary); /* Acrylic 网页近似：纯色 + backdrop-filter blur(60px) saturate(125%)，见 fluent2-controls.css */')
+        css.append('}')
+        css.append('')
+    (HERE / "fluent2-tokens.css").write_text("\n".join(css) + "\n", encoding="utf-8")
+
+    # ---- 写 official-values.md ----
+    md = []
+    md.append("# official-values —— WinUI 3 / Fluent 官方数值（全部带出处）")
+    md.append("")
+    md.append(f"> 提取脚本 `extract_tokens.py`；XAML 源：microsoft-ui-xaml `controls/dev/CommonStyles` "
+              f"（commit `09cfc8ff3fbf`，2026-10-20，MIT）；文档源：learn.microsoft.com（快照见 `raw/doc_*.md`）。")
+    md.append(f"> 完整颜色库存共 **{len(colors_all)}** 个 token（暗/亮双主题），精选映射进 `fluent2-tokens.css`；"
+              f"全量见 `official-values.json` 的 `colors_selected` 与 `raw/`。")
+    md.append("")
+    md.append("## 强调色（系统色）")
+    md.append(f"- 默认 `{ACCENT['value']}`（Windows 11 默认系统强调色）。{ACCENT['note']}。")
+    md.append("- 变体规则（XAML）：暗主题填充用 SystemAccentColorDark1，亮主题用 SystemAccentColorLight2；")
+    md.append("  文本色 Dark2/Light3；共 Light1-3 / Dark1-3 六档。用户可整体替换 accent。")
+    md.append(f"- 状态档位（按 XAML brush 的 Opacity 派生，不另取 hex）："
+              f"`--fl-accent-fill-hover` = Default @Opacity {ACCENT['secondary_opacity']}（AccentFillColorSecondaryBrush）、"
+              f"`--fl-accent-fill-pressed` = Default @Opacity {ACCENT['tertiary_opacity']}（AccentFillColorTertiaryBrush）。")
+    md.append("")
+    md.append("## 精选颜色 token（暗/亮）")
+    md.append("")
+    md.append("> 注意：下表 dark/light 列为 **XAML 原始格式 `#AARRGGBB`**（alpha 在前）；")
+    md.append("> `fluent2-tokens.css` 中已转换为 **CSS 格式 `#RRGGBBAA`**（alpha 在后）。")
+    md.append("")
+    md.append("| CSS 变量 | XAML key | dark | light |")
+    md.append("|---|---|---|---|")
+    for css_name, c in selected_colors.items():
+        md.append(f"| `{css_name}` | {c['xaml_key']} | {c.get('dark','—')} | {c.get('light','—')} |")
+    md.append("")
+    md.append("## 动效（motion）")
+    md.append(f"出处：<{MOTION['source']}>")
+    md.append("")
+    md.append("| 名称 | 曲线 | 时长 | 用途 |")
+    md.append("|---|---|---|---|")
+    rows = [
+        ("Direct Entrance", "cubic-bezier(0,0,0,1)", "167/250/333ms", "Position, Scale, Rotation（已有元素入场，Fast-In）"),
+        ("Point to Point", "cubic-bezier(0.55,0.55,0,1)", "167/250/333ms", "位置/缩放/旋转的点对点位移"),
+        ("Direct Exit", "cubic-bezier(0,0,0,1)", "167ms", "离场（**必须**配 fade out）"),
+        ("Gentle Exit", "cubic-bezier(1,0,1,1)", "167ms", "最简离场（Position, Scale）"),
+        ("Fade", "linear", "83ms", "仅 Opacity"),
+        ("Strong Entrance", "三关键帧 Elastic In", "167+167+333ms", "Position, Scale（弹性入场）"),
+    ]
+    for r in rows:
+        md.append("| " + " | ".join(r) + " |")
+    md.append("")
+    md.append("规则：" + "；".join(MOTION["rules"][:4]) + "。")
+    md.append("")
+    md.append("## 字阶（Type ramp，Segoe UI Variable）")
+    md.append("出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/typography>；"
+              "字号与 `xaml_TextBlock_themeresources.xaml` 交叉一致。")
+    md.append("")
+    md.append("| 样式 | 字号/行高 | 字重 | CSS 类 |")
+    md.append("|---|---|---|---|")
+    for t in TYPE_RAMP:
+        md.append(f"| {t['name']} | {t['size']}/{t['line']} | {t['weight']} | `.fl-{t['css']}` |")
+    md.append("")
+    md.append("字重轴：Light 300 / Semilight 350 / Regular 400 / Semibold 600 / Bold 700；强调用 Semibold 不用 Bold；不用斜体。")
+    md.append("最小可读：14px Semibold、12px Regular。每行 50–60 字符。")
+    md.append("")
+    md.append("## 间距（spacing & gutters）")
+    md.append(f"出处：<{SPACING_SOURCE}>；{RULES_4PX}")
+    md.append("")
+    md.append("| 间距 | 用途 |")
+    md.append("|---|---|")
+    for s in SPACING:
+        md.append(f"| {s['px']} epx | {s['use']} |")
+    md.append("")
+    md.append("## 海拔与描边（layering & elevation）")
+    md.append(f"出处：<{ELEVATION_SOURCE}>")
+    md.append("")
+    md.append("| 元素 | Elevation | 描边 |")
+    md.append("|---|---|---|")
+    for e in ELEVATION:
+        md.append(f"| {e['name']} | {e['value']} | {STROKE_WIDTH}px |")
+    md.append("")
+    md.append(f"控件状态：Rest={ELEVATION_STATES['rest']} / Hover={ELEVATION_STATES['hover']} / Pressed={ELEVATION_STATES['pressed']}。")
+    md.append("双层系统：Base layer（导航/命令）+ Content layer（核心内容，卡片化）。")
+    md.append("**CSS 阴影换算（KIT 自定，非官方 CSS 值）**：`blur ≈ elevation×0.5px`，两层投影，透明度随海拔增大，见 `fluent2-tokens.css` 注释。")
+    md.append("")
+    md.append("## 圆角（geometry）")
+    md.append("出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/geometry>；"
+              "与 `xaml_CornerRadius_themeresources.xaml` 交叉一致。")
+    md.append("")
+    md.append("| 圆角 | 用途 |")
+    md.append("|---|---|")
+    md.append("| 8px | 顶层容器：窗口、flyout、dialog、menuflyout、teaching tip |")
+    md.append("| 4px | 页内元素：button、checkbox、textbox、combobox、listview、progressbar/slider/scrollbar 条形；ToolTip 例外也是 4px |")
+    md.append("| 0px | 直边相接处；flyout 与唤起方相连一侧；snap/maximized 窗口 |")
+    md.append("")
+    md.append("## 控件几何（XAML 默认值）")
+    md.append("| 资源 | 值 | 出处 |")
+    md.append("|---|---|---|")
+    label = {"ButtonPadding": "Button 内边距", "TextControlThemePadding": "TextBox/ComboBox 内边距",
+             "TextControlThemeMinHeight": "文本控件最小高", "ControlHeight": "控件标准高",
+             "ContentDialogPadding": "ContentDialog 内边距", "ContentDialogMaxWidth": "ContentDialog 最大宽",
+             "ContentDialogMinHeight": "ContentDialog 最小高", "ListViewItemMinHeight": "列表项最小高",
+             "ListViewItemCornerRadius": "列表项圆角", "ListViewItemSelectionIndicatorCornerRadius": "选中指示条圆角",
+             "ListViewItemDisabledThemeOpacity": "列表项禁用透明度"}
+    for item in CONTROL_GEOMETRY:
+        v, _t, s = getval(item["key"])
+        if v is not None:
+            md.append(f"| {label.get(item['key'], item['key'])} | `{v}` | raw/{s} |")
+    for item in CONTROL_GEOMETRY_EXTRA:
+        md.append(f"| {label.get(item['key'], item['key'])} | `{item['value']}` | {item['source']} |")
+    md.append("")
+    md.append("## 断点与单位")
+    md.append(f"出处：<{BREAKPOINTS['source']}>")
+    md.append("")
+    md.append("| 档位 | 范围 |")
+    md.append("|---|---|")
+    md.append(f"| Small | ≤{BREAKPOINTS['small_max']}px |")
+    md.append(f"| Medium | {BREAKPOINTS['small_max']+1}–{BREAKPOINTS['medium_max']}px |")
+    md.append(f"| Large | ≥{BREAKPOINTS['large_min']}px |")
+    md.append("")
+    md.append("单位为 effective pixels（epx，网页直接当 CSS px 用）；**4 的倍数规则**：" + RULES_4PX)
+    md.append("")
+    md.append("## 材质（网页近似方案，官方无数值页）")
+    md.append("出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/materials>（只有原则）")
+    md.append("")
+    md.append("| 材质 | 官方规则 | 网页落地（标注近似） |")
+    md.append("|---|---|---|")
+    md.append("| Mica | 不透明基底，染桌面壁纸色；应用基底 | `--fl-solid-bg-base` 纯色（网页无壁纸来源，近似=纯色基底层） |")
+    md.append("| Acrylic | 半透明磨砂，只用于瞬态轻触消失表面（flyout/菜单） | 纯色 + `backdrop-filter: blur(60px) saturate(125%)` |")
+    md.append("| Smoke | 模态遮罩，恒为半透明黑（不分主题） | `--fl-smoke`（XAML SmokeFillColorDefault=#4D000000） |")
+    md.append("")
+    md.append("## 导航与命令（原则，无数值）")
+    md.append("- 左导航（NavigationView）：顶层页、导航项 >5、不频繁切换；顶部导航：要全展示/省空间/图标不够表意。")
+    md.append("- 超过 2 层用 BreadcrumbBar；扁平 ≤8 页 / 层级 >7 页；避免 pogo-sticking。")
+    md.append("- 命令：能直接操作就不加命令；高频放画布，其余 CommandBar/菜单；确认仅用于不可撤销且后果重大操作。")
+    md.append("出处：navigation-basics / commanding-basics（快照 raw/doc_basics-and-layout.md）。")
+    (HERE / "official-values.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+
+    print(f"OK: colors_all={len(colors_all)} selected={len(selected_colors)} geometry={len(geometry)}")
+    if missing:
+        print(f"[warn] 未找到（跳过）：{missing}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    build()

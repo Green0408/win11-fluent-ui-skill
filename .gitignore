@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# 分析 / 验收产物（体积大、可重生成）
+video-analysis/
+demo-motion.mp4
+frames/
+out/
+*.mp4
+
+# 编辑器与系统
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

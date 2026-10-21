@@ -1,0 +1,124 @@
+/* fluent2-motion.css —— 官方动效的 CSS 落地
+   数值出处：learn.microsoft.com/en-us/windows/apps/design/signature-experiences/motion
+   （Direct Entrance/Exit 167ms、Point to Point 167/250/333ms、Gentle Exit 167ms、Fade 83ms、
+     Strong Entrance 3 关键帧；曲线见 fluent2-tokens.css 的 --fl-ease-*，勿手写时长/缓动）
+
+   ── 两类动效分开表达（这是本文件的核心约定）──
+   1) 一次性动效（入场/出场/页面转场/Strong Entrance）→ keyframe animation
+      理由：不占用 transition 属性，控件自身的 hover/active transition 简写不会把它覆盖掉；
+            animation-delay 可走 --fl-stagger-delay 自定义属性，不污染元素的其他过渡。
+   2) 可逆的状态切换（浮层开合、hover/active、switch 等）→ transition
+      理由：中途反转可平滑接续。 */
+
+/* ---- Direct Entrance：167ms standard + fade（官方 Fast-In，已有元素入场） ----
+   静态隐藏；.fl-in 触发动画；延迟由 --fl-stagger-delay 提供（stagger 不写 transition-delay） */
+.fl-entrance { opacity: 0; }
+.fl-entrance.fl-in {
+  animation: fl-entrance-kf var(--fl-dur-normal) var(--fl-ease-standard) both;
+  animation-delay: var(--fl-stagger-delay, 0ms);
+}
+@keyframes fl-entrance-kf {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- Point to Point：位移类转场（页面进入用 250ms point 曲线） ----
+   位移量 12px：官方只给时长/曲线，位移量为 KIT 自定（守 4 的倍数）；页面级位移刻意小于元素级，避免叠加发飘 */
+.fl-point-to-point.fl-in {
+  animation: fl-point-to-point-kf var(--fl-dur-gentle) var(--fl-ease-point) both;
+}
+@keyframes fl-point-to-point-kf {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 位移类元素（拖动/排序/进度等位置变化）直接套用官方 point 曲线（可逆，用 transition） */
+.fl-movable { transition: transform var(--fl-dur-normal) var(--fl-ease-point); }
+
+/* ---- Direct Exit：Fast-Out，167ms，官方硬性要求必须与 fade out 组合 ---- */
+.fl-exit {
+  animation: fl-exit-kf var(--fl-dur-normal) var(--fl-ease-standard) both;
+  pointer-events: none; /* 离场元素不再接收交互 */
+}
+@keyframes fl-exit-kf {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ---- Fade：Linear，83ms，仅 Opacity（状态切换，用 transition） ---- */
+.fl-fade { transition: opacity var(--fl-dur-fast) var(--fl-ease-linear); }
+.fl-fade.fl-hidden { opacity: 0; }
+
+/* ---- Strong Entrance：Elastic In 三关键帧（167+167+333 = 667ms 总时长） ----
+   KF1 167ms cubic-bezier(0.85,0,0,1) → KF2 167ms cubic-bezier(0.85,0,0.75,1) → KF3 333ms cubic-bezier(0.85,0,0,1) */
+@keyframes fl-strong-entrance-kf {
+  0%   { opacity: 0; transform: translateY(32px) scale(0.96); animation-timing-function: var(--fl-ease-strong-1); }
+  25%  { opacity: 1; transform: translateY(8px)  scale(1.01); animation-timing-function: var(--fl-ease-strong-2); }
+  50%  { transform: translateY(-4px) scale(0.995); animation-timing-function: var(--fl-ease-strong-1); }
+  100% { opacity: 1; transform: none; animation-timing-function: var(--fl-ease-strong-1); }
+}
+.fl-strong-entrance { animation: fl-strong-entrance-kf 667ms var(--fl-ease-strong-1) both; }
+
+/* ---- 浮层（flyout / dialog / contextmenu）开合 ----
+   入场：point 曲线（Connected）；出场：soft 曲线（Gentle Exit 语义，官方 Consistent：同入口同方式开合）。
+   关键：visibility 走 0s 过渡 + 延迟，让出场动画播完才真正隐藏（否则关闭瞬间就 hidden，动画看不见）。 */
+.fl-overlay {
+  transition: opacity var(--fl-dur-normal) var(--fl-ease-point),
+              transform var(--fl-dur-normal) var(--fl-ease-point),
+              visibility 0s var(--fl-ease-linear);
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  pointer-events: auto;
+}
+.fl-overlay:not(.fl-open) {
+  transition: opacity var(--fl-dur-normal) var(--fl-ease-soft),
+              transform var(--fl-dur-normal) var(--fl-ease-soft),
+              visibility 0s var(--fl-ease-linear) var(--fl-dur-normal);
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Smoke 模态遮罩：恒半透明黑（官方不分主题），83ms fade，同样延迟隐藏 */
+.fl-smoke {
+  transition: opacity var(--fl-dur-fast) var(--fl-ease-linear),
+              visibility 0s var(--fl-ease-linear);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.fl-smoke:not(.fl-open) {
+  transition: opacity var(--fl-dur-fast) var(--fl-ease-linear),
+              visibility 0s var(--fl-ease-linear) var(--fl-dur-fast);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ---- stagger 错开：JS 按 83ms 步进（官方 Fade 档）、上限 333ms 写进 --fl-stagger-delay ---- */
+
+/* 无障碍：官方 Resourceful / 可用性原则的网页对应 */
+@media (prefers-reduced-motion: reduce) {
+  /* 一次性动效：直接呈现终态，不做位移与淡入 */
+  .fl-entrance,
+  .fl-point-to-point,
+  .fl-strong-entrance {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .fl-exit {
+    animation: none !important;
+    opacity: 0 !important;
+    transform: none !important;
+  }
+  /* 状态切换：瞬时完成，但显隐仍由各自规则（opacity/visibility）决定 */
+  .fl-overlay,
+  .fl-smoke,
+  .fl-movable,
+  .fl-fade {
+    transition: none !important;
+  }
+}

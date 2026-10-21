@@ -1,0 +1,589 @@
+{
+  "_meta": {
+    "generated_by": "extract_tokens.py",
+    "xaml_source": "https://github.com/microsoft/microsoft-ui-xaml/tree/main/controls/dev/CommonStyles",
+    "xaml_commit": "09cfc8ff3fbf (main, 2026-10-20)",
+    "fetch_date": "2026-10-20",
+    "license": "MIT (microsoft-ui-xaml)",
+    "note": "颜色/几何取自官方 XAML 主题资源；动效/字阶/间距/海拔取自 Microsoft Learn 文档（出处逐条标注）"
+  },
+  "accent": {
+    "value": "#0078D4",
+    "dark_fill": "#005FB8",
+    "light_fill": "#0067C0",
+    "secondary_opacity": 0.9,
+    "tertiary_opacity": 0.8,
+    "note": "XAML 引用 SystemAccentColor（系统用户色）；此处取 Win11 默认强调色，暗色填充用 Dark1 档、亮色填充用 Light2 档，可整体替换"
+  },
+  "colors_selected": {
+    "--fl-text-primary": {
+      "xaml_key": "TextFillColorPrimary",
+      "dark": "#FFFFFF",
+      "light": "#E4000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-text-secondary": {
+      "xaml_key": "TextFillColorSecondary",
+      "dark": "#C5FFFFFF",
+      "light": "#9E000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-text-tertiary": {
+      "xaml_key": "TextFillColorTertiary",
+      "dark": "#87FFFFFF",
+      "light": "#72000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-text-disabled": {
+      "xaml_key": "TextFillColorDisabled",
+      "dark": "#5DFFFFFF",
+      "light": "#5C000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-text-on-accent-primary": {
+      "xaml_key": "TextOnAccentFillColorPrimary",
+      "dark": "#000000",
+      "light": "#FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-text-on-accent-secondary": {
+      "xaml_key": "TextOnAccentFillColorSecondary",
+      "dark": "#80000000",
+      "light": "#B3FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-text-on-accent-disabled": {
+      "xaml_key": "TextOnAccentFillColorDisabled",
+      "dark": "#87FFFFFF",
+      "light": "#FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-fill-default": {
+      "xaml_key": "ControlFillColorDefault",
+      "dark": "#0FFFFFFF",
+      "light": "#B3FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-fill-secondary": {
+      "xaml_key": "ControlFillColorSecondary",
+      "dark": "#15FFFFFF",
+      "light": "#80F9F9F9",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-fill-tertiary": {
+      "xaml_key": "ControlFillColorTertiary",
+      "dark": "#08FFFFFF",
+      "light": "#4DF9F9F9",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-fill-disabled": {
+      "xaml_key": "ControlFillColorDisabled",
+      "dark": "#0BFFFFFF",
+      "light": "#4DF9F9F9",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-fill-input-active": {
+      "xaml_key": "ControlFillColorInputActive",
+      "dark": "#B31E1E1E",
+      "light": "#FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-strong-fill": {
+      "xaml_key": "ControlStrongFillColorDefault",
+      "dark": "#8BFFFFFF",
+      "light": "#72000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-strong-fill-disabled": {
+      "xaml_key": "ControlStrongFillColorDisabled",
+      "dark": "#3FFFFFFF",
+      "light": "#51000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-solid-fill": {
+      "xaml_key": "ControlSolidFillColorDefault",
+      "dark": "#454545",
+      "light": "#FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-stroke": {
+      "xaml_key": "ControlStrokeColorDefault",
+      "dark": "#12FFFFFF",
+      "light": "#0F000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-stroke-secondary": {
+      "xaml_key": "ControlStrokeColorSecondary",
+      "dark": "#18FFFFFF",
+      "light": "#29000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-stroke-on-accent": {
+      "xaml_key": "ControlStrokeColorOnAccentDefault",
+      "dark": "#14FFFFFF",
+      "light": "#14FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-control-stroke-on-accent-secondary": {
+      "xaml_key": "ControlStrokeColorOnAccentSecondary",
+      "dark": "#23000000",
+      "light": "#66000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-subtle-fill-hover": {
+      "xaml_key": "SubtleFillColorSecondary",
+      "dark": "#0FFFFFFF",
+      "light": "#09000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-subtle-fill-pressed": {
+      "xaml_key": "SubtleFillColorTertiary",
+      "dark": "#0AFFFFFF",
+      "light": "#06000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-subtle-fill-disabled": {
+      "xaml_key": "SubtleFillColorDisabled",
+      "dark": "#00FFFFFF",
+      "light": "#00FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-card-bg": {
+      "xaml_key": "CardBackgroundFillColorDefault",
+      "dark": "#0DFFFFFF",
+      "light": "#B3FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-card-bg-secondary": {
+      "xaml_key": "CardBackgroundFillColorSecondary",
+      "dark": "#08FFFFFF",
+      "light": "#80F6F6F6",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-card-stroke": {
+      "xaml_key": "CardStrokeColorDefault",
+      "dark": "#19000000",
+      "light": "#0F000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-layer-fill": {
+      "xaml_key": "LayerFillColorDefault",
+      "dark": "#4C3A3A3A",
+      "light": "#80FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-smoke": {
+      "xaml_key": "SmokeFillColorDefault",
+      "dark": "#4D000000",
+      "light": "#4D000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-solid-bg-base": {
+      "xaml_key": "SolidBackgroundFillColorBase",
+      "dark": "#202020",
+      "light": "#F3F3F3",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-solid-bg-base-alt": {
+      "xaml_key": "SolidBackgroundFillColorBaseAlt",
+      "dark": "#0A0A0A",
+      "light": "#DADADA",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-solid-bg-secondary": {
+      "xaml_key": "SolidBackgroundFillColorSecondary",
+      "dark": "#1C1C1C",
+      "light": "#EEEEEE",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-solid-bg-tertiary": {
+      "xaml_key": "SolidBackgroundFillColorTertiary",
+      "dark": "#282828",
+      "light": "#F9F9F9",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-solid-bg-quarternary": {
+      "xaml_key": "SolidBackgroundFillColorQuarternary",
+      "dark": "#2C2C2C",
+      "light": "#FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-divider-stroke": {
+      "xaml_key": "DividerStrokeColorDefault",
+      "dark": "#15FFFFFF",
+      "light": "#0F000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-focus-stroke-outer": {
+      "xaml_key": "FocusStrokeColorOuter",
+      "dark": "#FFFFFF",
+      "light": "#E4000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-focus-stroke-inner": {
+      "xaml_key": "FocusStrokeColorInner",
+      "dark": "#B3000000",
+      "light": "#B3FFFFFF",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-success": {
+      "xaml_key": "SystemFillColorSuccess",
+      "dark": "#6CCB5F",
+      "light": "#0F7B0F",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-caution": {
+      "xaml_key": "SystemFillColorCaution",
+      "dark": "#FCE100",
+      "light": "#9D5D00",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-critical": {
+      "xaml_key": "SystemFillColorCritical",
+      "dark": "#FF99A4",
+      "light": "#C42B1C",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-success-bg": {
+      "xaml_key": "SystemFillColorSuccessBackground",
+      "dark": "#393D1B",
+      "light": "#DFF6DD",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-caution-bg": {
+      "xaml_key": "SystemFillColorCautionBackground",
+      "dark": "#433519",
+      "light": "#FFF4CE",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-critical-bg": {
+      "xaml_key": "SystemFillColorCriticalBackground",
+      "dark": "#442726",
+      "light": "#FDE7E9",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    },
+    "--fl-accent-fill-disabled": {
+      "xaml_key": "AccentFillColorDisabled",
+      "dark": "#28FFFFFF",
+      "light": "#37000000",
+      "type": "Color",
+      "source": "raw/xaml_Common_themeresources_any.xaml"
+    }
+  },
+  "colors_count": 152,
+  "geometry": {
+    "--fl-radius-control": {
+      "value": "4",
+      "xaml_key": "ControlCornerRadius",
+      "source": "raw/xaml_CornerRadius_themeresources.xaml"
+    },
+    "--fl-radius-overlay": {
+      "value": "8",
+      "xaml_key": "OverlayCornerRadius",
+      "source": "raw/xaml_CornerRadius_themeresources.xaml"
+    },
+    "xaml:ButtonPadding": {
+      "value": "11,5,11,6",
+      "type": "Thickness",
+      "source": "raw/xaml_Button_themeresources.xaml"
+    },
+    "xaml:TextControlThemePadding": {
+      "value": "10,5,6,6",
+      "type": "Thickness",
+      "source": "raw/xaml_Common_themeresources.xaml"
+    },
+    "xaml:ContentDialogPadding": {
+      "value": "24",
+      "type": "Thickness",
+      "source": "raw/xaml_ContentDialog_themeresources.xaml"
+    },
+    "xaml:ContentDialogMaxWidth": {
+      "value": "548",
+      "type": "Double",
+      "source": "raw/xaml_ContentDialog_themeresources.xaml"
+    },
+    "xaml:ContentDialogMinHeight": {
+      "value": "184",
+      "type": "Double",
+      "source": "raw/xaml_ContentDialog_themeresources.xaml"
+    },
+    "xaml:ListViewItemMinHeight": {
+      "value": "40",
+      "type": "Double",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
+    "xaml:ListViewItemCornerRadius": {
+      "value": "4",
+      "type": "CornerRadius",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
+    "xaml:ListViewItemSelectionIndicatorCornerRadius": {
+      "value": "1.5",
+      "type": "CornerRadius",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
+    "xaml:ListViewItemDisabledThemeOpacity": {
+      "value": "0.3",
+      "type": "Double",
+      "source": "raw/xaml_ListViewItem_themeresources.xaml"
+    },
+    "extra:TextControlThemeMinHeight": {
+      "value": "32",
+      "type": "Double",
+      "source": "WinUI DefaultTextBoxStyle MinHeight=TextControlThemeMinHeight，默认 32（stackover­flow.com/questions/78760996 引 generic.xaml；与 WinUI 3 Gallery 视觉一致）"
+    },
+    "extra:ControlHeight": {
+      "value": "32",
+      "type": "Double",
+      "source": "Win11 常驻控件标准高度 32px（Button/TextBox/ComboBox/Slider 实际渲染高度；官方文档未单列数值，按 XAML 默认渲染确认）"
+    }
+  },
+  "motion": {
+    "durations": {
+      "fast": {
+        "ms": 83,
+        "use": "Fade（In+Out，仅 Opacity）",
+        "source": "learn.../motion Fade"
+      },
+      "normal": {
+        "ms": 167,
+        "use": "Direct Entrance/Exit、Point to Point、Gentle Exit、Strong Entrance 关键帧 1/2",
+        "source": "learn.../motion"
+      },
+      "gentle": {
+        "ms": 250,
+        "use": "Direct Entrance、Point to Point（中档）",
+        "source": "learn.../motion"
+      },
+      "slow": {
+        "ms": 333,
+        "use": "Direct Entrance、Point to Point（大位移）、Strong Entrance 关键帧 3",
+        "source": "learn.../motion"
+      }
+    },
+    "easings": {
+      "standard": {
+        "css": "cubic-bezier(0,0,0,1)",
+        "use": "Direct Entrance / Direct Exit（Fast-In / Fast-Out）"
+      },
+      "point": {
+        "css": "cubic-bezier(0.55,0.55,0,1)",
+        "use": "Point to Point（位移类）"
+      },
+      "soft": {
+        "css": "cubic-bezier(1,0,1,1)",
+        "use": "Gentle Exit（Soft-Out）"
+      },
+      "strong-1": {
+        "css": "cubic-bezier(0.85,0,0,1)",
+        "use": "Strong Entrance 关键帧 1（167ms）与 3（333ms）"
+      },
+      "strong-2": {
+        "css": "cubic-bezier(0.85,0,0.75,1)",
+        "use": "Strong Entrance 关键帧 2（167ms）"
+      },
+      "linear": {
+        "css": "linear",
+        "use": "Fade 83ms"
+      }
+    },
+    "rules": [
+      "Direct Exit 必须与 fade out 组合（官方硬性要求）",
+      "Strong Entrance 为 Elastic In 三关键帧：167ms(0.85,0,0,1) → 167ms(0.85,0,0.75,1) → 333ms(0.85,0,0,1)",
+      "同一入口的表面以相同方式开合（Consistent）",
+      "优先用现成控件转场（Resourceful），网页对应=直接用本 KIT 的 motion 类",
+      "页面转场默认参数见 learn.../page-transitions（Entrance 250-300ms 档佐证）"
+    ],
+    "source": "https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/motion"
+  },
+  "type_ramp": [
+    {
+      "name": "Caption",
+      "css": "caption",
+      "size": 12,
+      "line": 16,
+      "weight": 400
+    },
+    {
+      "name": "Body",
+      "css": "body",
+      "size": 14,
+      "line": 20,
+      "weight": 400
+    },
+    {
+      "name": "Body Strong",
+      "css": "body-strong",
+      "size": 14,
+      "line": 20,
+      "weight": 600
+    },
+    {
+      "name": "Body Large",
+      "css": "body-large",
+      "size": 18,
+      "line": 24,
+      "weight": 400
+    },
+    {
+      "name": "Body Large Strong",
+      "css": "body-large-strong",
+      "size": 18,
+      "line": 24,
+      "weight": 600
+    },
+    {
+      "name": "Subtitle",
+      "css": "subtitle",
+      "size": 20,
+      "line": 28,
+      "weight": 600
+    },
+    {
+      "name": "Title",
+      "css": "title",
+      "size": 28,
+      "line": 36,
+      "weight": 600
+    },
+    {
+      "name": "Title Large",
+      "css": "title-large",
+      "size": 40,
+      "line": 52,
+      "weight": 600
+    },
+    {
+      "name": "Display",
+      "css": "display",
+      "size": 68,
+      "line": 92,
+      "weight": 600
+    }
+  ],
+  "font_stack": "\"Segoe UI Variable Display\",\"Segoe UI Variable\",\"Segoe UI\",system-ui,-apple-system,\"PingFang SC\",\"Microsoft YaHei\",sans-serif",
+  "spacing": [
+    {
+      "px": 8,
+      "use": "按钮之间"
+    },
+    {
+      "px": 8,
+      "use": "按钮与 flyout 之间"
+    },
+    {
+      "px": 8,
+      "use": "控件与标题(header)之间"
+    },
+    {
+      "px": 12,
+      "use": "控件与标签(label)之间"
+    },
+    {
+      "px": 12,
+      "use": "内容区之间"
+    },
+    {
+      "px": 16,
+      "use": "表面与边缘文字之间"
+    },
+    {
+      "px": 16,
+      "use": "控件与 expander 按钮之间（右对齐）"
+    },
+    {
+      "px": 48,
+      "use": "expander 内控件缩进"
+    }
+  ],
+  "spacing_source": "https://learn.microsoft.com/en-us/windows/apps/design/basics/content-basics",
+  "elevation": [
+    {
+      "name": "Window/Dialog",
+      "value": 128
+    },
+    {
+      "name": "Flyout",
+      "value": 32
+    },
+    {
+      "name": "Tooltip",
+      "value": 16
+    },
+    {
+      "name": "Card",
+      "value": 8
+    },
+    {
+      "name": "Control",
+      "value": 2
+    },
+    {
+      "name": "Layer",
+      "value": 1
+    }
+  ],
+  "elevation_states": {
+    "rest": 2,
+    "hover": 2,
+    "pressed": 1
+  },
+  "elevation_stroke_width": 1,
+  "elevation_source": "https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/layering",
+  "shadow_map_approx": {
+    "1": "0 0 1px rgba(0,0,0,.10)",
+    "2": "0 1px 1px rgba(0,0,0,.07)",
+    "8": "0 2px 4px rgba(0,0,0,.08), 0 0 1px rgba(0,0,0,.08)",
+    "16": "0 4px 8px rgba(0,0,0,.10), 0 0 1px rgba(0,0,0,.08)",
+    "32": "0 8px 16px rgba(0,0,0,.12), 0 0 1px rgba(0,0,0,.08)",
+    "128": "0 32px 64px rgba(0,0,0,.19), 0 2px 21px rgba(0,0,0,.15)"
+  },
+  "breakpoints": {
+    "small_max": 640,
+    "medium_max": 1007,
+    "large_min": 1008,
+    "source": "https://learn.microsoft.com/en-us/windows/apps/design/layout/screen-sizes-and-breakpoints-for-responsive-design"
+  },
+  "rule_4px": "所有 UI 尺寸/边距/位置为 4 epx 的倍数（文本除外）——learn.../breakpoints#multiples-of-four"
+}

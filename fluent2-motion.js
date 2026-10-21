@@ -64,8 +64,8 @@
        down  → 起点在下方（+72px），向上落到 0
        left  → 起点在左侧（-176px）
        right → 起点在右侧（+176px）
-     forward / back 是逻辑方向，按轴映射（drill→right/left，nav→down/up），
-     与本文件旧调用点、M.back() 完全兼容。
+     forward / back 是逻辑方向，按轴映射（drill→right/left）；
+     **竖向一律落到 down**（见下面 shiftOf 的注释），所以 nav 的 forward / back 观感一致。
      轴由方向决定，行程由轴决定，kind 只提供缺省轴 —— 所以 {dir:"up"} 不带 kind 也能用，
      而 {kind:"drill", dir:"up"} 表示"水平场景下改走垂直"，见 KIT 规则 15。 */
   var DIR = {
@@ -81,11 +81,19 @@
   function axisOfKind(kind) { return kind === "drill" ? "x" : "y"; }
 
   /* dir → {axis, sign}；非法值返回 null，由调用方退化 —— 绝不静默当成 forward
-     （旧实现只判 dir === "back"，其余一律 +1，导致竖向永远"从下方进入"且 dir:'top' 无报错） */
+     （旧实现只判 dir === "back"，其余一律 +1，导致竖向永远"从下方进入"且 dir:'top' 无报错）
+
+     竖向的铁律：**一级导航（kind="nav"）只准"自下方进入"**。
+     Win11 设置类应用里点任意侧栏项，内容都是向上滑入；早期版本按"导航项在侧栏里的先后序"
+     给符号（点上面那条就从上方压下），实测观感过重、且与官方应用不符，已废弃。
+     `forward` / `back` 在竖向都归一到 down；要反向只能显式写 dir:"up"（保留逃生口）。 */
   function shiftOf(kind, dir) {
     var d = DIR[dir];
     if (!d) return null;
-    return { axis: d.axis || axisOfKind(kind), sign: d.sign };
+    var axis = d.axis || axisOfKind(kind);
+    var sign = d.sign;
+    if (axis === "y" && kind !== "drill" && !d.axis) sign = 1; // forward / back → 一律自下方
+    return { axis: axis, sign: sign };
   }
 
   function shiftVar(axis) {
@@ -112,20 +120,10 @@
     }
   }
 
-  /* 导航项在侧栏中的先后序：给竖向转场定符号（点更靠上的项 → 新页自上方进入） */
-  function navOrder() {
-    var els = document.querySelectorAll(".fl-nav-item[data-page]");
-    var map = {}, i;
-    for (i = 0; i < els.length; i++) map[els[i].getAttribute("data-page")] = i;
-    return map;
-  }
-
-  function has(map, key) {
-    return key != null && Object.prototype.hasOwnProperty.call(map, key);
-  }
-
-  /* 方向解析，四级退化：显式 dir → 导航项先后序 → 页面栈（目标是上一页=back）→ 缺省 forward
-     返回 {axis, sign, dir, isBack}；isBack 只决定页面栈语义，与物理方向彻底解耦 */
+  /* 方向解析，三级退化：显式 dir → 页面栈（目标是上一页=back）→ 缺省 forward
+     返回 {axis, sign, dir, isBack}；isBack 只决定页面栈语义，与物理方向彻底解耦。
+     注意 nav 不管 forward 还是 back，**物理方向都是 down**（自下方进入），
+     所以这里不能拿 dir 反推符号，只能拿 shiftOf 的结果。 */
   function resolveShift(kind, explicit, pageId, curId) {
     var s = explicit ? shiftOf(kind, explicit) : null;
     if (explicit && !s && global.console && global.console.warn) {
@@ -138,12 +136,11 @@
                isBack: explicit === "back" || backByStack };
     }
     if (kind === "nav") {
-      var order = navOrder();
-      if (has(order, pageId) && has(order, curId) && order[pageId] !== order[curId]) {
-        var d = order[pageId] < order[curId] ? "up" : "down"; // 点靠上的项 → 自上方进入
-        s = shiftOf(kind, d);
-        return { axis: s.axis, sign: s.sign, dir: d, isBack: false };
-      }
+      // 一级导航固定"自下方进入"，与点在侧栏的哪一项无关。
+      // isBack 恒 false：Win11 的一级导航没有"返回"概念，点回上面的项是新导航而不是后退，
+      // 若按页面栈判成 back，A→B→A 之后栈会被截断到 [A]，M.back() 就无路可退。
+      s = shiftOf(kind, "down");
+      return { axis: s.axis, sign: s.sign, dir: "down", isBack: false };
     }
     if (backByStack) {
       s = shiftOf(kind, "back");
@@ -163,13 +160,13 @@
     return cur;
   };
 
-  /* 页面转场：两轴 × 四向（实测派生 283ms；drill 水平 176px / nav 垂直 72px）
+  /* 页面转场：两轴（实测派生 283ms；drill 水平 176px / nav 垂直 72px，竖向恒自下方进入）
      kind: "nav"（一级导航，点侧栏）| "drill"（二级下钻，点内容区入口）
      dir : "forward" | "back" | "up" | "down" | "left" | "right"
-           缺省时按「导航项先后序 → 页面栈」自动推断（点上面那条 → 内容从上方进入）
+           缺省时 nav 恒为 down（自下方进入）、drill 按页面栈推断 right/left
      两页由 CSS 放在同一网格单元里重叠（不上下堆叠），转场期锁内容区高度，全程无布局跳变。
      用法：M.transitionTo("page-detail", { kind: "drill" })
-           M.transitionTo("page-b")                        // nav + 自动定符号
+           M.transitionTo("page-b")                        // nav，恒自下方进入
            M.transitionTo("page-x", { dir: "up" })          // 显式指定入场方位 */
   M.transitionTo = function (pageId, opts) {
     var next = document.getElementById(pageId);

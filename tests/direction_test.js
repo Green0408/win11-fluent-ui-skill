@@ -92,7 +92,9 @@ function scenario() {
   eq("main→settings 无 x 位移", s.pages[2]._props["--fl-page-from-x"], "0px");
 }
 
-/* 2) 点上面的导航项 → 新页自上方进入（-72px）—— 这是修复前拿不到的方向 */
+/* 2) 点上面的导航项 → **同样自下方进入**（+72px）
+   用户口径：一级导航的内容页动画只准从下往上，不允许"从上方压下"。
+   早期版本按侧栏先后序定符号，点靠上的项会反向，已废弃。 */
 {
   const s = scenario();
   const M = boot(s.pages, s.nav);
@@ -100,8 +102,8 @@ function scenario() {
   s.pages[0]._classes.delete("fl-current");
   s.pages[2]._classes.add("fl-current");
   M.transitionTo("page-main");              // 再点回最上面的 main
-  eq("settings→main 入页起点 y", s.pages[0]._props["--fl-page-from-y"], "calc(var(--fl-page-shift-y) * -1)");
-  eq("settings→main 出页终点 y", s.pages[2]._props["--fl-page-to-y"], "var(--fl-page-shift-y)");
+  eq("settings→main 入页起点 y（仍自下方）", s.pages[0]._props["--fl-page-from-y"], "var(--fl-page-shift-y)");
+  eq("settings→main 出页终点 y", s.pages[2]._props["--fl-page-to-y"], "calc(var(--fl-page-shift-y) * -1)");
 }
 
 /* 3) 页面栈语义：settings→main 是「点上面那条」，不是返回，栈不能被截断 */
@@ -115,9 +117,9 @@ function scenario() {
   s.pages[2]._classes.delete("fl-current");
   s.pages[0]._classes.add("fl-current");
   M.back("nav");                            // 栈顶应是 settings，而不是 grid
-  eq("up 不截断栈，back 回到 settings", s.pages[2]._classes.has("fl-current"), true);
-  eq("back 的入页起点 y（回到上一页 = 自上方进入）", s.pages[2]._props["--fl-page-from-y"],
-     "calc(var(--fl-page-shift-y) * -1)");
+  eq("点上面那条不截断栈，back 回到 settings", s.pages[2]._classes.has("fl-current"), true);
+  eq("nav back 的入页起点 y（竖向恒自下方）", s.pages[2]._props["--fl-page-from-y"],
+     "var(--fl-page-shift-y)");
 }
 
 /* 4) 显式 dir:up / down 覆盖自动推断 */
@@ -153,7 +155,7 @@ function scenario() {
   eq("drill 缺省入页起点 x", s.pages[1]._props["--fl-page-from-x"], "var(--fl-page-shift-x)");
 }
 
-/* 7) 非法 dir 不再静默变成 forward：回退自动推断（这里是向下项 → +y），并告警 */
+/* 7) 非法 dir 不再静默变成 forward：回退自动推断（nav → 恒自下方），并告警 */
 {
   const s = scenario();
   const M = boot(s.pages, s.nav);
@@ -162,7 +164,7 @@ function scenario() {
   console.warn = (...a) => warns.push(a.join(" "));
   M.transitionTo("page-settings", { dir: "top" });
   console.warn = orig;
-  eq("非法 dir 回退为导航序（向下）", s.pages[2]._props["--fl-page-from-y"], "var(--fl-page-shift-y)");
+  eq("非法 dir 回退为 nav 缺省（自下方）", s.pages[2]._props["--fl-page-from-y"], "var(--fl-page-shift-y)");
   eq("非法 dir 触发告警", warns.length > 0, true);
 }
 

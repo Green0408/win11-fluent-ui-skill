@@ -85,12 +85,17 @@
     - 填充段**禁止**加 `transition: background`（值跟随加过渡会变成拖影，是新的抖动源；校验器 R35 会拦）；
     - **thumb 是两层，外框尺寸三态恒定**（XAML `SliderThumbStyle`：Border 外盘 + Ellipse 内点，VisualState 只对 Ellipse 做 ScaleTransform）：
 
-| 态 | 内点 | 环宽（反向补偿） | 外框 |
-|---|---|---|---|
-| Normal | 12 | 4 | 20 |
-| PointerOver | **14** | 3 | 20 |
-| Pressed | **10** | 5 | 20 |
-| Disabled | 14 | 3 | 20 |
+| 态 | 内点 | 环宽（反向补偿） | 外框 | 过渡时长（KeyTime） |
+|---|---|---|---|---|
+| Normal | 12 | 4 | 20 | **167ms**（ControlFast） |
+| PointerOver | **14** | 3 | 20 | **250ms**（ControlNormal） |
+| Pressed | **10** | 5 | 20 | **250ms**（ControlNormal） |
+| Disabled | 14 | 3 | 20 | 167ms |
+
+      **时长必须逐状态**（曲线三态都是 `cubic-bezier(0,0,0,1)` = `--fl-ease-standard`）：
+      CSS 过渡取的是**目标态**的时长，所以基态写 `--fl-dur-control-fast`(167)、hover/active 各自
+      用 `transition-duration: var(--fl-dur-control-normal)` 覆盖成 250 —— 放大比缩小慢 1.5 倍。
+      一个时长糊三个状态就是"放大缩小一个速率"，观感立刻不对（R48 拦）。
 
       实现：盒子 = 内点（`--fl-slider-dot`），外框 = `box-shadow: 0 0 0 var(--fl-slider-ring)`，
       `--fl-slider-ring: calc((外框 - 内点) / 2)`，两者相加恒等于 20 → 内点变大时外框不动。
@@ -102,7 +107,9 @@
         hover 时内点 14、环仍 4 → 外框变 22（R48 拦，坏例 R48c）；
     - **档位色必须不透明**：`--fl-slider-accent` 不许直接引用 `--fl-accent-fill-hover/-pressed`（那是 alpha 0.9/0.8），必须 `color-mix(in srgb, var(--fl-accent-fill) 90%/80%, var(--fl-text-primary))`。alpha 档位叠在卡片上会透出底下的灰环，观感就是「悬停时滑块变透明」（校验器 R36 会拦）；
     - 填充色与 thumb 同步走四档（Default → hover → pressed → Disabled）；`[dir="rtl"]` 下渐变方向要翻转。
-    - 验收：`node tests/slider_thumb_shots.js` → `python tests/slider_thumb_pixels.py`（量三态外框/内点直径，含慢放中间态）。
+    - 验收：`node tests/slider_thumb_shots.js` → `python tests/slider_thumb_pixels.py`（量三态外框/内点直径，含慢放中间态）；
+      速率：`node tests/slider_thumb_timing.js` → `python tests/slider_thumb_timing.py`（时长放大 4× 后逐帧量，
+      判"放大:缩小 = 1.5"；该曲线尾段极长，视觉到位≈标称的 69%，实测 691/1000 与 465/668）。
 21. **按钮居中交给 flex，不要抄 XAML 的 `ButtonPadding=11,5,11,6`**：那是 ContentPresenter 做字基线补偿用的 4 值，照搬进 `align-items:center` 的盒子会让内容整体下沉 2px（校验器 R37 会拦上下不对称）。正确写法是 `padding: var(--fl-space-1) var(--fl-btn-pad-h)` + `min-height: var(--fl-control-height)`，再用 CDP 量 `Range` 文本盒中心与按钮盒中心的偏差（应 ≤0.5px）。
 22. **设置页列表用 `.fl-settings`，不要用卡片里堆控件**（这是"设置型工具"最容易做错的地方，堆出来像表单，不像 Windows 设置）：
 

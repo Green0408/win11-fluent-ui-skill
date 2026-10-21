@@ -55,7 +55,8 @@ R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走�
 R45 滚动条变粗只许 thumb 自身 hover：禁止把 :hover/:focus-within 挂在容器上（.fl-page:hover 恒真）
 R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::before、JS 必须有 reduced 分支
 R47 指示条拉伸必须"留在按钮内"：峰值来自固定常量，禁止按 |Δ| 派生（会跨过项间隙、跑出按钮）
-R48 滑块 thumb 外框尺寸恒定：只许改内点直径（--fl-slider-dot / background-size），禁 transform:scale 与改 width/height
+R48 滑块 thumb 外框尺寸恒定 + 逐状态时长：只许改内点直径（--fl-slider-dot），禁 transform:scale；
+    基态 167ms / hover·active 250ms（模板 KeyTime 不同），环宽必须在 thumb 内反向补偿
 """
 import re
 import sys
@@ -696,6 +697,12 @@ def main():
             if "box-shadow" in body and "var(--fl-slider-ring)" not in body:
                 fails.append("R48 fluent2-controls.css: %s 的 box-shadow 必须用 var(--fl-slider-ring) 画外框"
                              "（写死环宽会让外框随状态变大小）" % sel)
+            # 时长要逐状态：模板 PointerOver/Pressed=ControlNormal(250ms)，Normal(缩回)=ControlFast(167ms)
+            if not re.search(r":(?:hover|active)", sel):
+                if "transition" in body and "var(--fl-dur-control-fast)" not in body:
+                    fails.append("R48 fluent2-controls.css: %s 的过渡时长必须是 --fl-dur-control-fast(167ms)"
+                                 "（模板 Normal 态 KeyTime=ControlFast；一个时长糊三个状态就是"
+                                 "\"放大缩小速率一样\"，用户会看出不对）" % sel)
         if not ring_on_thumb:
             fails.append("R48 fluent2-controls.css: --fl-slider-ring 必须**写在 thumb 规则里**且是 "
                          "(外框 - 内点)/2 —— 写在 .fl-slider 上会按静止态 dot=12 算死成 4px，"
@@ -704,6 +711,18 @@ def main():
             if re.search(r"--fl-slider-thumb\s*:", m.group(1)):
                 fails.append("R48 fluent2-controls.css: --fl-slider-thumb 不许在 hover/active 里改"
                              "（外框尺寸三态恒定，只有 --fl-slider-dot 变 12/14/10）")
+        # 反方向：hover / active 的 thumb 规则必须把时长抬到 ControlNormal(250ms)
+        state_rules = [m for m in re.finditer(
+            r"\.fl-slider[^{]*:(?:hover|active)[^{]*::-webkit-slider-thumb\s*\{([^}]*)\}", controls_css)]
+        if not state_rules:
+            fails.append("R48 fluent2-controls.css: 缺 hover/active 的 thumb 规则（内点尺寸与时长都要在这里改）")
+        for m in state_rules:
+            body = m.group(1)
+            sel = m.group(0).split("{")[0].strip()
+            if not re.search(r"transition-duration\s*:\s*var\(--fl-dur-control-normal\)", body):
+                fails.append("R48 fluent2-controls.css: %s 必须写 "
+                             "transition-duration: var(--fl-dur-control-normal)（250ms）—— "
+                             "CSS 过渡取目标态时长，不写就一直是基态的 167ms，放大与缩小一个速率" % sel)
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

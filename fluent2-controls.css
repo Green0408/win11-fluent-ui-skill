@@ -377,15 +377,25 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   border: 0; border-radius: var(--fl-slider-radius);
   background: var(--fl-slider-accent);
   box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill); /* 外框 20（SliderOuterThumbBackground） */
-  /* 只过渡"内点直径"与随之变化的环宽；颜色按模板是离散跳变（DiscreteObjectKeyFrame），不参与过渡 */
+  /* 时长按模板**逐状态**给（XAML 里三个 VisualState 的 KeyTime 不一样，别用一个值糊过去）：
+       PointerOver / Pressed：ControlNormalAnimationDuration = 250ms
+       Normal（悬停移开、尺寸回落）：ControlFastAnimationDuration = 167ms
+     CSS 过渡取的是**目标态**的时长，所以基态写 167、hover/active 各自覆盖成 250 就对上了。
+     曲线三个状态都是 ControlFastOutSlowIn = cubic-bezier(0,0,0,1)（= --fl-ease-standard）。 */
   transition:
-    width var(--fl-dur-control-normal) var(--fl-ease-standard),
-    height var(--fl-dur-control-normal) var(--fl-ease-standard),
-    margin-top var(--fl-dur-control-normal) var(--fl-ease-standard),
-    box-shadow var(--fl-dur-control-normal) var(--fl-ease-standard);
+    width var(--fl-dur-control-fast) var(--fl-ease-standard),
+    height var(--fl-dur-control-fast) var(--fl-ease-standard),
+    margin-top var(--fl-dur-control-fast) var(--fl-ease-standard),
+    box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);
 }
-.fl-slider:not(:disabled):hover::-webkit-slider-thumb  { --fl-slider-dot: 14px; }
-.fl-slider:not(:disabled):active::-webkit-slider-thumb { --fl-slider-dot: 10px; }
+.fl-slider:not(:disabled):hover::-webkit-slider-thumb  {
+  --fl-slider-dot: 14px;
+  transition-duration: var(--fl-dur-control-normal);      /* 放大 250ms */
+}
+.fl-slider:not(:disabled):active::-webkit-slider-thumb {
+  --fl-slider-dot: 10px;
+  transition-duration: var(--fl-dur-control-normal);      /* 按下 250ms */
+}
 .fl-slider:focus-visible { outline: none; }
 /* 焦点环要画在外框之外：先保留外框那一圈，再加两层细环 */
 .fl-slider:focus-visible::-webkit-slider-thumb {
@@ -413,12 +423,18 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   background: var(--fl-slider-accent);
   box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill);
   transition:
-    width var(--fl-dur-control-normal) var(--fl-ease-standard),
-    height var(--fl-dur-control-normal) var(--fl-ease-standard),
-    box-shadow var(--fl-dur-control-normal) var(--fl-ease-standard);
+    width var(--fl-dur-control-fast) var(--fl-ease-standard),
+    height var(--fl-dur-control-fast) var(--fl-ease-standard),
+    box-shadow var(--fl-dur-control-fast) var(--fl-ease-standard);
 }
-.fl-slider:not(:disabled):hover::-moz-range-thumb  { --fl-slider-dot: 14px; }
-.fl-slider:not(:disabled):active::-moz-range-thumb { --fl-slider-dot: 10px; }
+.fl-slider:not(:disabled):hover::-moz-range-thumb  {
+  --fl-slider-dot: 14px;
+  transition-duration: var(--fl-dur-control-normal);
+}
+.fl-slider:not(:disabled):active::-moz-range-thumb {
+  --fl-slider-dot: 10px;
+  transition-duration: var(--fl-dur-control-normal);
+}
 .fl-slider:focus-visible::-moz-range-thumb {
   box-shadow: 0 0 0 var(--fl-slider-ring) var(--fl-control-solid-fill),
               0 0 0 calc(var(--fl-slider-ring) + var(--fl-stroke)) var(--fl-focus-stroke-inner),

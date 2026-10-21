@@ -235,10 +235,11 @@ DERIVED_MOTION = {
                      "source": "录屏《时钟》秒针每秒一跳"},
     },
     "shifts": {
-        "drill": {"px": 176, "use": "二级下钻单层行程（水平）",
-                  "source": "录屏《设置》实测 350 视频 px @2x ≈175 CSS px，取 4 的倍数 176"},
-        "nav": {"px": 72, "use": "一级导航单层行程（垂直）",
-                "source": "录屏《设置》实测 127–144 视频 px @2x ≈64–72 CSS px，取上界 72"},
+        "drill": {"px": 264, "use": "二级下钻单层行程（水平）",
+                  "source": "录屏实测 176（350 视频 px @2x）→ 观感校准 ×1.5 = 264，4 的倍数；"
+                            "录屏里内容区较窄，176 在宽内容区上显得位移太短"},
+        "nav": {"px": 108, "use": "一级导航单层行程（垂直）",
+                "source": "录屏实测 72（127–144 视频 px @2x 的上界）→ 观感校准 ×1.5 = 108，4 的倍数"},
     },
     "provenance": "measured-2026-10-21",
 }
@@ -485,7 +486,8 @@ def build():
                f'  --fl-page-shift-nav: {DERIVED_MOTION["shifts"]["nav"]["px"]}px;')
     css.append('  --fl-page-shift-x: var(--fl-page-shift-drill);'
                '  --fl-page-shift-y: var(--fl-page-shift-nav);'
-               '  /* 按轴取行程：drill=水平 176 / nav=垂直 72，供 motion.js 按方向选轴时引用 */')
+               f'  /* 按轴取行程：drill=水平 {DERIVED_MOTION["shifts"]["drill"]["px"]} / '
+               f'nav=垂直 {DERIVED_MOTION["shifts"]["nav"]["px"]}，供 motion.js 按方向选轴时引用 */')
     css.append('')
     css.append('  /* 字体栈（Segoe UI Variable → fallback） */')
     css.append(f'  --fl-font: {FONT_STACK};')

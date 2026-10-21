@@ -116,11 +116,15 @@ async function main() {
 
   const first = trace.find((p) => p.inX !== null || p.outX !== null) || trace[0];
   const baseX = 240;                       // 内容层左缘（页内边距已挪到 .fl-page 上）
+  /* 行程 = 首帧新页相对终点的偏移；由数据算出，避免硬编码（改 token 不用改脚本） */
+  const firstIn = trace.find((p) => p.inX !== null && p.inX > baseX);
+  const startOffset = Math.max((firstIn ? firstIn.inX - baseX : 1), 1);
   console.log(`${TAG}：采样 ${trace.length} 帧（≈${Math.round(trace[0].t)}–${Math.round(trace[trace.length - 1].t)}ms）`);
   console.log("t(ms)\t新页x\t新页y\t新页不透明\t旧页x\t旧页y\t旧页不透明");
   for (const p of trace) {
     if (p.t > 520 && p.t % 1 > 0.5) continue;
-    const prog = p.inX === null ? "" : ((p.inX - baseX) / 176).toFixed(3);
+    /* 分母用实测首帧偏移（= 行程），不写死像素：行程改了脚本不用跟着改 */
+    const prog = p.inX === null ? "" : ((p.inX - baseX) / startOffset).toFixed(3);
     if (p.inX === null && p.outX === null) continue;
     console.log(`${p.t}\t${p.inX ?? "-"}\t${p.inY ?? "-"}\t${p.inOp ?? "-"}\t${p.outX ?? "-"}\t${p.outY ?? "-"}\t${p.outOp ?? "-"}`);
   }

@@ -94,8 +94,8 @@
 | `--fl-ease-page` | `cubic-bezier(0.1,0.9,0.2,1)` | 页面转场·进场：强减速（起手就快、一路收尾；前 3 帧走完约 60%） | 拟合自录屏《设置》10-21 下钻逐帧进度 0.36/0.57/0.70/0.78/0.84/0.89/0.92… |
 | `--fl-ease-page-out` | `cubic-bezier(0.7,0,1,0.5)` | 页面转场·退场：原地淡出后加速离开（速度峰在退场末尾，与进场的快起手衔接） | 录屏旧页逐帧增量 25,8,12,16（递增）→ ease-in；试过近线性 (0.3,0.3,0.6,1)：退场末尾减速、紧接着进场猛起，速度突变反而更「顿」 |
 | `--fl-ease-steps-60` | `steps(60, end)` | 跳秒：一秒 60 步 | 录屏《时钟》秒针每秒一跳 |
-| `--fl-page-shift-drill` | 176px | 二级下钻单层行程（水平） | 录屏《设置》实测 350 视频 px @2x ≈175 CSS px，取 4 的倍数 176 |
-| `--fl-page-shift-nav` | 72px | 一级导航单层行程（垂直） | 录屏《设置》实测 127–144 视频 px @2x ≈64–72 CSS px，取上界 72 |
+| `--fl-page-shift-drill` | 264px | 二级下钻单层行程（水平） | 录屏实测 176（350 视频 px @2x）→ 观感校准 ×1.5 = 264，4 的倍数；录屏里内容区较窄，176 在宽内容区上显得位移太短 |
+| `--fl-page-shift-nav` | 108px | 一级导航单层行程（垂直） | 录屏实测 72（127–144 视频 px @2x 的上界）→ 观感校准 ×1.5 = 108，4 的倍数 |
 
 ## 字阶（Type ramp，Segoe UI Variable）
 出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/typography>；字号与 `xaml_TextBlock_themeresources.xaml` 交叉一致。

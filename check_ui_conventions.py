@@ -351,11 +351,15 @@ def main():
             fails.append("R21 fluent2-motion.js: 转场必须同时写入 --fl-page-from-x 与 --fl-page-from-y"
                          "（只写一个轴 = 只会垂直或只会水平）")
 
-    # R22 drill 必须有方向（否则返回动画方向错或没有）；注释不算数
+    # R22 drill 必须带方向，且 data-dir 的取值必须在枚举内（拼错会静默退化成自动推断）；注释不算数
     html_code = re.sub(r"<!--.*?-->", "", html, flags=re.S)
     if re.search(r'data-kind\s*=\s*["\']drill["\']', html_code):
-        if "data-dir" not in html_code and "M.back(" not in html_code:
-            fails.append('R22: 出现 data-kind="drill" 但没有方向传递（需 data-dir 或 M.back(）')
+        if 'data-dir="' not in html_code and "M.back(" not in html_code:
+            fails.append('R22: 出现 data-kind="drill" 但没有方向传递（需 data-dir 属性或 M.back(）')
+    for v in re.findall(r'data-dir\s*=\s*["\']([^"\']*)["\']', html_code):
+        if v not in ("forward", "back", "up", "down", "left", "right"):
+            fails.append(f'R22: data-dir="{v}" 非法（可选 forward/back/up/down/left/right）'
+                         f'—— 非法值会被静默忽略并回退到自动推断')
 
     # R23 连续型动效必须线性非 both，且 reduced 里关停
     reduced_body = ""
@@ -402,6 +406,87 @@ def main():
         if not re.search(r"\.fl-content-layer\s*\{[^}]*overflow\s*:\s*(clip|hidden)", controls_css):
             fails.append("R26 fluent2-controls.css: .fl-content-layer 必须 overflow: clip/hidden"
                          "（否则 ±位移会撑出横向滚动条）")
+
+    # ---- R27~R34：控件与方向的结构性防复发规则 ----
+    # 这批规则针对的是「实现层只有一种符号 / 只有一半状态」类缺陷：
+    # 旧 R20/R21/R22 全是"变量名是否出现"的存在性检查，所以"竖向只能从下方进入"当年零告警通过。
+
+    # R27 方向枚举必须齐全（缺 up/down 就等于竖向只有一个方向）
+    if motion_js:
+        miss = [d for d in ("forward", "back", "up", "down", "left", "right")
+                if not re.search(r'\b%s\s*:\s*\{' % d, motion_js)]
+        if miss:
+            fails.append(f"R27 fluent2-motion.js: 方向枚举不全，缺 {', '.join(miss)}"
+                         f"（DIR 表须同时含 forward/back/up/down/left/right）")
+
+    # R28 竖向必须能取到两种符号，且 applyShift 不得再按 kind/dir 自行推断
+    if motion_js:
+        if not re.search(r'up\s*:\s*\{[^}]*sign\s*:\s*-\s*1', motion_js):
+            fails.append("R28 fluent2-motion.js: up 的方向映射必须为 sign: -1（自上方进入）")
+        if not re.search(r'down\s*:\s*\{[^}]*sign\s*:\s*1', motion_js):
+            fails.append("R28 fluent2-motion.js: down 的方向映射必须为 sign: 1（自下方进入）")
+        fn = re.search(r"function\s+applyShift\s*\(([^)]*)\)", motion_js)
+        if fn and not ("axis" in fn.group(1) and "sign" in fn.group(1)):
+            fails.append("R28 fluent2-motion.js: applyShift 必须以 (axis, sign) 为参数，"
+                         "不得再从 kind/dir 内部推导符号（那正是单符号缺陷的来源）")
+
+    # R29 列表六档不许塌陷
+    if controls_css and ".fl-listitem" in controls_css:
+        list_bgs = re.findall(r"\.fl-listitem[^{}]*\{[^}]*background\s*:", controls_css)
+        if len(list_bgs) < 6:
+            fails.append(f"R29 fluent2-controls.css: 列表状态档不足（找到 {len(list_bgs)} 条含 background 的"
+                         f" .fl-listitem 规则，官方 XAML 要求 6 档）")
+        for pseudo, name in ((r":hover", "SelectedPointerOver"), (r":active", "SelectedPressed")):
+            if not re.search(r'\.fl-listitem\[aria-selected\s*=\s*"true"\]\s*' + pseudo +
+                             r'\s*\{[^}]*background\s*:', controls_css):
+                fails.append(f'R29 fluent2-controls.css: 缺少 .fl-listitem[aria-selected="true"]{pseudo}'
+                             f' 的 background（{name} 档；缺了就是"选中后没反馈"）')
+
+    # R30 列表行结构：网格列 + 两档行高
+    if controls_css and re.search(r"^\.fl-listitem\s*\{", controls_css, re.M):
+        item_rule = re.search(r"\.fl-listitem\s*\{([^}]*)\}", controls_css)
+        body = item_rule.group(1) if item_rule else ""
+        # 只看声明（property: value），不看 transition 里的属性名，否则过渡列表会冒充结构
+        if not re.search(r"(?<![\w-])grid-template-columns\s*:", body):
+            fails.append("R30 fluent2-controls.css: .fl-listitem 必须用 grid-template-columns"
+                         "（flex 布局下尾部区域无法与主文本对齐）")
+        if "--fl-list-item-height" not in controls_css:
+            fails.append("R30 fluent2-controls.css: 列表行高必须走 --fl-list-item-height 变量")
+        if "--fl-list-item-height-two-line" not in controls_css:
+            fails.append("R30 fluent2-controls.css: 缺两行档行高 --fl-list-item-height-two-line")
+
+    # R31 勾号必须是 SVG 描边，禁止退化成文本字符
+    if "fl-check" in html_code:
+        if re.search(r'content\s*:\s*["\']\s*[✓✔√]', controls_css + html_code):
+            fails.append('R31: 勾号不得用文本字符（content: "✓"）—— 无法描画、字重随字体漂移，'
+                         '必须用 .fl-check-glyph 的 SVG 中心线 + stroke-dashoffset')
+        if "fl-check-glyph" not in html_code:
+            fails.append("R31: 出现 .fl-check 但页面里没有 .fl-check-glyph（勾号 SVG）")
+        if "stroke-dashoffset" not in (controls_css or ""):
+            fails.append("R31 fluent2-controls.css: 勾号必须有 stroke-dashoffset 过渡（描画动效）")
+
+    # R32 reduced-motion 必须覆盖新增控件的过渡
+    for cls in (".fl-check-glyph", ".fl-combo-popup", ".fl-listitem"):
+        if not re.search(re.escape(cls) + r"[^{]*[,{]", reduced_body):
+            fails.append(f"R32 fluent2-motion.css: prefers-reduced-motion 未覆盖 {cls}"
+                         f"（关掉系统动画后仍会过渡/描画）")
+
+    # R33 ComboBox 可达性
+    if re.search(r'class\s*=\s*["\'][^"\']*fl-combo\b', html_code):
+        for attr in ('role="combobox"', 'aria-expanded', 'aria-controls', 'role="listbox"', 'role="option"'):
+            if attr not in html_code:
+                fails.append(f'R33: 出现 .fl-combo 但缺少 {attr}')
+        for key in ("Escape", "ArrowDown", "ArrowUp", "aria-activedescendant"):
+            if key not in (motion_js or ""):
+                fails.append(f"R33 fluent2-motion.js: ComboBox 键盘/可达性缺 {key}")
+
+    # R34 弹层不得被转场容器的 overflow:clip 裁切
+    if ".fl-combo-popup" in (controls_css or ""):
+        if not re.search(r"\.fl-combo-popup\s*\{[^}]*position\s*:\s*fixed", controls_css):
+            fails.append("R34 fluent2-controls.css: .fl-combo-popup 必须 position: fixed"
+                         "（.fl-content-layer 有 overflow:clip，absolute 会被裁）")
+        if "appendChild(popup)" not in (motion_js or ""):
+            fails.append("R34 fluent2-motion.js: ComboBox 弹层必须 portal 到 body")
 
     # 输出
     print(f"目标：{target}")

@@ -32,8 +32,8 @@ BAD_CASES = {
             'inEl.style.setProperty("--fl-page-from-y", inY);',
             'inEl.style.setProperty("--fl-page-unused", inY);'),
     "R22": ("fluent2-tool-starter.html",
-            'M.back("drill")',
-            'M.transitionTo("page-main")'),
+            'data-kind="drill" data-page="page-detail"',
+            'data-kind="drill" data-page="page-detail" data-dir="upward"'),
     "R23": ("fluent2-motion.css",
             "animation-timing-function: var(--fl-ease-steps-60);",
             "animation-timing-function: var(--fl-ease-standard);"),
@@ -46,6 +46,31 @@ BAD_CASES = {
     "R26": ("fluent2-controls.css",
             "display: grid; overflow: clip; }",
             "display: grid; }"),
+    # ---- R27~R34：控件与方向的结构性规则（针对"只有一种符号 / 只有一半状态"类缺陷）----
+    "R27": ("fluent2-motion.js",
+            'up:      { axis: "y",  sign: -1 },',
+            'upward:  { axis: "y",  sign: -1 },'),
+    "R28": ("fluent2-motion.js",
+            'up:      { axis: "y",  sign: -1 },',
+            'up:      { axis: "y",  sign: 1 },'),
+    "R29": ("fluent2-controls.css",
+            '.fl-listitem[aria-selected="true"]:hover { background: var(--fl-subtle-fill-pressed); }',
+            ""),
+    "R30": ("fluent2-controls.css",
+            "  grid-template-columns: var(--fl-check-col) minmax(0, 1fr);",
+            "  display: flex;"),
+    "R31": ("fluent2-controls.css",
+            ".fl-list-sub { color: var(--fl-text-secondary); }",
+            '.fl-list-sub { color: var(--fl-text-secondary); }\n.fl-check .fl-box::after { content: "✓"; }'),
+    "R32": ("fluent2-motion.css",
+            "  .fl-check-glyph path,",
+            "  .fl-unused-glyph,"),
+    "R33": ("fluent2-tool-starter.html",
+            'aria-haspopup="listbox" aria-expanded="false" aria-controls="combo-view-list"',
+            'aria-haspopup="listbox" aria-controls="combo-view-list"'),
+    "R34": ("fluent2-controls.css",
+            "  position: fixed; z-index: 40;",
+            "  position: absolute; z-index: 40;"),
 }
 
 # 处方：按模块名整块删除（与 FLUENT-COMPOSE.md 的四种处方一致）
@@ -77,6 +102,32 @@ def remove_module(html, name):
     nxt = re.search(r"<!-- 模块：", html[m.end():])
     end = m.end() + nxt.start() if nxt else len(html)
     return html[:m.start()] + html[end:]
+
+
+def check_tokens_in_sync():
+    """资产一致性：在临时目录重跑 extract_tokens.py，断言产物与仓库内的完全一致。
+
+    这是「tokens 是脚本生成的，勿手改」这条纪律的唯一机械保障 ——
+    手改 fluent2-tokens.css 能过所有 lint，却会在下次重生成时被静默抹掉。
+    """
+    print("== 资产一致性（tokens 必须由脚本生成）==")
+    import filecmp
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        shutil.copy(ROOT / "extract_tokens.py", td / "extract_tokens.py")
+        shutil.copytree(ROOT / "raw", td / "raw")
+        r = subprocess.run([PY, "extract_tokens.py"], cwd=str(td),
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            print(f"  ✗ extract_tokens.py 执行失败\n    {r.stderr.strip()[:300]}")
+            return 1
+        bad = 0
+        for name in ("fluent2-tokens.css", "official-values.json", "official-values.md"):
+            same = filecmp.cmp(ROOT / name, td / name, shallow=False)
+            print(f"  {name}  {'✓ 与脚本产物一致' if same else '✗ 与脚本产物不一致（被手改过？）'}")
+            if not same:
+                bad += 1
+        return bad
 
 
 def main():
@@ -134,8 +185,11 @@ def main():
             else:
                 pos_ok += 1
 
-    print(f"\n坏例命中 {bad_ok}/{len(BAD_CASES)}，正常例通过 {pos_ok}/{2 + len(PRESCRIPTIONS)}")
-    return 0 if (bad_fail == 0 and pos_fail == 0) else 1
+    bad_sync = check_tokens_in_sync()
+
+    print(f"\n坏例命中 {bad_ok}/{len(BAD_CASES)}，正常例通过 {pos_ok}/{2 + len(PRESCRIPTIONS)}，"
+          f"资产一致性不符 {bad_sync}")
+    return 0 if (bad_fail == 0 and pos_fail == 0 and bad_sync == 0) else 1
 
 
 if __name__ == "__main__":

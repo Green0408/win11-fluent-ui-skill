@@ -255,6 +255,216 @@
     return items.length;
   };
 
+  /* ---- ComboBox -------------------------------------------------------------
+     焦点始终留在按钮上（aria-activedescendant 指向高亮项），这是 APG「select-only combobox」的做法：
+     焦点进弹层后 Esc/Tab/outside-click 的处理会成倍变复杂。
+     弹层必须 portal 到 body：.fl-content-layer 有 overflow:clip（校验器 R26 强制），留在页内会被裁。
+     API：M.combo.auto() 绑定页面上所有 .fl-combo；M.combo.init(rootEl) 单个绑定并返回实例。 */
+  var comboSeq = 0;
+
+  function comboInit(root) {
+    if (!root) return null;
+    if (root.__flCombo) return root.__flCombo;
+    var btn = root.querySelector(".fl-combo-btn");
+    var popup = root.querySelector(".fl-combo-popup");
+    if (!btn || !popup) return null;
+
+    var valueEl = btn.querySelector(".fl-combo-value");
+    var items = Array.prototype.slice.call(popup.querySelectorAll(".fl-combo-item"));
+    var active = -1;
+    var typed = "", typedAt = 0;
+    var base = root.id || ("fl-combo-" + (++comboSeq));
+    var portalDone = false;
+    var rafId = 0;
+
+    /* aria-activedescendant 依赖 id，缺了就不生效 —— 统一补齐，避免调用方手写漏掉 */
+    items.forEach(function (it, i) { if (!it.id) it.id = base + "-o" + (i + 1); });
+    btn.setAttribute("aria-controls", popup.id);
+
+    function isDisabled(i) { return items[i].getAttribute("aria-disabled") === "true"; }
+    function selectedIndex() {
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].getAttribute("aria-selected") === "true") return i;
+      }
+      return -1;
+    }
+    function step(from, delta) {
+      var n = items.length, i = from;
+      for (var k = 0; k < n; k++) {
+        i = (i + delta + n) % n;
+        if (!isDisabled(i)) return i;
+      }
+      return from;
+    }
+    function setActive(i) {
+      if (i < 0 || i >= items.length) return;
+      if (active >= 0 && items[active]) items[active].removeAttribute("data-active");
+      active = i;
+      items[i].setAttribute("data-active", "true");
+      btn.setAttribute("aria-activedescendant", items[i].id);
+      /* 键盘移动时保证高亮项可见（弹层自身滚动，不滚动页面） */
+      var it = items[i], top = it.offsetTop, bot = top + it.offsetHeight;
+      if (top < popup.scrollTop) popup.scrollTop = top;
+      else if (bot > popup.scrollTop + popup.clientHeight) popup.scrollTop = bot - popup.clientHeight;
+    }
+
+    /* 定位：优先向下展开，下方不够且上方更宽裕则翻转；只赋值 left/top（不做 transition） */
+    function place() {
+      var r = btn.getBoundingClientRect();
+      var maxH = parseFloat(global.getComputedStyle(popup).maxHeight) || 504;
+      var wantH = Math.min(popup.scrollHeight, maxH);
+      var below = global.innerHeight - r.bottom - 8;
+      var above = r.top - 8;
+      var up = below < wantH && above > below;
+      popup.dataset.drop = up ? "up" : "down";
+      popup.style.minWidth = Math.max(parseFloat(global.getComputedStyle(root).minWidth) || 0, r.width) + "px";
+      popup.style.left = r.left + "px";
+      popup.style.maxHeight = Math.min(wantH, up ? above : below) + "px";
+      if (up) {
+        popup.style.top = "auto";
+        popup.style.bottom = (global.innerHeight - r.top + 4) + "px";
+      } else {
+        popup.style.bottom = "auto";
+        popup.style.top = (r.bottom + 4) + "px";
+      }
+    }
+    function reflowOnScroll() {
+      if (!popup.classList.contains("fl-open")) return;
+      if (rafId) return;
+      rafId = global.requestAnimationFrame(function () { rafId = 0; place(); });
+    }
+
+    function open() {
+      if (popup.classList.contains("fl-open")) return;
+      if (!portalDone) { document.body.appendChild(popup); portalDone = true; }
+      place();
+      popup.classList.add("fl-open");
+      btn.setAttribute("aria-expanded", "true");
+      root.setAttribute("data-open", "true");
+      setActive(selectedIndex() >= 0 ? selectedIndex() : step(-1, 1));
+      document.addEventListener("pointerdown", onOutside, true);
+      global.addEventListener("resize", reflowOnScroll);
+      global.addEventListener("scroll", reflowOnScroll, true);
+    }
+    function close(restoreFocus) {
+      if (!popup.classList.contains("fl-open")) return;
+      popup.classList.remove("fl-open");
+      btn.setAttribute("aria-expanded", "false");
+      root.setAttribute("data-open", "false");
+      btn.removeAttribute("aria-activedescendant");
+      if (active >= 0 && items[active]) items[active].removeAttribute("data-active");
+      active = -1;
+      document.removeEventListener("pointerdown", onOutside, true);
+      global.removeEventListener("resize", reflowOnScroll);
+      global.removeEventListener("scroll", reflowOnScroll, true);
+      if (restoreFocus) btn.focus();
+    }
+    function onOutside(e) {
+      if (!popup.contains(e.target) && !btn.contains(e.target)) close(false);
+    }
+
+    function choose(i) {
+      if (i < 0 || isDisabled(i)) return;
+      items.forEach(function (it, k) { it.setAttribute("aria-selected", k === i ? "true" : "false"); });
+      if (valueEl) valueEl.textContent = items[i].textContent.trim();
+      root.setAttribute("data-value", items[i].getAttribute("data-value") || "");
+      close(true);
+      /* 让业务侧能响应选择（原生 select 的 change 语义） */
+      var Ctor = global.CustomEvent;
+      var ev = Ctor ? new Ctor("fl-combo-change", {
+        bubbles: true, detail: {
+          index: i, value: items[i].getAttribute("data-value") || "", text: items[i].textContent.trim()
+        }
+      }) : null;
+      if (ev) root.dispatchEvent(ev);
+    }
+
+    btn.addEventListener("click", function () {
+      if (popup.classList.contains("fl-open")) close(true); else open();
+    });
+
+    btn.addEventListener("keydown", function (e) {
+      var open_ = popup.classList.contains("fl-open");
+      var key = e.key;
+      if (!open_) {
+        if (key === "ArrowDown" || key === "ArrowUp" || key === "Enter" || key === " ") {
+          e.preventDefault(); open();
+          if (key === "ArrowUp") setActive(step(items.length, -1));  // 未打开时 Alt/Ctrl+↑ 也落到末项
+          return;
+        }
+        if (key === "Escape") return;
+      } else {
+        if (key === "Escape") { e.preventDefault(); close(true); return; }
+        if (key === "Tab") { close(false); return; }   // 不吞 Tab：正常移出焦点
+        if (key === "Enter" || key === " ") { e.preventDefault(); choose(active); return; }
+        if (key === "ArrowDown") { e.preventDefault(); setActive(step(active, 1)); return; }
+        if (key === "ArrowUp") { e.preventDefault(); setActive(step(active, -1)); return; }
+        if (key === "Home") { e.preventDefault(); setActive(step(-1, 1)); return; }
+        if (key === "End") { e.preventDefault(); setActive(step(items.length, -1)); return; }
+      }
+      /* type-ahead：200ms 内累加，跳到首个以该串开头的项 */
+      if (key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        var now = Date.now();
+        typed = (now - typedAt < 200 ? typed : "") + key.toLowerCase();
+        typedAt = now;
+        for (var k = 0; k < items.length; k++) {
+          var t = items[k].textContent.trim().toLowerCase();
+          if (!isDisabled(k) && t.indexOf(typed) === 0) {
+            if (!open_) open();
+            setActive(k);
+            break;
+          }
+        }
+      }
+    });
+
+    items.forEach(function (it, i) {
+      it.addEventListener("click", function () { choose(i); });
+      it.addEventListener("pointermove", function () { if (!isDisabled(i)) setActive(i); });
+    });
+
+    var inst = {
+      root: root, btn: btn, popup: popup, items: items,
+      open: open, close: close, value: function () {
+        var i = selectedIndex();
+        return i < 0 ? "" : items[i].getAttribute("data-value") || items[i].textContent.trim();
+      }
+    };
+    root.__flCombo = inst;
+    return inst;
+  }
+
+  M.combo = {
+    init: comboInit,
+    auto: function (scope) {
+      var nodes = (scope || document).querySelectorAll(".fl-combo");
+      var out = [];
+      for (var i = 0; i < nodes.length; i++) out.push(comboInit(nodes[i]));
+      return out;
+    }
+  };
+
+  /* 列表辅助：多选模式开关 + 父勾选框半选态同步 */
+  M.list = {
+    multiselect: function (root, on) {
+      var el = typeof root === "string" ? document.querySelector(root) : root;
+      if (!el) return null;
+      if (on) el.setAttribute("data-multiselect", "");
+      else el.removeAttribute("data-multiselect");
+      return el;
+    },
+    /* parentInput：表头「全选」input；items：.fl-listitem 数组 */
+    syncParent: function (parentInput, items) {
+      if (!parentInput) return;
+      var sel = 0;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].getAttribute("aria-selected") === "true") sel++;
+      }
+      parentInput.checked = items.length > 0 && sel === items.length;
+      parentInput.indeterminate = sel > 0 && sel < items.length;  // 半选靠 JS 设置，纯属性写不出来
+    }
+  };
+
   /* 浮层（flyout / contextmenu）：开 = point 入、关 = soft 出（官方 Consistent：同入口同方式开合）
      显隐与延迟隐藏由 .fl-overlay 的 transition（含 visibility 0s 延迟）承担，这里只切状态类 */
   function setOverlay(el, open) {

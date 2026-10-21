@@ -194,6 +194,33 @@ MOTION = {
     "source": "https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/motion",
 }
 
+# 实测派生动效（**非官方档位**）：Win11 官方应用 60fps 录屏逐帧反解，方法与原始数字见 VIDEO-ALIGN.md §9
+# 与 MOTION 严格分离：official-values.md 的「官方动效表」不引用本字典，避免给实测值伪造官方出处
+DERIVED_MOTION = {
+    "durations": {
+        "page": {"value": "283ms", "use": "页面转场（二级下钻水平 / 一级导航垂直共用同一节奏）",
+                 "source": "录屏《设置》10-21：下钻逐帧位移 2,4,6,8,12,16,22,34,70|66,38,24,16,10,8,6，17 帧 ≈283ms"},
+        "tick": {"value": "1s", "use": "连续型：秒针跳秒周期（每秒一次 83ms 小变化）",
+                 "source": "录屏《时钟》10-21：每秒出现一次 83ms、变化面积 0.6% 的位移"},
+        "sweep": {"value": "60s", "use": "连续型：秒针整圈（分针/时针用 calc 倍乘）",
+                  "source": "连续型动效的物理周期，非测量值"},
+    },
+    "easings": {
+        "page": {"css": "cubic-bezier(0.6,0,0.3,1)",
+                 "use": "页面转场：对称加减速（逐帧增量先增后减，峰在中段）",
+                 "source": "拟合自录屏《设置》下钻的逐帧位移序列"},
+        "steps-60": {"css": "steps(60, end)", "use": "跳秒：一秒 60 步",
+                     "source": "录屏《时钟》秒针每秒一跳"},
+    },
+    "shifts": {
+        "drill": {"px": 176, "use": "二级下钻单层行程（水平）",
+                  "source": "录屏《设置》实测 350 视频 px @2x ≈175 CSS px，取 4 的倍数 176"},
+        "nav": {"px": 72, "use": "一级导航单层行程（垂直）",
+                "source": "录屏《设置》实测 127–144 视频 px @2x ≈64–72 CSS px，取上界 72"},
+    },
+    "provenance": "measured-2026-10-21",
+}
+
 # Windows 11 Type ramp（learn.../typography；字号与 XAML TextBlock_themeresources 交叉一致）
 TYPE_RAMP = [
     {"name": "Caption", "css": "caption", "size": 12, "line": 16, "weight": 400},
@@ -265,6 +292,12 @@ CONTROL_GEOMETRY_EXTRA = [
      "source": "WinUI DefaultTextBoxStyle MinHeight=TextControlThemeMinHeight，默认 32（stackover­flow.com/questions/78760996 引 generic.xaml；与 WinUI 3 Gallery 视觉一致）"},
     {"key": "ControlHeight", "value": "32", "type": "Double",
      "source": "Win11 常驻控件标准高度 32px（Button/TextBox/ComboBox/Slider 实际渲染高度；官方文档未单列数值，按 XAML 默认渲染确认）"},
+    {"key": "SliderTrackThemeHeight", "value": "4", "type": "Double",
+     "source": "raw/xaml_Slider_themeresources.xaml：SliderTrackThemeHeight=4（轨道粗）"},
+    {"key": "SliderInnerThumbWidth", "value": "12", "type": "Double",
+     "source": "raw/xaml_Slider_themeresources.xaml：SliderInnerThumbWidth=12（内圆直径，外环 20 由描边近似）"},
+    {"key": "SliderThumbCornerRadius", "value": "10", "type": "CornerRadius",
+     "source": "raw/xaml_Slider_themeresources.xaml：SliderThumbCornerRadius=10（圆形 thumb）"},
 ]
 
 
@@ -346,6 +379,7 @@ def build():
         "colors_count": len(colors_all),
         "geometry": geometry,
         "motion": MOTION,
+        "motion_derived": DERIVED_MOTION,
         "type_ramp": TYPE_RAMP,
         "font_stack": FONT_STACK,
         "spacing": SPACING,
@@ -375,6 +409,16 @@ def build():
     for name, e in MOTION["easings"].items():
         css.append(f'  --fl-ease-{name}: {e["css"]};')
     css.append('')
+    css.append('  /* 实测派生（非官方档位）：Win11 官方应用 60fps 录屏反解，方法与原始数字见 VIDEO-ALIGN.md §9 */')
+    css.append(f'  --fl-dur-page: {DERIVED_MOTION["durations"]["page"]["value"]};'
+               f'  /* {DERIVED_MOTION["durations"]["page"]["use"]} */')
+    css.append(f'  --fl-dur-tick: {DERIVED_MOTION["durations"]["tick"]["value"]};'
+               f'  --fl-dur-sweep: {DERIVED_MOTION["durations"]["sweep"]["value"]};')
+    css.append(f'  --fl-ease-page: {DERIVED_MOTION["easings"]["page"]["css"]};'
+               f'  --fl-ease-steps-60: {DERIVED_MOTION["easings"]["steps-60"]["css"]};')
+    css.append(f'  --fl-page-shift-drill: {DERIVED_MOTION["shifts"]["drill"]["px"]}px;'
+               f'  --fl-page-shift-nav: {DERIVED_MOTION["shifts"]["nav"]["px"]}px;')
+    css.append('')
     css.append('  /* 字体栈（Segoe UI Variable → fallback） */')
     css.append(f'  --fl-font: {FONT_STACK};')
     css.append('')
@@ -400,6 +444,9 @@ def build():
     css.append('  --fl-stroke: 1px; /* 官方描边宽一律 1px */')
     css.append('  --fl-control-height: 32px; /* 官方控件标准高度 */')
     css.append('  --fl-list-item-height: 40px; /* ListViewItemMinHeight */')
+    css.append('  --fl-slider-track: 4px;   /* SliderTrackThemeHeight */')
+    css.append('  --fl-slider-inner: 12px;  /* SliderInnerThumbWidth */')
+    css.append('  --fl-slider-radius: 10px; /* SliderThumbCornerRadius */')
     css.append('')
     css.append('  /* 间距（content-basics） */')
     css.append('  --fl-space-1: 4px;  --fl-space-2: 8px;  --fl-space-3: 12px;')
@@ -476,6 +523,19 @@ def build():
         md.append("| " + " | ".join(r) + " |")
     md.append("")
     md.append("规则：" + "；".join(MOTION["rules"][:4]) + "。")
+    md.append("")
+    md.append("## 动效：实测派生（**非官方档位**）")
+    md.append("来源：Win11 官方应用 60fps 录屏逐帧反解（2026-10-21），方法与原始数字见 `VIDEO-ALIGN.md` §9。")
+    md.append("这些值**不属于**官方 83 / 167 / 250 / 333ms 四档，检索官方规范时不要引用本节。")
+    md.append("")
+    md.append("| CSS 变量 | 值 | 用途 | 依据 |")
+    md.append("|---|---|---|---|")
+    for name, d in DERIVED_MOTION["durations"].items():
+        md.append(f"| `--fl-dur-{name}` | {d['value']} | {d['use']} | {d['source']} |")
+    for name, e in DERIVED_MOTION["easings"].items():
+        md.append(f"| `--fl-ease-{name}` | `{e['css']}` | {e['use']} | {e['source']} |")
+    for name, s in DERIVED_MOTION["shifts"].items():
+        md.append(f"| `--fl-page-shift-{name}` | {s['px']}px | {s['use']} | {s['source']} |")
     md.append("")
     md.append("## 字阶（Type ramp，Segoe UI Variable）")
     md.append("出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/typography>；"

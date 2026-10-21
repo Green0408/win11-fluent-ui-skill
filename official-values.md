@@ -73,6 +73,20 @@
 
 规则：Direct Exit 必须与 fade out 组合（官方硬性要求）；Strong Entrance 为 Elastic In 三关键帧：167ms(0.85,0,0,1) → 167ms(0.85,0,0.75,1) → 333ms(0.85,0,0,1)；同一入口的表面以相同方式开合（Consistent）；优先用现成控件转场（Resourceful），网页对应=直接用本 KIT 的 motion 类。
 
+## 动效：实测派生（**非官方档位**）
+来源：Win11 官方应用 60fps 录屏逐帧反解（2026-10-21），方法与原始数字见 `VIDEO-ALIGN.md` §9。
+这些值**不属于**官方 83 / 167 / 250 / 333ms 四档，检索官方规范时不要引用本节。
+
+| CSS 变量 | 值 | 用途 | 依据 |
+|---|---|---|---|
+| `--fl-dur-page` | 283ms | 页面转场（二级下钻水平 / 一级导航垂直共用同一节奏） | 录屏《设置》10-21：下钻逐帧位移 2,4,6,8,12,16,22,34,70|66,38,24,16,10,8,6，17 帧 ≈283ms |
+| `--fl-dur-tick` | 1s | 连续型：秒针跳秒周期（每秒一次 83ms 小变化） | 录屏《时钟》10-21：每秒出现一次 83ms、变化面积 0.6% 的位移 |
+| `--fl-dur-sweep` | 60s | 连续型：秒针整圈（分针/时针用 calc 倍乘） | 连续型动效的物理周期，非测量值 |
+| `--fl-ease-page` | `cubic-bezier(0.6,0,0.3,1)` | 页面转场：对称加减速（逐帧增量先增后减，峰在中段） | 拟合自录屏《设置》下钻的逐帧位移序列 |
+| `--fl-ease-steps-60` | `steps(60, end)` | 跳秒：一秒 60 步 | 录屏《时钟》秒针每秒一跳 |
+| `--fl-page-shift-drill` | 176px | 二级下钻单层行程（水平） | 录屏《设置》实测 350 视频 px @2x ≈175 CSS px，取 4 的倍数 176 |
+| `--fl-page-shift-nav` | 72px | 一级导航单层行程（垂直） | 录屏《设置》实测 127–144 视频 px @2x ≈64–72 CSS px，取上界 72 |
+
 ## 字阶（Type ramp，Segoe UI Variable）
 出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/typography>；字号与 `xaml_TextBlock_themeresources.xaml` 交叉一致。
 
@@ -144,6 +158,9 @@
 | 列表项禁用透明度 | `0.3` | raw/xaml_ListViewItem_themeresources.xaml |
 | 文本控件最小高 | `32` | WinUI DefaultTextBoxStyle MinHeight=TextControlThemeMinHeight，默认 32（stackover­flow.com/questions/78760996 引 generic.xaml；与 WinUI 3 Gallery 视觉一致） |
 | 控件标准高 | `32` | Win11 常驻控件标准高度 32px（Button/TextBox/ComboBox/Slider 实际渲染高度；官方文档未单列数值，按 XAML 默认渲染确认） |
+| SliderTrackThemeHeight | `4` | raw/xaml_Slider_themeresources.xaml：SliderTrackThemeHeight=4（轨道粗） |
+| SliderInnerThumbWidth | `12` | raw/xaml_Slider_themeresources.xaml：SliderInnerThumbWidth=12（内圆直径，外环 20 由描边近似） |
+| SliderThumbCornerRadius | `10` | raw/xaml_Slider_themeresources.xaml：SliderThumbCornerRadius=10（圆形 thumb） |
 
 ## 断点与单位
 出处：<https://learn.microsoft.com/en-us/windows/apps/design/layout/screen-sizes-and-breakpoints-for-responsive-design>

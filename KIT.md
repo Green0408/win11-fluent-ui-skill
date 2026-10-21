@@ -116,7 +116,21 @@
     - 视觉：命中区 12px、静止画 **6px**（3px 透明 border + `background-clip: content-box` 裁出）、hover / 拖动收到 2px border → 视觉 **8px**、thumb 圆角 999、`min-height` 28、**去掉 `::-webkit-scrollbar-button`**；
     - **颜色直接用 `--fl-control-strong-fill`**（= ControlStrongFillColorDefault，暗 55% 白 / 亮 45% 黑），hover 用 `--fl-text-secondary`。**不要再套 `color-mix(..., 85%, transparent)`** —— 这个 token 本身已经是半透明色，再混透明等于把对比度稀释掉，Acrylic 底上直接消失（2px + 55% alpha 那版就是这么"看不见"的）；
     - **变粗必须挂在 thumb 上**（`::-webkit-scrollbar-thumb:hover`）。挂在容器上就是 bug：`.fl-page:hover` 在指针位于页面任意位置时都成立 → 整页滚动条永远粗着（校验器 **R45** 会拦）；`:focus-within` 同理，下拉一展开焦点进 listbox 就变粗；
-    - **拖动（`:active`）不许继续变粗**：曾经收到 0，thumb 直接画满 12px 命中区（校验器 R43 会拦）；
+    - **悬停/拖动规则必须写完整的 `border` 简写并重复 `background-clip`**：
+      ```css
+      …::-webkit-scrollbar-thumb:hover,
+      …::-webkit-scrollbar-thumb:active {
+        background: var(--fl-text-secondary);
+        background-clip: content-box;      /* 必须重复 */
+        border: 2px solid transparent;     /* 必须是简写，含 style */
+      }
+      ```
+      这两个部件状态**不是常规层叠**，悬停规则会整体接管绘制：只写 `border-width: 2px`
+      （没有 style）等于没有边框，`background-clip` 也会回退成 border-box —— 两种都会让
+      thumb 直接画满 12px 命中区。实测就是 6px → 12px 的突变，这是「一悬停就变粗」的真因（R43 会拦）；
+    - **宽度只能靠截图量**：`getComputedStyle(el, '::-webkit-scrollbar-thumb')` 在 Chromium 里拿不到东西，
+      `cdp_check` 又是 `--hide-scrollbars` 起的（占宽恒为 0）。用 `tests/scrollbar_pixels.py`：
+      `python tests/scrollbar_pixels.py shot.png --y 300 --window 60 --expect-width 6 --expect-min 60`；
     - 这条容易漏：只有"超过 15 项（MaxDropDownHeight 504 ÷ 项高 32）"才看得见滚动条，演示数据通常到不了这个量。
     - **下拉项必须 `white-space: nowrap` + `text-overflow: ellipsis`**：折行会把弹层撑高，凭空长出一条滚动条；而不折行又不截断则会把弹层**撑到视口外**（见规则 25）。
 

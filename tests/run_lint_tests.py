@@ -95,9 +95,18 @@ BAD_CASES = {
             "  min-height: var(--fl-settings-row-h);",
             "  min-height: 56px;"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
-    "R43": ("fluent2-controls.css",
-             "border-width: 2px;                      /* 视觉 8px */",
-             "border-width: 0;"),
+    # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
+    "R43a": ("fluent2-controls.css",
+             "    border: 2px solid transparent;          /* 12 - 2×2 = 视觉 8px */",
+             "    border-width: 2px;"),
+    # 悬停态把边框收成 0 → 同样画满命中区
+    "R43b": ("fluent2-controls.css",
+             "    border: 2px solid transparent;          /* 12 - 2×2 = 视觉 8px */",
+             "    border: 0;"),
+    # 悬停态漏掉 background-clip → 回退 border-box，画满命中区
+    "R43c": ("fluent2-controls.css",
+             "    background-clip: content-box;\n    border: 2px solid transparent;          /* 12 - 2×2 = 视觉 8px */",
+             "    border: 2px solid transparent;          /* 12 - 2×2 = 视觉 8px */"),
     # 变粗条件挂到容器上 → .fl-page:hover 恒真，整页滚动条永远粗着
     "R45": ("fluent2-controls.css",
             "  :is(.fl-scroll, .fl-page, .fl-nav)::-webkit-scrollbar-thumb:hover,\n"

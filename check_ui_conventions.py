@@ -50,7 +50,7 @@ R39 自绘弹层必须用细滚动条：.fl-combo-popup 必须带 fl-scroll，�
 R40 设置行造型：行高走 --fl-settings-row-h、hover 底色带圆角、分隔线左缩进对齐文字、行内必须有 .fl-settings-text
 R41 转场必须两拍：.fl-page-in 要有 animation-delay、离场页不许与入页同长、转场页不得涂不透明底
 R42 应用外壳：body 锁高度、.fl-shell 有 min-height:0、内容层固定 1fr 行、.fl-page 是滚动容器
-R43 滚动条悬停/拖动态不许变粗：thumb 的 border-width 不得 <2px（否则画满 12px 命中区）
+R43 滚动条悬停/拖动态：边框 2px 左右、必须写完整 border 简写 + background-clip（否则回弹成 12px 命中区）
 R44 弹层不许越出视口：.fl-combo-popup 必须有 max-width、选项走省略号、JS 量宽用 offsetWidth 且做水平钳制
 R45 滚动条变粗只许 thumb 自身 hover：禁止把 :hover/:focus-within 挂在容器上（.fl-page:hover 恒真）
 """
@@ -585,28 +585,44 @@ def main():
             fails.append("R39 fluent2-controls.css: 缺 @supports selector(::-webkit-scrollbar) 块"
                          "（不重置 scrollbar-width 为 auto，伪元素样式在 Chromium 里会被静默忽略）")
 
-    # R43 滚动条悬停/拖动态不许变粗
-    #     thumb 的"细"是靠 4px 透明边框 + content-box 裁出来的；边框一收到 0 就画满 12px 命中区。
-    #     hover 与 :active 两种写法都要查：状态既可能写在容器上（:hover::-webkit-scrollbar-thumb），
-    #     也可能写在 thumb 上（::-webkit-scrollbar-thumb:active）——只认后者会漏掉 hover 那条。
-    if controls_css and "::-webkit-scrollbar-thumb" in controls_css:
-        for m in re.finditer(r"[^{}]*::-webkit-scrollbar-thumb[^{]*\{([^}]*)\}", controls_css):
+    # R43 滚动条悬停/拖动态：宽度必须仍是「细」，且必须写完整 border 简写 + background-clip
+    #     thumb 的"细"是靠「透明边框 + background-clip: content-box」裁出来的。
+    #     ⚠ Chromium 里悬停/按下的规则会**整体接管**该部件的绘制，不是常规层叠：
+    #       只写 `border-width: 2px`（没有 style）等于没有边框 → thumb 回弹成整个 12px 命中区。
+    #       实测 6px → 12px，这就是"悬停突然变粗"的真因。所以这两条都必须显式重复。
+    # 注释里也会出现 "::-webkit-scrollbar-thumb:hover"（本文件的说明就写了），
+    # 不剥注释会把它当成一条规则，然后拿相邻规则的 body 去判定 → 假阳性
+    css_nc = re.sub(r"/\*.*?\*/", "", controls_css or "", flags=re.S)
+    if css_nc and "::-webkit-scrollbar-thumb" in css_nc:
+        for m in re.finditer(r"[^{}]*::-webkit-scrollbar-thumb[^{]*\{([^}]*)\}", css_nc):
             sel = m.group(0).split("{")[0]
             state = re.search(r":(hover|active)", sel)
             if not state:
                 continue
-            # 0 可以不带单位（border-width: 0），所以 px 后缀要可选
-            bw = re.search(r"border-width\s*:\s*([\d.]+)\s*(px)?", m.group(1))
+            body = m.group(1)
+            st = state.group(1)
+            # 宽度：border-width 或 border 简写都认（0 可以不带单位，所以 px 后缀可选）
+            bw = re.search(r"border-width\s*:\s*([\d.]+)", body) or \
+                 re.search(r"border\s*:\s*([\d.]+)", body)
             if bw and float(bw.group(1)) < 2:
-                fails.append(f"R43 fluent2-controls.css: 滚动条 :{state.group(1)} 态 border-width={bw.group(1)}px 太小"
+                fails.append(f"R43 fluent2-controls.css: 滚动条 :{st} 态边框 {bw.group(1)}px 太窄"
                              f"（视觉会占 {12 - 2 * float(bw.group(1)):.0f}px，看起来太粗）；"
-                             f"hover 与拖动都保持 3px（视觉 6px）")
+                             f"保持 2px（视觉 8px）")
+            # 必须有 style：只写 border-width / border: 0 都等于无边框
+            has_style = re.search(r"border-style\s*:", body) or \
+                        re.search(r"border\s*:\s*[\d.]+(?:\s*px)?\s+(?:solid|dashed|dotted)", body)
+            if not has_style:
+                fails.append(f"R43 fluent2-controls.css: 滚动条 :{st} 态没有带 border-style 的边框。"
+                             f"悬停规则会整体接管绘制，缺 style 等于无边框 → thumb 回弹成 12px")
+            if "background-clip" not in body:
+                fails.append(f"R43 fluent2-controls.css: 滚动条 :{st} 态没有重复 background-clip: content-box。"
+                             f"悬停时它会回退成 border-box，thumb 直接画满整个命中区")
 
     # R45 滚动条变粗只能由 thumb 自身的 hover / active 触发
     #     挂在容器上一定错：`.fl-page:hover` 在指针位于页面任意位置时都成立 → 整页滚动条永远变粗；
     #     `:focus-within` 则会让下拉一展开（焦点进 listbox）就变粗。两种都被用户当 bug 报过。
-    if controls_css and "::-webkit-scrollbar-thumb" in controls_css:
-        for m in re.finditer(r"([^{}]*::-webkit-scrollbar-thumb[^{]*)\{", controls_css):
+    if css_nc and "::-webkit-scrollbar-thumb" in css_nc:
+        for m in re.finditer(r"([^{}]*::-webkit-scrollbar-thumb[^{]*)\{", css_nc):
             sel = m.group(1)
             if re.search(r":(hover|focus-within)\s*::", sel):
                 fails.append("R45 fluent2-controls.css: 滚动条变粗写成了容器 hover（" + sel.strip()[:60] + "），"

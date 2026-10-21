@@ -381,7 +381,11 @@ async function main() {
             /* 记下选择器原文：必须挂在 thumb 上（thumb:hover），
                挂在容器上（.fl-page:hover::-webkit-scrollbar-thumb）会永远命中 */
             /* hover 与 active 常写在同一条逗号选择器里，两个都要取（不能用 else） */
-            if (/:hover/.test(r.selectorText)) { out.hoverBorder = bw; out.hoverSel = r.selectorText; }
+            if (/:hover/.test(r.selectorText)) {
+              out.hoverBorder = bw; out.hoverSel = r.selectorText;
+              out.hoverStyle = r.style.borderTopStyle || r.style.borderStyle;
+              out.hoverClip = r.style.backgroundClip;
+            }
             if (/:active/.test(r.selectorText)) { out.activeBorder = bw; out.activeSel = r.selectorText; }
           }
         }
@@ -410,6 +414,11 @@ async function main() {
     `hover:${sbRules.hoverBorder} active:${sbRules.activeBorder}`);
   /* 变粗只能由 thumb 自身 hover 触发；挂在容器上时 .fl-page:hover 恒真，
      整页滚动条会一直粗着 —— 用户报的「鼠标一进页面就变粗」就是这条 */
+  /* 悬停规则会整体接管该部件的绘制：只写 border-width（无 style）或漏掉 background-clip，
+     thumb 都会回弹成整个 12px 命中区（实测 6px → 12px），这就是「一悬停就变粗」的真因 */
+  check("悬停态写的是完整 border（含 style）且重复了 background-clip",
+    /solid|dashed|dotted/.test(sbRules.hoverStyle || "") && /content-box/.test(sbRules.hoverClip || ""),
+    `style:${sbRules.hoverStyle} clip:${sbRules.hoverClip}`);
   check("变粗条件挂在 thumb 上，不是容器 hover",
     /thumb:hover/.test(sbRules.hoverSel || "") && !/:hover\s*::/.test(sbRules.hoverSel || ""),
     String(sbRules.hoverSel));

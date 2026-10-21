@@ -3,27 +3,33 @@
    （Direct Entrance/Exit 167ms、Point to Point 167/250/333ms、Gentle Exit 167ms、Fade 83ms、
      Strong Entrance 3 关键帧；曲线见 fluent2-tokens.css 的 --fl-ease-*，勿手写时长/缓动）
 
+   页面转场另有实测派生值（283ms / ease-page / 176-72px）：来自 Win11 官方应用 60fps 录屏反解，
+   定义在 fluent2-tokens.css 的「实测派生」段，方法与原始数字见 VIDEO-ALIGN.md §9。
+
    ── 两类动效分开表达（这是本文件的核心约定）──
    1) 一次性动效（入场/出场/页面转场/Strong Entrance）→ keyframe animation
       理由：不占用 transition 属性，控件自身的 hover/active transition 简写不会把它覆盖掉；
             animation-delay 可走 --fl-stagger-delay 自定义属性，不污染元素的其他过渡。
    2) 可逆的状态切换（浮层开合、hover/active、switch 等）→ transition
-      理由：中途反转可平滑接续。 */
+      理由：中途反转可平滑接续。
+   3) 连续型动效（秒针/进度环等永不结束的推进）→ animation + infinite + linear/steps，且不得 both
+      理由：没有终态，用 both/forwards 会把角度钉死；红线见校验器 R23。 */
 
 /* ---- Direct Entrance：167ms standard + fade（官方 Fast-In，已有元素入场） ----
-   静态隐藏；.fl-in 触发动画；延迟由 --fl-stagger-delay 提供（stagger 不写 transition-delay） */
+   静态隐藏；.fl-in 触发动画；延迟由 --fl-stagger-delay 提供（stagger 不写 transition-delay）
+   位移 8px：录屏《时钟》小面板实测 8–12px（+12→+8→+4→0），原先 16px 偏大约一倍 */
 .fl-entrance { opacity: 0; }
 .fl-entrance.fl-in {
   animation: fl-entrance-kf var(--fl-dur-normal) var(--fl-ease-standard) both;
   animation-delay: var(--fl-stagger-delay, 0ms);
 }
 @keyframes fl-entrance-kf {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
 
-/* ---- Point to Point：位移类转场（页面进入用 250ms point 曲线） ----
-   位移量 12px：官方只给时长/曲线，位移量为 KIT 自定（守 4 的倍数）；页面级位移刻意小于元素级，避免叠加发飘 */
+/* ---- Point to Point：局部内容替换（位移 12px / 250ms point）----
+   页面级转场已改用 .fl-page-in/.fl-page-out（见下），本类保留给「块内容就地替换」场景 */
 .fl-point-to-point.fl-in {
   animation: fl-point-to-point-kf var(--fl-dur-gentle) var(--fl-ease-point) both;
 }
@@ -59,12 +65,70 @@
 }
 .fl-strong-entrance { animation: fl-strong-entrance-kf 667ms var(--fl-ease-strong-1) both; }
 
+/* ---- 页面转场：一套 keyframe 覆盖「两轴 × 两向」（实测派生 283ms / 176-72px）----
+   轴与方向由 JS 写入 4 个带符号的自定义属性（单位 px），keyframe 内不写位移字面量（校验器 R20）：
+     --fl-page-from-x / -from-y  新页起点偏移
+     --fl-page-to-x   / -to-y    旧页终点偏移
+   二级下钻 drill：x 轴 ±var(--fl-page-shift-drill)；一级导航 nav：y 轴 ±var(--fl-page-shift-nav)
+   位移与淡入拆成两条 animation：位移走 --fl-dur-page + --fl-ease-page（对称加减速），
+   淡入淡出走 83ms + linear —— 对上录屏「内容 ≈83ms 内换掉、其余时间只有位移」的观测。 */
+.fl-page-in {
+  will-change: transform, opacity;
+  animation:
+    fl-page-in-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,
+    fl-page-in-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
+}
+.fl-page-out {
+  will-change: transform, opacity;
+  pointer-events: none; /* 离场页不再接收交互 */
+  animation:
+    fl-page-out-slide-kf var(--fl-dur-page) var(--fl-ease-page) both,
+    fl-page-out-fade-kf var(--fl-dur-fast) var(--fl-ease-linear) both;
+}
+@keyframes fl-page-in-slide-kf {
+  from { transform: translate3d(var(--fl-page-from-x, 0px), var(--fl-page-from-y, 0px), 0); }
+  to   { transform: none; }
+}
+@keyframes fl-page-out-slide-kf {
+  from { transform: none; }
+  to   { transform: translate3d(var(--fl-page-to-x, 0px), var(--fl-page-to-y, 0px), 0); }
+}
+@keyframes fl-page-in-fade-kf  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fl-page-out-fade-kf { from { opacity: 1; } to { opacity: 0; } }
+
+/* ---- 连续型动效：线性推进、无限循环、不保留终态 ----
+   与一次性动效的区别：没有「播完」，所以禁用 both/forwards（会把终态钉死，校验器 R23）。
+   用法：秒针 .fl-continuous（60s 一圈）；跳秒 .fl-tick（60s 内 60 步，每秒跳 6°）；
+        分针/时针用 style="animation-duration: calc(var(--fl-dur-sweep) * 60)" 倍乘。 */
+.fl-continuous {
+  transform-origin: 50% 100%;
+  animation-name: fl-continuous-kf;
+  animation-duration: var(--fl-dur-sweep);
+  animation-timing-function: var(--fl-ease-linear);
+  animation-iteration-count: infinite;
+  animation-fill-mode: none;
+  will-change: transform;
+}
+.fl-tick {
+  transform-origin: 50% 100%;
+  animation-name: fl-continuous-kf;
+  animation-duration: var(--fl-dur-sweep);
+  animation-timing-function: var(--fl-ease-steps-60);
+  animation-iteration-count: infinite;
+  animation-fill-mode: none;
+  will-change: transform;
+}
+@keyframes fl-continuous-kf {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* ---- 浮层（flyout / dialog / contextmenu）开合 ----
-   入场：point 曲线（Connected）；出场：soft 曲线（Gentle Exit 语义，官方 Consistent：同入口同方式开合）。
+   入场 Fade 83ms（录屏《时钟》小面板实测 ≈67ms，落 83 档）；出场同档 soft 曲线。
    关键：visibility 走 0s 过渡 + 延迟，让出场动画播完才真正隐藏（否则关闭瞬间就 hidden，动画看不见）。 */
 .fl-overlay {
-  transition: opacity var(--fl-dur-normal) var(--fl-ease-point),
-              transform var(--fl-dur-normal) var(--fl-ease-point),
+  transition: opacity var(--fl-dur-fast) var(--fl-ease-standard),
+              transform var(--fl-dur-fast) var(--fl-ease-standard),
               visibility 0s var(--fl-ease-linear);
   opacity: 1;
   transform: none;
@@ -72,9 +136,9 @@
   pointer-events: auto;
 }
 .fl-overlay:not(.fl-open) {
-  transition: opacity var(--fl-dur-normal) var(--fl-ease-soft),
-              transform var(--fl-dur-normal) var(--fl-ease-soft),
-              visibility 0s var(--fl-ease-linear) var(--fl-dur-normal);
+  transition: opacity var(--fl-dur-fast) var(--fl-ease-soft),
+              transform var(--fl-dur-fast) var(--fl-ease-soft),
+              visibility 0s var(--fl-ease-linear) var(--fl-dur-fast);
   opacity: 0;
   transform: translateY(8px) scale(0.98);
   visibility: hidden;
@@ -104,15 +168,22 @@
   /* 一次性动效：直接呈现终态，不做位移与淡入 */
   .fl-entrance,
   .fl-point-to-point,
-  .fl-strong-entrance {
+  .fl-strong-entrance,
+  .fl-page-in {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
-  .fl-exit {
+  .fl-exit,
+  .fl-page-out {
     animation: none !important;
     opacity: 0 !important;
     transform: none !important;
+  }
+  /* 连续型：停住，不退化成「转一圈后停」 */
+  .fl-continuous,
+  .fl-tick {
+    animation: none !important;
   }
   /* 状态切换：瞬时完成，但显隐仍由各自规则（opacity/visibility）决定 */
   .fl-overlay,

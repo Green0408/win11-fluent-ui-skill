@@ -18,14 +18,18 @@
 
   var STEP = 83;    // 官方 Fade 档（ms），stagger 步进
   var CAP = 333;    // 官方最大时长档（ms），stagger 上限
-  var EXIT_MS = 167; // Direct Exit
-  var ENTER_MS = 250; // Point to Point（页面进入）
+  var PAGE_MS = 283; // 页面转场：实测派生档（tokens --fl-dur-page），非官方 83/167/250/333
+  var PAGE_ANIM = "fl-page-in-slide-kf"; // 结算只认位移那条，不认 83ms 的 fade
+  var PAGE_ANIM_OUT = "fl-page-out-slide-kf";
 
   var M = {};
-  var pageGen = 0; // 转场代际：快速连点时丢弃上一轮的回调
+  var pageGen = 0;      // 转场代际：快速连点时丢弃上一轮的回调
+  var pageStack = [];   // 页面栈：用于自动判断 forward / back
+  var PAGE_VARS = ["--fl-page-from-x", "--fl-page-from-y", "--fl-page-to-x", "--fl-page-to-y"];
 
-  /* 一次性动效结算：animationend 优先，setTimeout 兜底；代际过期则丢弃（不污染新一次转场） */
-  function onAnimEnd(el, gen, fallbackMs, fn) {
+  /* 一次性动效结算：animationend 优先，setTimeout 兜底；代际过期则丢弃（不污染新一次转场）
+     animName 非空时只认这条动画 —— 页面转场有「位移 + fade」两条，fade 先结束会提前清类造成闪回 */
+  function onAnimEnd(el, gen, fallbackMs, fn, animName) {
     if (!el) return;
     var done = false;
     function fire() {
@@ -36,17 +40,41 @@
       fn();
     }
     function onEnd(e) {
-      if (e.target === el) fire(); // 忽略子元素冒泡上来的 animationend（stagger 项）
+      if (e.target !== el) return; // 忽略子元素冒泡上来的 animationend（stagger 项）
+      if (animName && e.animationName !== animName) return;
+      fire();
     }
     el.addEventListener("animationend", onEnd);
     global.setTimeout(fire, fallbackMs + 80);
   }
 
-  /* 同步结算上一轮转场残留的类（连点安全） */
+  /* 同步结算上一轮转场残留的类与位移变量（连点安全） */
   function settlePages() {
     var pages = document.querySelectorAll(".fl-page");
     for (var i = 0; i < pages.length; i++) {
-      pages[i].classList.remove("fl-exit", "fl-point-to-point", "fl-in", "fl-page-leaving");
+      pages[i].classList.remove("fl-exit", "fl-point-to-point", "fl-in",
+                                "fl-page-leaving", "fl-page-in", "fl-page-out");
+      for (var k = 0; k < PAGE_VARS.length; k++) pages[i].style.removeProperty(PAGE_VARS[k]);
+    }
+  }
+
+  /* 写入本轮的入/出方向：入页起点 = from，出页终点 = 反号 */
+  function applyShift(inEl, outEl, kind, dir) {
+    var axis = kind === "drill" ? "x" : "y";
+    var mag = kind === "drill" ? "var(--fl-page-shift-drill)" : "var(--fl-page-shift-nav)";
+    var sign = dir === "back" ? -1 : 1;
+    var v = "calc(" + mag + " * " + sign + ")";
+    var neg = "calc(" + mag + " * " + (sign * -1) + ")";
+    var zero = "0px";
+    var inX = axis === "x" ? v : zero, inY = axis === "y" ? v : zero;
+    var outX = axis === "x" ? neg : zero, outY = axis === "y" ? neg : zero;
+    if (inEl) {
+      inEl.style.setProperty("--fl-page-from-x", inX);
+      inEl.style.setProperty("--fl-page-from-y", inY);
+    }
+    if (outEl) {
+      outEl.style.setProperty("--fl-page-to-x", outX);
+      outEl.style.setProperty("--fl-page-to-y", outY);
     }
   }
 
@@ -60,47 +88,76 @@
     return cur;
   };
 
-  /* 页面转场：旧页 Direct Exit（167ms standard）与新页 Point to Point（250ms point）同时启动。
-     两页由 CSS 放在同一网格单元里重叠（不再上下堆叠），转场期锁内容区高度，全程无布局跳变。
-     用法：M.transitionTo("page-id") */
-  M.transitionTo = function (pageId) {
+  /* 页面转场：两轴 × 两向（实测派生 283ms；drill 水平 176px / nav 垂直 72px）
+     kind: "nav"（一级导航，点侧栏）| "drill"（二级下钻，点内容区入口）
+     dir : "forward" | "back"；缺省按页面栈推断（目标是栈中倒数第二页 → back）
+     两页由 CSS 放在同一网格单元里重叠（不上下堆叠），转场期锁内容区高度，全程无布局跳变。
+     用法：M.transitionTo("page-detail", { kind: "drill" }) / M.back("drill") */
+  M.transitionTo = function (pageId, opts) {
     var next = document.getElementById(pageId);
     if (!next) return null;
     if (next.classList.contains("fl-current") && !next.classList.contains("fl-page-leaving")) return next;
 
+    opts = opts || {};
+    var kind = opts.kind === "drill" ? "drill" : "nav";
     var cur = document.querySelector(".fl-page.fl-current");
     var host = next.parentElement;
     var gen = ++pageGen;
 
-    settlePages();
+    if (!pageStack.length && cur && cur.id) pageStack = [cur.id];
+    var dir = opts.dir ||
+      (pageStack.length >= 2 && pageStack[pageStack.length - 2] === pageId ? "back" : "forward");
 
-    if (REDUCED) { // 无障碍：瞬时切换，不做位移与淡入淡出
+    settlePages();                 // 先清上一轮残留（含位移变量），否则连点时符号会串
+    applyShift(next, cur, kind, dir);
+    void next.offsetWidth;         // 单次 reflow：让「移除类 → 添加类」真实发生，动画才会重播
+
+    if (REDUCED) {                 // 无障碍：瞬时切换，不做位移与淡入淡出
       if (cur) cur.classList.remove("fl-current");
       if (host) host.style.minHeight = "";
       next.classList.add("fl-current");
+      recordStack(pageId, dir);
       M.stagger(next);
       return next;
     }
 
     if (cur) {
       cur.classList.remove("fl-current");
-      cur.classList.add("fl-page-leaving", "fl-exit"); // 保留渲染，播离场动画
+      cur.classList.add("fl-page-leaving", "fl-page-out"); // 保留渲染，播离场动画
     }
-    next.classList.add("fl-current", "fl-point-to-point", "fl-in");
+    next.classList.add("fl-current", "fl-page-in");
     if (host) { // 锁高度 = max(旧页, 新页)：旧页移除的瞬间容器不收缩，避免二次跳变
       host.style.minHeight = Math.max(cur ? cur.offsetHeight : 0, next.offsetHeight) + "px";
     }
     M.stagger(next); // 入场页的元素分批入场与页面入场同步启动（否则隐藏页里的 .fl-entrance 永不显形）
+    recordStack(pageId, dir);
 
-    onAnimEnd(cur, gen, EXIT_MS, function () {
-      if (cur) cur.classList.remove("fl-page-leaving", "fl-exit");
-    });
-    onAnimEnd(next, gen, ENTER_MS, function () {
-      next.classList.remove("fl-point-to-point", "fl-in");
+    onAnimEnd(cur, gen, PAGE_MS, function () {
+      if (cur) cur.classList.remove("fl-page-leaving", "fl-page-out");
+    }, PAGE_ANIM_OUT);
+    onAnimEnd(next, gen, PAGE_MS, function () {
+      next.classList.remove("fl-page-in");
       if (host) host.style.minHeight = "";
-    });
+    }, PAGE_ANIM);
     return next;
   };
+
+  /* 页面栈：forward 入栈；back 截断到目标页（配合 dir 缺省推断） */
+  function recordStack(pageId, dir) {
+    if (dir === "back") {
+      var i = pageStack.lastIndexOf(pageId);
+      pageStack = i >= 0 ? pageStack.slice(0, i + 1) : pageStack.concat([pageId]);
+    } else if (pageStack[pageStack.length - 1] !== pageId) {
+      pageStack.push(pageId);
+    }
+  }
+
+  /* 返回上一页（不硬编码 id，模块被删也不会报错） */
+  M.back = function (kind) {
+    if (pageStack.length < 2) return null;
+    return M.transitionTo(pageStack[pageStack.length - 2], { kind: kind || "nav", dir: "back" });
+  };
+  M.stack = function () { return pageStack.slice(); };
 
   /* 列表/卡片分批入场：.fl-entrance + 83ms 步进、上限 333ms
      延迟写进 --fl-stagger-delay（只影响本动画的 animation-delay），不污染 hover/active 过渡 */

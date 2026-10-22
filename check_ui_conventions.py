@@ -57,7 +57,7 @@ R46 侧栏指示条：.fl-nav 必须 position:relative、必须关掉每项 ::be
 R47 指示条拉伸必须"留在按钮内"：峰值来自固定常量，禁止按 |Δ| 派生（会跨过项间隙、跑出按钮）
 R48 滑块 thumb：外框恒定（ring = 外框/scale − 内点，反向补偿）+ 只缩内点 + 尺寸动效走 transform（禁过渡 width/height）
     + 逐状态时长（基态 167ms / hover·active 250ms）
-R49 弹出层：菜单 = 淡入 + 垂直 50px 平移（方向按放置关系、入 250ms/出 167ms、无缩放）；
+R49 弹出层：菜单 = 整个弹层滑入视野（行程 = 自身高度 100%、不淡入、方向按放置关系、入 250ms/出 167ms、无缩放）；
     下拉列表 = 压在按钮上（选中项那一行盖住按钮）+ clip-path 从顶边往下揭示，167ms / --fl-ease-popup，
     关闭瞬变；对话框与 ToolTip 只许淡入淡出（基类不带 transform）
 """
@@ -798,8 +798,9 @@ def main():
     # R49 弹出层开合动画：**下拉列表与菜单是两套**（各自有录屏依据）
     #     下拉列表（.fl-combo-popup，依据 2026-10-21 23-13-35.mp4）：顶边固定、底边扫下去，
     #       内容是"被揭示"而不是被拉伸（不是 scaleY）；不淡入；关闭单帧瞬变。
-    #     菜单（.fl-flyout，依据 Learn《Animating pop-up UI (XAML)》）：淡入 + 垂直 50px 平移，没有缩放；
-    #       方向按放置关系；入场 250ms / 出场 167ms。
+    #     菜单（.fl-flyout，依据 2026-10-22 16-34-16.mp4 + WinUI 源码注释）：MenuPopupThemeTransition
+    #       = 整个弹层滑入视野，行程 = 弹层自身高度（100%），不淡入，没有缩放；方向按放置关系；
+    #       入场 250ms / 出场 167ms。自定义 Popup 的"50px 微移"是 PopupThemeTransition，别混用。
     #     对话框 / ToolTip 只许淡入淡出（基类 .fl-overlay 不许带 transform）。
     if motion_css and "fl-overlay" in motion_css:
         # —— 菜单（flyout）——
@@ -808,14 +809,21 @@ def main():
         if not pop or not closed:
             fails.append("R49 fluent2-motion.css: 菜单（.fl-flyout）必须有独立的开合规则")
         else:
-            if "--fl-popup-shift" not in pop.group(1) or "50px" not in pop.group(1):
-                fails.append("R49 fluent2-motion.css: 菜单位移必须走 --fl-popup-shift: 50px（官方建议 50px）")
+            if "--fl-popup-shift" not in pop.group(1) or "100%" not in pop.group(1):
+                fails.append("R49 fluent2-motion.css: 菜单位移必须走 --fl-popup-shift: 100%"
+                             "（MenuPopupThemeTransition = 整个弹层滑入视野；录屏实测行程 = 菜单高 355 CSS）")
             if "translateY(calc(var(--fl-popup-shift)" not in closed.group(1):
                 fails.append("R49 fluent2-motion.css: 菜单关态必须 translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir)))"
                              "（方向由 JS 按放置关系写 --fl-popup-dir）")
             for body, name in ((pop.group(1), "开态"), (closed.group(1), "关态")):
                 if "scale" in body:
-                    fails.append("R49 fluent2-motion.css: 菜单%s不许有 scale —— 官方 pop-up 动画只有 fade + 平移" % name)
+                    fails.append("R49 fluent2-motion.css: 菜单%s不许有 scale —— 官方 pop-up 动画只有平移" % name)
+                for om in re.finditer(r"opacity\s*:\s*([^;]+);", body):
+                    if om.group(1).strip() != "1":
+                        fails.append("R49 fluent2-motion.css: 菜单%s的 opacity 只能是 1"
+                                     "（录屏首帧文字对比度已满：菜单不淡入也不淡出）" % name)
+                if re.search(r"transition[^;]*opacity", body):
+                    fails.append("R49 fluent2-motion.css: 菜单的 transition 里不许有 opacity —— 只滑入/滑出")
             if "var(--fl-dur-control-normal)" not in pop.group(1):
                 fails.append("R49 fluent2-motion.css: 菜单入场时长要用 --fl-dur-control-normal(250ms)")
             if "var(--fl-dur-control-fast)" not in closed.group(1):

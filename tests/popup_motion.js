@@ -96,20 +96,22 @@ class CDP {
     }
   };
 
-  /* 关态：transform 应该停在 translateY(dir × 50)，并且没有缩放 */
+  /* 关态：transform 应该停在 translateY(dir × 弹层自身高度)，并且没有缩放 */
   const state = () => evalJs(`(function(){
     var el = document.getElementById("flyout-more");
     var cs = getComputedStyle(el);
     var m = new DOMMatrixReadOnly(cs.transform === "none" ? "" : cs.transform);
-    return { ty: +m.m42.toFixed(2), sx: +m.a.toFixed(3), sy: +m.d.toFixed(3),
+    return { ty: +m.m42.toFixed(2), h: +el.getBoundingClientRect().height.toFixed(2),
+             sx: +m.a.toFixed(3), sy: +m.d.toFixed(3),
              op: +cs.opacity, drop: el.dataset.drop || "", open: el.classList.contains("fl-open") };
   })()`);
 
   const closed = await state();
-  check("关态：位移 = 50px、无缩放、opacity 0",
-    Math.abs(Math.abs(closed.ty) - 50) <= 0.6 && Math.abs(closed.sx - 1) < 0.001 &&
-    Math.abs(closed.sy - 1) < 0.001 && closed.op === 0,
-    JSON.stringify(closed));
+  /* MenuPopupThemeTransition：整个弹层滑入视野，行程 = 自身高度（不是 50px） */
+  check("关态：位移 = 弹层自身高度、无缩放、不靠透明度隐藏",
+    Math.abs(closed.ty + closed.h) <= 1.5 && Math.abs(closed.sx - 1) < 0.001 &&
+    Math.abs(closed.sy - 1) < 0.001 && closed.op === 1,
+    `ty=${closed.ty} h=${closed.h} op=${closed.op}`);
   check("关态：默认方向为「从上方滑入」（触发按钮在上、菜单在下 → dir -1）",
     closed.ty < 0, `ty=${closed.ty}`);
 
@@ -137,15 +139,15 @@ class CDP {
   const ty = openTrace.map(r => r[1]);
   const op = openTrace.map(r => r[3]);
   const sx = openTrace.map(r => r[2]);
-  check("开：从 -50px 起手（不是 0、也不是 8px）",
-    Math.abs(ty[0] + 50) <= 1 && Math.max(...ty.map(Math.abs)) <= 50.5,
-    `首帧 ty=${ty[0]}，全程最大位移 ${Math.max(...ty.map(Math.abs))}`);
+  check("开：从 -自身高度 起手（整个弹层在视野外，不是 50px 微移）",
+    Math.abs(ty[0] + closed.h) <= 1.5 && Math.min(...ty) >= -closed.h - 1.5,
+    `首帧 ty=${ty[0]}，menuH=${closed.h}，全程最小 ${Math.min(...ty)}`);
   check("开：全程无缩放（合成矩阵 a 恒为 1）",
     sx.every(v => Math.abs(v - 1) < 0.005), `min=${Math.min(...sx)} max=${Math.max(...sx)}`);
-  check("开：位移单调收敛到 0、透明度同步上升到 1",
+  check("开：位移单调收敛到 0、且**不淡入**（opacity 全程 1）",
     ty.every((v, i) => i === 0 || v >= ty[i - 1] - 0.6) && Math.abs(ty[ty.length - 1]) <= 0.5 &&
-    op[op.length - 1] >= 0.99,
-    `ty: ${ty.slice(0, 6).join(",")} … ${ty[ty.length - 1]}；op 末 ${op[op.length - 1]}`);
+    op.every((v) => v >= 0.999),
+    `ty: ${ty.slice(0, 6).join(",")} … ${ty[ty.length - 1]}；op 集合 ${[...new Set(op)].join(",")}`);
   const motionOf = (rows, target) => {
     const start = rows.find(r => Math.abs(r[1] - rows[0][1]) > 0.2) || rows[0];
     const i0 = rows.indexOf(start);
@@ -155,16 +157,43 @@ class CDP {
   const openM = motionOf(openTrace, 0);
   check("开：≈250ms 到位（ControlNormal）",
     openM.dur >= 180 && openM.dur <= 320, `${openM.dur}ms（自 ${openM.t0}ms 起）`);
+  /* 录屏里 60fps 下位移是 0.46/0.59/0.75/0.85/0.89/0.92/0.96/1.00 的减速曲线 → 至少 4 帧可辨 */
+  const seen = ty.filter((v, i) => i === 0 || Math.abs(v - ty[i - 1]) > closed.h * 0.02).length;
+  check("开：60fps 下至少 4 帧位移可辨（整段滑行看得出来）",
+    seen >= 4, `${seen} 帧有可辨位移 / 共 ${ty.length} 采样`);
 
-  /* 关：点空白处轻触消失，应在 ≈167ms 内滑回 -50 */
+  /* 关：点空白处轻触消失，应在 ≈167ms 内滑回去 */
   const closeTrace = await trace(() => clickSel("#page-main h1, #page-main"));
   console.log("     关态轨迹 ty:", closeTrace.map(r => r[1]).slice(0, 10).join(","));
   const ty2 = closeTrace.map(r => r[1]);
-  const closeM = motionOf(closeTrace, -50);
-  check("关：滑回 -50px，且比开明显更快（167 vs 250）",
-    Math.abs(ty2[ty2.length - 1] + 50) <= 0.6 &&
+  const closeM = motionOf(closeTrace, -closed.h);
+  check("关：滑回 -自身高度，且比开明显更快（167 vs 250）",
+    Math.abs(ty2[ty2.length - 1] + closed.h) <= 1.5 &&
     closeM.dur >= 100 && closeM.dur <= 240 && closeM.dur < openM.dur - 25,
     `${closeM.dur}ms（开 ${openM.dur}ms）`);
+
+  /* 右键菜单（place:false）：方向要按"菜单相对鼠标"判断。
+     坑：关态弹层被 translateY(-100%) 抬起，getBoundingClientRect 带着这个位移 ——
+     不还原位移就会一直判成"在上方"，菜单从下往上滑。 */
+  const ctx = await evalJs(`(function(){
+    var f = document.getElementById("flyout-more");
+    M.flyout.hide("flyout-more");
+    f.style.right = "auto"; f.style.top = "520px"; f.style.left = "200px";
+    var anchor = { getBoundingClientRect: function(){ return { top: 400, height: 0, left: 200, width: 0, right: 200, bottom: 400 }; } };
+    M.flyout.show("flyout-more", anchor, { place: false });
+    var below = f.dataset.drop;
+    M.flyout.hide("flyout-more");
+    f.style.top = "120px";
+    var anchor2 = { getBoundingClientRect: function(){ return { top: 420, height: 0, left: 200, width: 0, right: 200, bottom: 420 }; } };
+    M.flyout.show("flyout-more", anchor2, { place: false });
+    var above = f.dataset.drop;
+    M.flyout.hide("flyout-more");
+    return { below: below, above: above };
+  })()`);
+  check("右键菜单：菜单在鼠标下方 → drop=down（-100% 位移不许把方向骗反）",
+    ctx.below === "down", JSON.stringify(ctx));
+  check("右键菜单：菜单在鼠标上方 → drop=up",
+    ctx.above === "up", JSON.stringify(ctx));
 
   /* ================= 下拉列表（ComboBox 弹层）：另一套动画 =================
      ① 位置：**选中项那一行正好盖住按钮**（弹层压在按钮上、顶边露一小条），

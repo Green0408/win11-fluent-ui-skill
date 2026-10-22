@@ -736,8 +736,10 @@
     }
   };
 
-  /* 浮层（flyout / contextmenu）：开 = 淡入 + 50px 垂直滑入、关 = 淡出 + 滑回
-     （官方 pop-up 动画只有 fade + 平移，没有 scale；见 fluent2-motion.css 的说明）。
+  /* 浮层（flyout / contextmenu）：**整个弹层滑入视野**（MenuPopupThemeTransition 的做法：
+     行程 = 弹层自身高度 100%，不淡入），关闭反向滑出。
+     依据 2026-10-22 16-34-16.mp4（Win11 资源管理器 … 菜单）：菜单从工具栏下边缘一路"长"出来，
+     底边扫到底、内容整体下移一个菜单高；首帧文字对比度已满 = 没有淡入。
      滑入方向看放置关系：弹层在触发元素下方 → 从上方滑下来（dir -1），在上方 → 从下方升上来（dir +1）。
      显隐与延迟隐藏由 .fl-overlay 的 transition（含 visibility 0s 延迟）承担，这里只切状态类 */
   /* 把 .fl-flyout 摆到触发元素旁边：优先正下方、右对齐；下方放不下就翻到上方。
@@ -759,12 +761,23 @@
       if (!opts || opts.place !== false) {
         placeFlyout(el, anchor);      // 自己定位（按钮触发的菜单）
       } else {
-        /* 页面已经摆好了位置（右键菜单跟着鼠标走），这里只按相对高低定方向 */
+        /* 页面已经摆好了位置（右键菜单跟着鼠标走），这里只按相对高低定方向。
+           注意：关态弹层被 translateY(-100%) 抬起（开合是"整个弹层滑入视野"），
+           getBoundingClientRect 拿到的是**加了位移**的位置 —— 必须先把位移减回去再比，
+           否则右键菜单会一直判成"在上方"、从下往上滑。 */
         var pr = el.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
-        var above = (pr.top + pr.height / 2) < (ar.top + ar.height / 2);
+        var ty = 0, m = global.getComputedStyle(el).transform;
+        if (m && m !== "none") {
+          var MM = global.DOMMatrixReadOnly || global.DOMMatrix;
+          if (MM) ty = new MM(m).m42 || 0;
+        }
+        var above = (pr.top - ty + pr.height / 2) < (ar.top + ar.height / 2);
         el.dataset.drop = above ? "up" : "down";
       }
     }
+    /* 方向可能刚被改写（这次在按钮下方、上次在上方）：先把**新的关态**刷成已解析样式，
+       否则过渡会从旧方向的位移起手（比如明明该从下方升上来，却从上方滑下去）。 */
+    void el.offsetHeight;
     el.classList.toggle("fl-open", !!open);
     return el;
   }

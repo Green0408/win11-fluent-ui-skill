@@ -134,17 +134,22 @@
 
 /* ---- 浮层（flyout / dialog / contextmenu）开合 ----
    官方规范（Learn《Animating pop-up UI (XAML)》/《弹出 UI 动画指南》）：
-     · 弹出层 = **淡入 + 垂直平移**，移动距离建议 **50px**；**没有缩放**；
-       方向看放置关系：出现在触发元素**下方**就向下滑入，在上方就向上滑入
-       （"给弹出元素和触发元素之间一个视觉联系"）。
+     · 弹出层 = **淡入 + 垂直平移**；**没有缩放**；方向看放置关系：出现在触发元素**下方**就从上方滑入，
+       在上方就从下方滑入（"给弹出元素和触发元素之间一个视觉联系"）。
+       自定义 Popup 用 `PopupThemeTransition`：平移 50px 即可。
      · ToolTip / 对话框**只用淡入淡出**，不许用弹出动画。
-   两类弹出层**动画不同**（实测两段不同的录屏得出，别混用）：
-     .fl-combo-popup（下拉列表）= **从顶边向下揭示**（内容不拉伸、不淡入），关闭是**瞬变**
-       —— 依据 `2026-10-21 23-13-35.mp4`：顶边 y≈527 全程不动、底边一路扫到 766，
-          首帧就走完 60%（曲线见下方"速率"段），关闭单帧完成；
-     .fl-flyout（更多选项 / 上下文菜单）= 淡入 + 垂直 50px 平移
-   入场用 FastOutSlowIn（0,0,0,1），出场用 SlowOutFastIn（1,0,1,1）= --fl-ease-soft；
-   位移 50px 属于"较大的位移"，用时长的 Normal 档 250ms，出场收紧到 Fast 档 167ms。
+   三类浮层**动画不同**（各有录屏/源码依据，别混用）：
+     .fl-combo-popup（下拉列表）= 从顶边向下**揭示**（内容不拉伸、不淡入），关闭瞬变
+       —— 依据 `2026-10-21 23-13-35.mp4`；
+     .fl-flyout（更多选项 / 上下文菜单）= **整个弹层滑入视野** + **不淡入**
+       —— 依据 `2026-10-22 16-34-16.mp4`（Win11 资源管理器 … 菜单）与 WinUI 源码注释
+          "MenuFlyout 使用 windowed popup，带整个 popup 滑入视野的进出场动画，由
+          MenuPopupThemeTransition 实现"。
+       所以行程不是 50px 而是**弹层自身高度（100%）**：录屏里菜单从工具栏下边缘"长"出来，
+       底边一路扫到底（内容整体下移 355 CSS，逐帧 0.46/0.59/0.75/0.85/0.89/0.92/0.96/1.00），
+       首帧文字对比度就是满的（没有淡入），≈250ms（ControlNormal 档）减速收尾。
+       向上翻（[data-drop="up"]）时从下方升起。
+   入场用 FastOutSlowIn（0,0,0,1）= --fl-ease-standard，出场用 SlowOutFastIn = --fl-ease-soft。
    关键：visibility 走 0s 过渡 + 延迟，让出场动画播完才真正隐藏（否则关闭瞬间就 hidden，动画看不见）。 */
 .fl-overlay {
   transition: opacity var(--fl-dur-fast) var(--fl-ease-standard),
@@ -162,19 +167,19 @@
 }
 /* 向上展开（[data-drop="up"]，弹层在触发元素上方）时改为从下方升上来 */
 .fl-overlay.fl-flyout[data-drop="up"] { --fl-popup-dir: 1; }
-/* 弹出层：从触发元素那一侧滑出来，滑回去 */
+/* 菜单：整个弹层滑入视野（MenuPopupThemeTransition），不淡入；向上翻时反向 */
 .fl-overlay.fl-flyout {
-  --fl-popup-shift: 50px;   /* 官方建议的移动距离 */
-  --fl-popup-dir: -1;       /* -1 = 弹出层在触发元素下方（从上方滑入）；+1 = 在上方（从下方滑入）。JS 按放置关系写 */
+  --fl-popup-shift: 100%;   /* = 弹层自身高度（录屏实测行程 355 CSS = 菜单高），不是 50px 微移 */
+  --fl-popup-dir: -1;       /* -1 = 弹层在触发元素下方（从上方滑入）；+1 = 在上方（从下方滑入）。JS 按放置关系写 */
+  opacity: 1;               /* 菜单不做淡入：录屏首帧文字对比度已经是满的 */
   transform: translateY(0);
-  transition: opacity var(--fl-dur-control-normal) var(--fl-ease-standard),
-              transform var(--fl-dur-control-normal) var(--fl-ease-standard),
+  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),
               visibility 0s var(--fl-ease-linear);
 }
 .fl-overlay.fl-flyout:not(.fl-open) {
+  opacity: 1;               /* 隐藏靠 visibility，不靠透明度 → 关闭也不会淡出 */
   transform: translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir)));
-  transition: opacity var(--fl-dur-control-fast) var(--fl-ease-soft),
-              transform var(--fl-dur-control-fast) var(--fl-ease-soft),
+  transition: transform var(--fl-dur-control-fast) var(--fl-ease-soft),
               visibility 0s var(--fl-ease-linear) var(--fl-dur-control-fast);
 }
 

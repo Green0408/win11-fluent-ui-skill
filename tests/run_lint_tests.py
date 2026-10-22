@@ -146,6 +146,19 @@ BAD_CASES = {
     "R49h": ("fluent2-tokens.css",
              "--fl-ease-popup: cubic-bezier(0,0,0,1);",
              "--fl-ease-popup: cubic-bezier(0.1,0.9,0.2,1);"),
+    # 菜单行程退回 50px（PopupThemeTransition 的值）→ MenuFlyout 是"整个弹层滑入视野"，量出来是 100%
+    "R49i": ("fluent2-motion.css",
+             "  --fl-popup-shift: 100%;   /* = 弹层自身高度",
+             "  --fl-popup-shift: 50px;   /* = 弹层自身高度"),
+    # 菜单加回淡入 → 录屏里首帧文字对比度已经满，菜单只滑不淡
+    "R49j": ("fluent2-motion.css",
+             "  opacity: 1;               /* 菜单不做淡入：录屏首帧文字对比度已经是满的 */\n"
+             "  transform: translateY(0);\n"
+             "  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),",
+             "  opacity: 1;\n"
+             "  transform: translateY(0);\n"
+             "  transition: opacity var(--fl-dur-fast) var(--fl-ease-standard),\n"
+             "              transform var(--fl-dur-control-normal) var(--fl-ease-standard),"),
     # 位置退回"挂在按钮下方一条缝" → 选中项不在按钮上
     "R49g": ("fluent2-motion.js",
              "      var top = Math.round(r.top - off);",
@@ -158,10 +171,10 @@ BAD_CASES = {
     "R49a": ("fluent2-motion.css",
              "  transform: translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir)));",
              "  transform: translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir))) scale(0.98);"),
-    # 位移写死 8px（旧实现）→ 与官方建议的 50px 不符
+    # 位移写死 px（旧实现是 8px，后来是 50px）→ 行程必须跟着弹层高度走，只能用 100%
     "R49b": ("fluent2-motion.css",
-             "  --fl-popup-shift: 50px;   /* 官方建议的移动距离 */",
-             "  --fl-popup-shift: 8px;"),
+             "  --fl-popup-shift: 100%;   /* = 弹层自身高度",
+             "  --fl-popup-shift: 100px;   /* = 弹层自身高度"),
     # 对话框也带上了位移 → 对话框只许淡入淡出
     "R49c": ("fluent2-motion.css",
              "  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;",

@@ -540,18 +540,28 @@ f83（首帧可见）→ f97（停住）共 14 帧 ≈ 233ms；按 ControlNormal
 ### 14.5 实现与校验
 
 - `fluent2-motion.css`：`.fl-flyout` 的 `--fl-popup-shift: 100%`（原来 50px），
-  过渡只有 `transform + visibility`（`opacity` 恒 1，不淡入也不淡出）；
+  过渡是 `transform + clip-path + visibility`（`opacity` 恒 1，不淡入也不淡出）；
 - `check_ui_conventions.py` R49：菜单必须 `--fl-popup-shift: 100%`、`opacity` 只能 1、
-  `transition` 里不许出现 opacity（坏例：改回 50px / 加回淡入）；
-- `tests/popup_motion.js`：关态位移 = 自身高度、开态从 -自身高度 起手、单调到 0、
-  opacity 全程 1、≈250ms、60fps 下 ≥4 帧可辨、关 167ms 且更快；另加两条右键菜单方向用例
-  （`place:false` 时要把 -100% 位移还原再判上下，否则方向永远判反），22 条全过；
-- `tests/more-menu-compare.png`（上：录屏逐帧；下：本 KIT 真浏览器暂停过渡后逐时刻取帧）。
+  `transition` 里不许有 opacity、开态裁剪 `inset(-2px -24px -24px -24px)`、关态 `inset(100% 0 0 0)`
+  （向上翻贴底边）、两条过渡都要在 transition 里（坏例 R49b/i/j/k/l）；
+- `tests/popup_motion.js`：关态位移 = 自身高度、关态零高裁剪、开态从 -自身高度 起手、单调到 0、
+  opacity 全程 1、≈250ms、60fps 下 ≥4 帧可辨、clip 与 transform 同长同曲线、关 167ms 且更快；
+  另加两条右键菜单方向用例（`place:false` 时要把 -100% 位移还原再判上下），24 条全过；
+- `tests/more-menu-compare.png`（上：录屏逐帧；下：本 KIT 真浏览器暂停过渡后逐时刻取帧）、
+  `tests/more-menu-clip.png`（加裁剪后：按钮区域逐像素不变）。
 
-### 14.6 与真实的一处差异（已知，不影响机制）
+### 14.6 裁剪：让弹层"从触发元素那一侧长出来"
 
-WinUI 的 `MenuFlyout` 是 windowed popup；录屏里它被资源管理器的**工具栏裁掉上沿**，
-所以看起来是"从工具栏下边缘长出来"。网页里弹层是 body 级 portal、永远在最上层，
-滑行过程中会**盖过触发按钮**一瞬（机制相同，只是裁它的是视口而不是工具栏）。
-要做到"从按钮下边缘长出来"，需要给弹层加一层固定尺寸的裁剪容器（外层 clip + 内层位移），
-属于结构改动，暂不做。
+录屏里那层裁剪其实是资源管理器的工具栏；网页里弹层是 body 级 portal、永远在最上层，
+直接滑行会**盖过触发按钮**。所以 `.fl-flyout` 自己裁到**最终矩形**：
+
+- 开态 `clip-path: inset(-2px -24px -24px -24px)`（左/右/下留 24px 给 e32 阴影）；
+- 关态 `clip-path: inset(100% 0 0 0)`（零高、贴在最终顶边），向上翻则 `inset(0 0 100% 0)` 贴底边；
+- `clip-path` 与 `transform` 同长同曲线（250ms / `0,0,0,1`），两者的合成让"可见带的下沿"
+  始终贴着内容的下沿 —— 与录屏的 `b = 769 + 2c` 是同一个关系。
+
+**上沿只能留 2px**：e32 是 `0 8px 16px`（往下偏），顶边几乎没有阴影；若也留 24px，
+裁剪线会在动画中向上漂 24p 像素，把触发按钮压掉一截（实测 120ms 时按钮区域和关态差 4.18）。
+
+真机验证（`tests/more-menu-clip.png`）：把过渡按时刻冻结后逐帧截图，
+**触发按钮区域与关态逐像素相同（mean abs diff = 0.00，五个时刻全为 0）** —— 菜单确实没压住按钮。

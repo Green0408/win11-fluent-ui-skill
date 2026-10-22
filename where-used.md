@@ -25,7 +25,7 @@
 | 左导航（选中指示条） | `.fl-nav-ind`（JS 自动挂；`M.nav.indicator.to/sync`，`M.transitionTo` 已接线） | XAML NavigationViewSelectionIndicator 系列 几何 + 录屏实测节奏（拉伸 167 / 收缩 333，峰值固定 1.6×，见 VIDEO-ALIGN §12） |
 | 左导航 | `.fl-nav` + `.fl-nav-item`（项高 36、圆角 2、选中=subtle 填充 + 3×16 accent 胶囊） | XAML NavigationViewItemOnLeftMinHeight / SelectionIndicatorWidth/Height/Radius |
 | 通知条 | `.fl-infobar[data-severity=success/caution/critical]`（`--fl-success/caution/critical`） | XAML SystemFillColor* |
-| flyout / 右键菜单 | `.fl-flyout.fl-overlay`（Acrylic 近似 + 圆角 8 + 阴影 e32；开合 = **整个弹层滑入视野**，行程 = 自身高度，250/167ms，不淡入） | materials + geometry + layering Flyout=32 + WinUI `MenuPopupThemeTransition`（录屏实测见 VIDEO-ALIGN §14） |
+| flyout / 右键菜单 | `.fl-flyout.fl-overlay`（Acrylic 近似 + 圆角 8 + 阴影 e32；开合 = **整个弹层滑入视野**，行程 = 自身高度，**clip-path 裁到自身矩形**（从触发元素那一侧长出来），250/167ms，不淡入） | materials + geometry + layering Flyout=32 + WinUI `MenuPopupThemeTransition`（录屏实测见 VIDEO-ALIGN §14） |
 | 对话框 | `.fl-dialog.fl-overlay` + `M.dialog`（Smoke 遮罩、圆角 8、阴影 e128、padding 24、max-width 548） | XAML ContentDialogPadding/MaxWidth/MinHeight + materials Smoke |
 | tooltip | 圆角 4（小尺寸例外）、阴影 e16 | geometry ToolTip 例外 + layering Tooltip=16 |
 | 元素入场 | `.fl-entrance` + `M.stagger`（167ms standard，位移 8px；83ms 步进上限 333，延迟走 `--fl-stagger-delay`） | motion Direct Entrance + Fade 档；位移量实测自录屏 |

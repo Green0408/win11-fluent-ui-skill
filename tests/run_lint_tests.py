@@ -150,15 +150,20 @@ BAD_CASES = {
     "R49i": ("fluent2-motion.css",
              "  --fl-popup-shift: 100%;   /* = 弹层自身高度",
              "  --fl-popup-shift: 50px;   /* = 弹层自身高度"),
-    # 菜单加回淡入 → 录屏里首帧文字对比度已经满，菜单只滑不淡
+    # 菜单关态改半透明（等于淡出）→ 录屏里菜单只滑不淡
     "R49j": ("fluent2-motion.css",
-             "  opacity: 1;               /* 菜单不做淡入：录屏首帧文字对比度已经是满的 */\n"
-             "  transform: translateY(0);\n"
+             "  clip-path: inset(100% 0 0 0);   /* 零高，贴在弹层最终顶边 —— 出现时从这里往下长 */",
+             "  clip-path: inset(100% 0 0 0);\n  opacity: 0.6;"),
+    # 菜单去掉裁剪 → 变成"从上面盖过去"，会压住触发按钮
+    "R49k": ("fluent2-motion.css",
+             "  clip-path: inset(-2px -24px -24px -24px);\n"
              "  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),",
-             "  opacity: 1;\n"
-             "  transform: translateY(0);\n"
-             "  transition: opacity var(--fl-dur-fast) var(--fl-ease-standard),\n"
-             "              transform var(--fl-dur-control-normal) var(--fl-ease-standard),"),
+             "  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),"),
+    # 裁剪不参与过渡 → 位移在动、揭示边界不动，等于没裁
+    "R49l": ("fluent2-motion.css",
+             "  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),\n"
+             "              clip-path var(--fl-dur-control-normal) var(--fl-ease-standard),",
+             "  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),"),
     # 位置退回"挂在按钮下方一条缝" → 选中项不在按钮上
     "R49g": ("fluent2-motion.js",
              "      var top = Math.round(r.top - off);",

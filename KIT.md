@@ -32,7 +32,7 @@
 |---|---|---|
 | 依据 | `2026-10-21 23-13-35.mp4`（Win11 设置页实测） | `2026-10-22 16-34-16.mp4`（资源管理器 … 菜单）+ WinUI 源码注释 |
 | 位置 | **压在按钮上**：选中项那一行正好盖住按钮，弹层顶边露在按钮上方一小条 | 挂在触发元素旁（下方优先，放不下翻到上方） |
-| 动作 | **从顶边向下揭示**（clip-path），内容不被拉伸 | **整个弹层滑入视野**（`MenuPopupThemeTransition`）：行程 = **自身高度 100%**，无缩放 |
+| 动作 | **从顶边向下揭示**（clip-path），内容不被拉伸 | **整个弹层滑入视野**（`MenuPopupThemeTransition`）：行程 = **自身高度 100%** + **裁到自身矩形**（看起来从触发元素那一侧长出来），无缩放 |
 | 淡入 | **没有**（首帧文字对比度已 97%） | **没有**（录屏首帧文字对比度已满） |
 | 时长 / 曲线 | **167ms**（`--fl-dur-popup`）+ `--fl-ease-popup`（`0,0,0,1` = 官方 ControlFastOutSlowIn） | 入场 250ms / 出场 167ms，`--fl-ease-standard`（0,0,0,1）减速 |
 | 速率 | 60fps 实机第一帧 **≈45%**、半程 ≈89%、末段收尾（`0,0,0,1` 拟合录屏 RMSE 0.022） | 逐帧 0.46 / 0.59 / 0.75 / 0.85 / 0.89 / 0.92 / 0.96 / 1.00（减速） |
@@ -47,7 +47,12 @@
       **不是 50px**：50px 是自定义 Popup 的 `PopupThemeTransition`；`MenuFlyout` 走的是
       `MenuPopupThemeTransition`（WinUI 源码："MenuFlyout 使用 windowed popup，带整个 popup 滑入视野的进出场动画"）；
     · **不淡入**：把文字区域按内容位移对齐后，最暗像素 f84..f97 一直是 17~31（终态 19）→ 首帧就是不透明；
-    · 时长：首帧（f83）到底边停住（f97）共 14 帧 ≈ 233ms，取 ControlNormal **250ms**。
+    · 时长：首帧（f83）到底边停住（f97）共 14 帧 ≈ 233ms，取 ControlNormal **250ms**；
+    · **裁剪**：录屏里那层裁剪是资源管理器的工具栏；网页里弹层是 portal、永远最上层，
+      所以自己裁到最终矩形 —— 开态 `inset(-2px -24px -24px -24px)`、关态 `inset(100% 0 0 0)`，
+      与 `transform` 同长同曲线。**上沿只留 2px**：e32 阴影是 `0 8px 16px`（往下偏），
+      留 24px 会让裁剪线在动画中上漂 24p、把触发按钮压掉一截（实测按钮区域差 4.18/255）；
+      改 2px 后按钮区域逐像素不变（diff = 0.00）。
 
     下拉列表实测细节（60fps、1920×1080）：
     · **位置**：按钮 y 543..602；选中项那一行 y 543..605（顶边与按钮顶边重合 ±1.5px）；
@@ -69,7 +74,8 @@
       偏移用 rect 差 + `scrollTop` 还原（别自己算 padding/行高）；放不下时整体上移、再不行才内部滚动；
      · 揭示用 `clip-path: inset(-24px -24px calc(100% + 24px) -24px)` → `inset(-24px)`
       （四周留 -24px 让阴影不被裁掉），关闭 `transition: none` 硬切。
-    菜单则是 `.fl-overlay.fl-flyout`（`--fl-popup-shift: 100%` + `--fl-popup-dir`，只有 transform 过渡，没有 opacity）。
+    菜单则是 `.fl-overlay.fl-flyout`（`--fl-popup-shift: 100%` + `--fl-popup-dir`，
+    过渡只有 `transform + clip-path + visibility`，没有 opacity）。
     **对话框 / ToolTip 只许淡入淡出**（基类 `.fl-overlay` 不带 transform）。
 
 7. **海拔**语义（layering 文档）：dialog/window=128、flyout=32、tooltip=16、card=8、control=2、layer=1。CSS 阴影 `--fl-shadow-e*` 是 KIT 换算近似（官方只给 elevation 值，无 CSS 定义），勿改作他用。

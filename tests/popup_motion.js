@@ -107,6 +107,13 @@ class CDP {
   })()`);
 
   const closed = await state();
+  /* 菜单 = 滑入 + 裁剪到自身矩形（clip-path 与 transform 同长同曲线） */
+  const clipState = await evalJs(`(function(){
+    var el = document.getElementById("flyout-more");
+    return { clipClosed: getComputedStyle(el).clipPath };
+  })()`);
+  check("关态：裁剪成零高、贴在最终顶边（inset(100% 0 0 0)）",
+    /inset\(100%\s+0px\s+0px/.test(clipState.clipClosed), clipState.clipClosed);
   /* MenuPopupThemeTransition：整个弹层滑入视野，行程 = 自身高度（不是 50px） */
   check("关态：位移 = 弹层自身高度、无缩放、不靠透明度隐藏",
     Math.abs(closed.ty + closed.h) <= 1.5 && Math.abs(closed.sx - 1) < 0.001 &&
@@ -135,7 +142,14 @@ class CDP {
     return evalJs("window.__t");
   };
 
-  const openTrace = await trace(() => clickSel("#btn-more"));
+  let openAnims = [];
+  const openTrace = await trace(async () => {
+    await clickSel("#btn-more");
+    /* getAnimations() 只返回**在播**的过渡 → 开完立刻读，采样等待之后就读不到了 */
+    openAnims = await evalJs(`document.getElementById("flyout-more").getAnimations().map(function(a){
+      return { p: a.transitionProperty, d: a.effect.getTiming().duration, e: a.effect.getTiming().easing };
+    })`);
+  });
   const ty = openTrace.map(r => r[1]);
   const op = openTrace.map(r => r[3]);
   const sx = openTrace.map(r => r[2]);
@@ -161,6 +175,12 @@ class CDP {
   const seen = ty.filter((v, i) => i === 0 || Math.abs(v - ty[i - 1]) > closed.h * 0.02).length;
   check("开：60fps 下至少 4 帧位移可辨（整段滑行看得出来）",
     seen >= 4, `${seen} 帧有可辨位移 / 共 ${ty.length} 采样`);
+  /* 裁剪必须跟位移同步同长：否则位移在动、揭示边界不动（等于没裁，会盖住触发元素） */
+  const clipAnim = openAnims.find((a) => a.p === "clip-path");
+  const trAnim = openAnims.find((a) => a.p === "transform");
+  check("开：clip-path 与 transform 两条过渡同时存在、时长与曲线一致",
+    !!clipAnim && !!trAnim && clipAnim.d === trAnim.d && clipAnim.e === trAnim.e,
+    JSON.stringify(openAnims));
 
   /* 关：点空白处轻触消失，应在 ≈167ms 内滑回去 */
   const closeTrace = await trace(() => clickSel("#page-main h1, #page-main"));

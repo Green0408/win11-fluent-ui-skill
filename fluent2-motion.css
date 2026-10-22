@@ -141,14 +141,16 @@
    三类浮层**动画不同**（各有录屏/源码依据，别混用）：
      .fl-combo-popup（下拉列表）= 从顶边向下**揭示**（内容不拉伸、不淡入），关闭瞬变
        —— 依据 `2026-10-21 23-13-35.mp4`；
-     .fl-flyout（更多选项 / 上下文菜单）= **整个弹层滑入视野** + **不淡入**
+     .fl-flyout（更多选项 / 上下文菜单）= **整个弹层滑入视野 + 裁剪到自身矩形** + **不淡入**
        —— 依据 `2026-10-22 16-34-16.mp4`（Win11 资源管理器 … 菜单）与 WinUI 源码注释
           "MenuFlyout 使用 windowed popup，带整个 popup 滑入视野的进出场动画，由
           MenuPopupThemeTransition 实现"。
        所以行程不是 50px 而是**弹层自身高度（100%）**：录屏里菜单从工具栏下边缘"长"出来，
        底边一路扫到底（内容整体下移 355 CSS，逐帧 0.46/0.59/0.75/0.85/0.89/0.92/0.96/1.00），
        首帧文字对比度就是满的（没有淡入），≈250ms（ControlNormal 档）减速收尾。
-       向上翻（[data-drop="up"]）时从下方升起。
+       录屏里那层"裁剪"是资源管理器的工具栏；网页里弹层是 portal、永远在最上层，
+       所以用 clip-path 自己裁到**最终矩形**，复现"从触发元素那一侧长出来"的观感。
+       向上翻（[data-drop="up"]）时从下方升起、由底边往上长。
    入场用 FastOutSlowIn（0,0,0,1）= --fl-ease-standard，出场用 SlowOutFastIn = --fl-ease-soft。
    关键：visibility 走 0s 过渡 + 延迟，让出场动画播完才真正隐藏（否则关闭瞬间就 hidden，动画看不见）。 */
 .fl-overlay {
@@ -167,21 +169,35 @@
 }
 /* 向上展开（[data-drop="up"]，弹层在触发元素上方）时改为从下方升上来 */
 .fl-overlay.fl-flyout[data-drop="up"] { --fl-popup-dir: 1; }
-/* 菜单：整个弹层滑入视野（MenuPopupThemeTransition），不淡入；向上翻时反向 */
+/* 菜单：整个弹层滑入视野（MenuPopupThemeTransition），不淡入；
+   同时把弹层**裁剪到自身矩形**（inset 从"零高"长到 -24px），所以看起来是从触发元素那一侧
+   "长"出来的，而不是从上面盖过去。向上翻时反向。
+   裁剪与位移必须同步：位移 -(1-p)·H、裁掉上方 (1-p)·H —— 两者的合成刚好让可见带的下沿
+   贴着内容下沿走（录屏里 b = 769 + 2c 就是这个关系），顶上那条线固定在弹层最终顶边。
+   四周留 24px 是给 --fl-shadow-flyout（e32：0 8px 16px）的扩散，和下拉列表同一套做法。 */
 .fl-overlay.fl-flyout {
   --fl-popup-shift: 100%;   /* = 弹层自身高度（录屏实测行程 355 CSS = 菜单高），不是 50px 微移 */
   --fl-popup-dir: -1;       /* -1 = 弹层在触发元素下方（从上方滑入）；+1 = 在上方（从下方滑入）。JS 按放置关系写 */
   opacity: 1;               /* 菜单不做淡入：录屏首帧文字对比度已经是满的 */
   transform: translateY(0);
+  /* 上沿只留 2px：e32 阴影是 0 8px 16px（往下偏），顶边几乎没有阴影；
+     留 24px 会让裁剪线在动画中往上漂 24px、把触发元素压住一截。左/右/下留 24px 给阴影。 */
+  clip-path: inset(-2px -24px -24px -24px);
   transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),
+              clip-path var(--fl-dur-control-normal) var(--fl-ease-standard),
               visibility 0s var(--fl-ease-linear);
 }
 .fl-overlay.fl-flyout:not(.fl-open) {
   opacity: 1;               /* 隐藏靠 visibility，不靠透明度 → 关闭也不会淡出 */
   transform: translateY(calc(var(--fl-popup-shift) * var(--fl-popup-dir)));
+  clip-path: inset(100% 0 0 0);   /* 零高，贴在弹层最终顶边 —— 出现时从这里往下长 */
   transition: transform var(--fl-dur-control-fast) var(--fl-ease-soft),
+              clip-path var(--fl-dur-control-fast) var(--fl-ease-soft),
               visibility 0s var(--fl-ease-linear) var(--fl-dur-control-fast);
 }
+/* 向上翻：贴在弹层最终底边，从下往上长（下沿同样只留 2px，其余 24px 给阴影） */
+.fl-overlay.fl-flyout[data-drop="up"] { clip-path: inset(-24px -24px -2px -24px); }
+.fl-overlay.fl-flyout[data-drop="up"]:not(.fl-open) { clip-path: inset(0 0 100% 0); }
 
 /* ---- 下拉列表（ComboBox 弹层）：从顶边向下"揭示" ----
    录屏实测（2026-10-21 23-13-35.mp4，Win11 设置页 专注周期 下拉，60fps）：

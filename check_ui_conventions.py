@@ -828,6 +828,25 @@ def main():
                 fails.append("R49 fluent2-motion.css: 菜单入场时长要用 --fl-dur-control-normal(250ms)")
             if "var(--fl-dur-control-fast)" not in closed.group(1):
                 fails.append("R49 fluent2-motion.css: 菜单出场时长要用 --fl-dur-control-fast(167ms)")
+            # 裁剪：开态留 -24px（阴影），关态零高并贴在最终矩形的那条边上 →
+            # 吃相才是"从触发元素那一侧长出来"，而不是从上面盖过去
+            if not re.search(r"clip-path\s*:\s*inset\(-2px -24px -24px -24px\)", pop.group(1)):
+                fails.append("R49 fluent2-motion.css: 菜单开态必须 clip-path: inset(-2px -24px -24px -24px)"
+                             "（左右下留 24px 给 --fl-shadow-flyout；**上沿只留 2px**，"
+                             "留大了裁剪线会在动画中往上漂、压住触发元素）")
+            if not re.search(r"clip-path\s*:\s*inset\(\s*100%", closed.group(1)):
+                fails.append("R49 fluent2-motion.css: 菜单关态必须 clip-path: inset(100% 0 0 0)"
+                             "（零高、贴在最终顶边；配合 translateY(-100%) 才等于「长出来」）")
+            for body, name in ((pop.group(1), "开态"), (closed.group(1), "关态")):
+                if "clip-path" not in body.split("transition", 1)[-1]:
+                    fails.append("R49 fluent2-motion.css: 菜单%s的 transition 必须同时过渡 clip-path"
+                                 "（只动 transform 会变成从上面盖过去）" % name)
+            if not re.search(r'\[data-drop="up"\][^{]*\{[^}]*clip-path\s*:\s*inset\(\s*0\s+0\s+100%', motion_css):
+                fails.append("R49 fluent2-motion.css: 菜单向上翻时裁剪要贴在底边（inset(0 0 100% 0)）")
+            if not re.search(r'\[data-drop="up"\]\s*\{[^}]*clip-path\s*:\s*inset\(-24px -24px -2px -24px\)',
+                             motion_css):
+                fails.append("R49 fluent2-motion.css: 菜单向上翻的开态裁剪要 inset(-24px -24px -2px -24px)"
+                             "（下沿只留 2px，避免裁剪线往下漂盖住触发元素）")
         if not re.search(r"\.fl-overlay[^{]*\[data-drop=[\"']up[\"']\][^{]*\{[^}]*--fl-popup-dir\s*:\s*1", motion_css):
             fails.append("R49 fluent2-motion.css: 菜单向上展开时必须 --fl-popup-dir: 1（从下方升上来）")
         # —— 下拉列表（reveal）——

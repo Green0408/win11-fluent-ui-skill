@@ -23,7 +23,8 @@
 | 卡片 | `.fl-card`（圆角 8、elevation 8、`--fl-card-bg/stroke`） | XAML Card* + layering Card=8 |
 | 应用外壳（布局） | `.fl-shell` + `.fl-content-layer` + `.fl-page`：左导航固定、内容区独立滚动；每页各自滚（切页记住位置） | web-app-shell 常见做法（KIT 规则 24）；Win11 视觉依据见 navigation-basics |
 | 左导航（选中指示条） | `.fl-nav-ind`（JS 自动挂；`M.nav.indicator.to/sync`，`M.transitionTo` 已接线） | XAML NavigationViewSelectionIndicator 系列 几何 + 录屏实测节奏（拉伸 167 / 收缩 333，峰值固定 1.6×，见 VIDEO-ALIGN §12） |
-| 左导航 | `.fl-nav` + `.fl-nav-item`（项高 36、圆角 2、选中=subtle 填充 + 3×16 accent 胶囊） | XAML NavigationViewItemOnLeftMinHeight / SelectionIndicatorWidth/Height/Radius |
+| 左导航 | `.fl-nav` + `.fl-nav-item`（项高 36、圆角 2、选中=subtle 填充 + 3×16 accent 胶囊；文字包 `.fl-nav-label`、图标用 `.fl-nav-icon`） | XAML NavigationViewItemOnLeftMinHeight / SelectionIndicatorWidth/Height/Radius |
+| 左导航响应式 | `M.nav.responsive.auto()`：≥1008 展开 240 / 641–1007 收成 48 图标列 / ≤640 收起 + 汉堡浮层 + `--fl-smoke` 遮罩；`.fl-nav-toggle`(40×36) + `.fl-nav-scrim` 必须一起放 | NavigationView `PaneDisplayMode=Auto` 默认行为（CompactModeThresholdWidth=641 / ExpandedModeThresholdWidth=1008，与响应式断点同值）；KIT 规则 27 |
 | 通知条 | `.fl-infobar[data-severity=success/caution/critical]`（`--fl-success/caution/critical`） | XAML SystemFillColor* |
 | flyout / 右键菜单 | `.fl-flyout.fl-overlay`（Acrylic 近似 + 圆角 8 + 阴影 e32；开合 = **整个弹层滑入视野**，行程 = 自身高度，**clip-path 裁到自身矩形**（从触发元素那一侧长出来），250/167ms，不淡入） | materials + geometry + layering Flyout=32 + WinUI `MenuPopupThemeTransition`（录屏实测见 VIDEO-ALIGN §14） |
 | 对话框 | `.fl-dialog.fl-overlay` + `M.dialog`（Smoke 遮罩、圆角 8、阴影 e128、padding 24、max-width 548） | XAML ContentDialogPadding/MaxWidth/MinHeight + materials Smoke |

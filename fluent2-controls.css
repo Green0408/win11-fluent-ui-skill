@@ -42,7 +42,8 @@ body {
    只写 min-height 会让 body 被内容撑高、内层滚动整个失效（这个坑踩过）。 */
 html:has(.fl-shell) { height: 100%; }
 body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
-.fl-shell { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.fl-shell { flex: 1; min-height: 0; display: flex; overflow: hidden; position: relative; }
+/* position: relative —— 极简档的导航栏与遮罩是 absolute（相对 shell，不盖住 titlebar） */
 /* Content layer = 页面叠放容器：所有 .fl-page 放同一网格单元，转场期互相覆盖而不是上下堆叠。
    网格行固定成 1fr（minmax(0,1fr)）：页面必须拿到「确定高度」才能各自成为滚动容器；
    否则 auto 行会被内容撑高，overflow:clip 直接裁掉而不是出滚动条。 */
@@ -74,24 +75,119 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 }
 
 /* ---- NavigationView 左导航（nav 模块） ----
-   结构/选择规则出处：learn.../design/basics/navigation-basics（顶层页、>5 项、不频繁切换） */
+   结构/选择规则出处：learn.../design/basics/navigation-basics（顶层页、>5 项、不频繁切换）
+   响应式三档（PaneDisplayMode=Auto 的官方默认行为，阈值与响应式断点同值）：
+     · ≥1008px  Expanded —— pane 并排展开（--fl-nav-width）
+     · 641~1007 Compact  —— 只留图标列（--fl-nav-compact-width=48，NavigationViewCompactPaneLength）
+     · ≤640px   Minimal  —— pane 收起，点汉堡从左侧浮出盖住内容 + 遮罩（--fl-smoke），点遮罩/Esc 关闭
+   档位由 JS 写 data-nav-mode（对应 XAML 的 AdaptiveTrigger → VisualState），CSS 只认这个属性；
+   宽度切换**不做过渡**（过渡 width 会被 layout 量化成台阶，见 fluent2-motion.css 滑块那段）。 */
 .fl-nav {
-  width: var(--fl-nav-width, 240px); flex-shrink: 0;
+  width: var(--fl-nav-width); flex-shrink: 0;
   position: relative;          /* 指示条层的定位基准（.fl-nav-ind 的 offsetParent） */
   background: var(--fl-layer-fill, var(--fl-solid-bg-secondary));
   border-right: var(--fl-stroke) solid var(--fl-divider-stroke);
-  padding: var(--fl-space-2); display: flex; flex-direction: column; gap: var(--fl-space-1);
+  /* 4px 内边距：官方 pane 内容距边缘 4，导航项从 4 起、图标盒 40 宽 → 图标中心恒在 24 */
+  padding: var(--fl-space-1); display: flex; flex-direction: column; gap: var(--fl-space-1);
   overflow-y: auto; /* 导航项多时侧栏自己滚，页面本体不动 */
 }
+/* pane 头部行：官方 NavigationViewPaneHeaderRowMinHeight=40，放 PaneToggleButton(40×36)。
+   与导航项同一个原点：按钮盒从 pane 内 4px 起 → 图标中心也是 24。 */
+.fl-nav-panehead {
+  flex-shrink: 0; display: flex; align-items: center;
+  height: calc(var(--fl-nav-toggle-h) + var(--fl-space-1));
+}
+.fl-nav-toggle {
+  width: var(--fl-nav-toggle-w); height: var(--fl-nav-toggle-h);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; padding: 0; cursor: pointer;
+  border: 0; border-radius: var(--fl-radius-control); background: transparent;
+  color: var(--fl-text-primary);
+  transition: background var(--fl-dur-fast) var(--fl-ease-standard);
+}
+.fl-nav-toggle:hover { background: var(--fl-subtle-fill-hover); }
+.fl-nav-toggle:active { background: var(--fl-subtle-fill-pressed); color: var(--fl-text-secondary); }
+.fl-nav-glyph { width: 16px; height: 16px; display: block; }
+/* 图标盒：官方 NavigationViewIconBoxWidth=40（图标 16 居中于 40 盒，左右各 12），
+   所以图标中心恒在 pane 内 4+20=24 处 —— 展开态和紧凑态是同一个位置。 */
+.fl-nav-icon {
+  width: 16px; height: 16px; flex-shrink: 0; display: block;
+  box-sizing: content-box; padding: 0 var(--fl-space-3);
+}
+.fl-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 紧凑档：48px 图标列。内边距 4 → 导航项 40 宽（与官方 compact item 一致），图标水平居中 */
+.fl-nav[data-nav-mode="compact"] {
+  width: var(--fl-nav-compact-width);
+  padding: var(--fl-space-1);
+}
+.fl-nav[data-nav-mode="compact"] .fl-nav-panehead { margin-left: 0; padding: 0; }
+.fl-nav[data-nav-mode="compact"] .fl-nav-item {
+  justify-content: center; gap: 0; padding: 0;
+}
+.fl-nav[data-nav-mode="compact"] .fl-nav-label { display: none; }
+
+/* 极简档：pane 变成盖在内容上的浮层，从左侧滑出（SplitView Pane 的 overlay 行为）。
+   开关对称用 ControlNormal 250ms —— pane 是布局元素，和菜单那种轻量弹层不同档。
+   visibility 走 0s + 延迟，保证关闭动画播完才真正隐藏。 */
+.fl-nav[data-nav-mode="minimal"] {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 45;
+  width: var(--fl-nav-width);
+  /* 浮层态用 Acrylic（官方 LeftMinimal 的 NavigationViewDefaultPaneBackground）：
+     并排态的 --fl-layer-fill 只有 30% 不透明，浮起来会透出下面的正文 */
+  background: var(--fl-acrylic-bg);
+  -webkit-backdrop-filter: blur(60px) saturate(125%);
+  backdrop-filter: blur(60px) saturate(125%);
+  box-shadow: var(--fl-shadow-flyout);
+  transform: translateX(-100%); visibility: hidden;
+  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),
+              visibility 0s linear var(--fl-dur-control-normal);
+}
+.fl-nav[data-nav-mode="minimal"][data-nav-open="1"] {
+  transform: none; visibility: visible;
+  transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),
+              visibility 0s linear;
+}
+/* 遮罩（SmokeFillColorDefault）：只在极简档存在；点它关闭 pane */
+.fl-nav-scrim {
+  position: absolute; inset: 0; z-index: 44;
+  background: var(--fl-smoke);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity var(--fl-dur-control-normal) var(--fl-ease-standard),
+              visibility 0s linear var(--fl-dur-control-normal);
+}
+.fl-nav-scrim[data-open="1"] {
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transition: opacity var(--fl-dur-control-normal) var(--fl-ease-standard),
+              visibility 0s linear;
+}
+/* 展开/紧凑档手动收起（点 pane 头部汉堡）：pane 直接让位，内容占满，汉堡移到内容左上。
+   这里**不能过渡 width** —— layout 会把每帧宽度量化，看到的是 3 级台阶而不是平滑收起。 */
+.fl-nav[data-nav-mode="expanded"][data-nav-open="0"],
+.fl-nav[data-nav-mode="compact"][data-nav-open="0"] {
+  width: 0; padding: 0; border-right-width: 0; overflow: hidden;
+}
+/* 极简档收起时，汉堡浮在内容左上角（官方 minimal 的 PaneToggleButton 也压在内容上）；
+   pane 打开后由 pane 头部那个代替，这个隐藏 */
+.fl-nav-toggle-float { position: absolute; left: 0; top: 0; z-index: 46; display: none; }
+.fl-nav[data-nav-open="0"] ~ .fl-nav-toggle-float { display: inline-flex; }
+/* 汉堡浮在内容上时要给它让位，否则会压住 Infobar 左侧的 severity 条（官方 minimal 的
+   toggle 也是独占内容左上一格，内容不会被它盖住） */
+.fl-shell:has(.fl-nav[data-nav-open="0"]) > .fl-content-layer {
+  padding-left: var(--fl-nav-toggle-w);
+}
 .fl-nav-item {
-  position: relative; display: flex; align-items: center; gap: var(--fl-space-3);
+  position: relative; display: flex; align-items: center; gap: 0;
   min-height: var(--fl-nav-item-height); /* NavigationViewItemOnLeftMinHeight 36（不是控件标准高 32） */
-  padding: 0 var(--fl-space-2) 0 var(--fl-space-4);
+  /* 左内边距 0：图标盒自己的 12px 内边距就是它的左边距（官方 4 + 40 盒 = 文字从 44 开始） */
+  padding: 0 var(--fl-space-2) 0 0;
   border-radius: var(--fl-radius-indicator); color: var(--fl-text-primary);
   text-decoration: none; cursor: pointer; border: 0; background: transparent; width: 100%;
   font: inherit; text-align: left;
   transition: background var(--fl-dur-fast) var(--fl-ease-standard);
 }
+/* 没有图标的导航项：文字直接从 16px 开始（否则贴着左边缘） */
+.fl-nav-item:not(:has(.fl-nav-icon)) { padding-left: var(--fl-space-4); }
 .fl-nav-item:hover { background: var(--fl-subtle-fill-hover); }
 .fl-nav-item:active { background: var(--fl-subtle-fill-pressed); color: var(--fl-text-secondary); }
 .fl-nav-item[aria-current="page"] { background: var(--fl-subtle-fill-hover); font-weight: var(--fl-weight-semibold); }

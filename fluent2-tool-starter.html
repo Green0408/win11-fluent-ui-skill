@@ -19,12 +19,49 @@
 
 <div class="fl-shell">
 
-  <!-- 模块：nav —— NavigationView 左导航（顶层页、>5 项、不频繁切换时用；单页工具整块删除） -->
+  <!-- 模块：nav —— NavigationView 左导航（顶层页、>5 项、不频繁切换时用；单页工具整块删除）
+       响应式：≥1008px 展开 240 / 641~1007 收成 48px 图标列 / ≤640 收起，点汉堡从左侧浮出 + 遮罩。
+       图标 16px、文字必须包在 .fl-nav-label 里（紧凑档要隐藏文字、只留图标）。 -->
   <nav class="fl-nav" id="nav" aria-label="主导航">
-    <a class="fl-nav-item" href="#" data-page="page-main" aria-current="page">条目管理</a>
-    <a class="fl-nav-item" href="#" data-page="page-grid">图库视图</a>
-    <a class="fl-nav-item" href="#" data-page="page-settings">设置</a>
+    <div class="fl-nav-panehead">
+      <button class="fl-nav-toggle" type="button" aria-label="收起导航" aria-expanded="true">
+        <svg class="fl-nav-glyph" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <a class="fl-nav-item" href="#" data-page="page-main" aria-current="page">
+      <svg class="fl-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="2.8" cy="4" r="1" fill="currentColor"/><circle cx="2.8" cy="8" r="1" fill="currentColor"/><circle cx="2.8" cy="12" r="1" fill="currentColor"/>
+        <path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="fl-nav-label">条目管理</span>
+    </a>
+    <a class="fl-nav-item" href="#" data-page="page-grid">
+      <svg class="fl-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+        <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/>
+      </svg>
+      <span class="fl-nav-label">图库视图</span>
+    </a>
+    <a class="fl-nav-item" href="#" data-page="page-settings">
+      <svg class="fl-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M2 5h6M11.6 5h2.4M2 11h2.4M7.6 11h6.4" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        <circle cx="9.8" cy="5" r="1.7" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="5.8" cy="11" r="1.7" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      <span class="fl-nav-label">设置</span>
+    </a>
   </nav>
+
+  <!-- 极简档（≤640）收起时浮在内容左上的汉堡；pane 打开后由 pane 头部那个代替 -->
+  <button class="fl-nav-toggle fl-nav-toggle-float" type="button" aria-label="打开导航" aria-expanded="false">
+    <svg class="fl-nav-glyph" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <!-- 极简档打开 pane 时的遮罩（SmokeFillColorDefault 30% 黑），点它关闭 -->
+  <div class="fl-nav-scrim" data-open="0" aria-hidden="true"></div>
 
   <main class="fl-content-layer">
 

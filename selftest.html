@@ -17,9 +17,35 @@
 
 <div class="fl-shell">
   <nav class="fl-nav" id="nav" aria-label="导航">
-    <a class="fl-nav-item" href="#" data-page="page-a" aria-current="page">页面 A</a>
-    <a class="fl-nav-item" href="#" data-page="page-b">页面 B</a>
+    <div class="fl-nav-panehead">
+      <button class="fl-nav-toggle" type="button" aria-label="收起导航" aria-expanded="true">
+        <svg class="fl-nav-glyph" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <a class="fl-nav-item" href="#" data-page="page-a" aria-current="page">
+      <svg class="fl-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="2.8" cy="4" r="1" fill="currentColor"/><circle cx="2.8" cy="8" r="1" fill="currentColor"/><circle cx="2.8" cy="12" r="1" fill="currentColor"/>
+        <path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="fl-nav-label">页面 A</span>
+    </a>
+    <a class="fl-nav-item" href="#" data-page="page-b">
+      <svg class="fl-nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+        <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/><rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor"/>
+      </svg>
+      <span class="fl-nav-label">页面 B</span>
+    </a>
   </nav>
+
+  <button class="fl-nav-toggle fl-nav-toggle-float" type="button" aria-label="打开导航" aria-expanded="false">
+    <svg class="fl-nav-glyph" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <div class="fl-nav-scrim" data-open="0" aria-hidden="true"></div>
 
   <main class="fl-content-layer">
     <section class="fl-page fl-current" id="page-a">

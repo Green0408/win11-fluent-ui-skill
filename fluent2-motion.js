@@ -435,9 +435,106 @@
     global.setTimeout(initIndicator, 0);
   }
 
+  /* ---- 导航响应式档位（对应 XAML NavigationView 的 PaneDisplayMode=Auto）----
+       ≥ --fl-nav-expand-threshold(1008)  expanded —— pane 并排展开
+       641~1007                           compact  —— 只留 48px 图标列（紧凑态）
+       < --fl-nav-compact-threshold(641)  minimal  —— pane 收起，汉堡从左侧浮出 + 遮罩
+     阈值直接读 CSS 变量，不在 JS 里写第二份数字（XAML 侧对应 AdaptiveTrigger → VisualState）。
+     toggle：展开/紧凑档点它 = 手动收起（open=0，汉堡移到内容左上）；极简档点它 = 开浮层。
+     切档时**不重置用户已手动收起的意图**，只在新档位上给官方默认值。 */
+  (function () {
+    function num(v, fb) {
+      var n = parseFloat(v);
+      return isFinite(n) ? n : fb;
+    }
+
+    function bind(nav) {
+      if (nav.__flNav) return nav.__flNav;
+      var cs = global.getComputedStyle(nav);
+      var compactT = num(cs.getPropertyValue("--fl-nav-compact-threshold"), 641);
+      var expandT = num(cs.getPropertyValue("--fl-nav-expand-threshold"), 1008);
+      var shell = nav.parentElement;
+      var scrim = shell ? shell.querySelector(".fl-nav-scrim") : null;
+      var floats = shell ? shell.querySelectorAll(".fl-nav-toggle-float") : [];
+
+      function modeFor(w) {
+        if (w < compactT) return "minimal";
+        if (w < expandT) return "compact";
+        return "expanded";
+      }
+      function syncToggles() {
+        var open = nav.dataset.navOpen === "1";
+        var all = nav.querySelectorAll(".fl-nav-toggle");
+        for (var i = 0; i < all.length; i++) all[i].setAttribute("aria-expanded", open ? "true" : "false");
+        for (var j = 0; j < floats.length; j++) floats[j].setAttribute("aria-expanded", open ? "true" : "false");
+      }
+      function setOpen(open) {
+        nav.dataset.navOpen = open ? "1" : "0";
+        /* 遮罩只在「极简档 + 打开」时出现：展开档手动收起不浮层，内容直接占满 */
+        if (scrim) scrim.dataset.open = (open && nav.dataset.navMode === "minimal") ? "1" : "0";
+        syncToggles();
+      }
+      function apply() {
+        var w = shell ? shell.clientWidth : global.innerWidth;
+        var m = modeFor(w);
+        if (nav.dataset.navMode !== m) {
+          /* 档位切换是布局级瞬变（官方 AdaptiveTrigger 语义）：先掐掉过渡再改，
+             否则从 expanded 到 minimal 会先"浮起来"再滑走，内容闪一下。
+             inline transition 清空后会自动回落到样式表里的过渡。 */
+          nav.style.transition = "none";
+          nav.dataset.navMode = m;
+          setOpen(m !== "minimal");
+          void nav.offsetHeight;              /* 强制同步样式，让 none 立即生效 */
+          nav.style.transition = "";
+          if (M.nav.indicator) M.nav.indicator.sync(nav); /* 宽度变了，指示条要重新落位 */
+        }
+      }
+      function toggle() {
+        setOpen(nav.dataset.navOpen !== "1");
+      }
+
+      var btns = nav.querySelectorAll(".fl-nav-toggle");
+      for (var i = 0; i < btns.length; i++) btns[i].addEventListener("click", toggle);
+      for (var j = 0; j < floats.length; j++) floats[j].addEventListener("click", toggle);
+      if (scrim) scrim.addEventListener("click", function () { setOpen(false); });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && nav.dataset.navMode === "minimal" && nav.dataset.navOpen === "1") {
+          setOpen(false);
+        }
+      });
+
+      if (global.ResizeObserver && shell) {
+        new global.ResizeObserver(apply).observe(shell);
+      } else {
+        global.addEventListener("resize", apply);
+      }
+      apply();
+      if (!nav.dataset.navMode) nav.dataset.navMode = modeFor(shell ? shell.clientWidth : global.innerWidth);
+      if (!nav.dataset.navOpen) nav.dataset.navOpen = nav.dataset.navMode === "minimal" ? "0" : "1";
+      syncToggles();
+      nav.__flNav = { apply: apply, setOpen: setOpen, mode: function () { return nav.dataset.navMode; } };
+      return nav.__flNav;
+    }
+
+    M.nav = M.nav || {};
+    M.nav.responsive = {
+      bind: bind,
+      auto: function (root) {
+        var scope = (typeof root === "string" ? document.querySelector(root) : root) || document;
+        var list = scope.querySelectorAll(".fl-nav");
+        for (var i = 0; i < list.length; i++) bind(list[i]);
+        return list.length;
+      }
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () { M.nav.responsive.auto(); }, { once: true });
+    } else {
+      global.setTimeout(function () { M.nav.responsive.auto(); }, 0);
+    }
+  })();
+
   /* 列表/卡片分批入场：.fl-entrance + 83ms 步进、上限 333ms
-     延迟写进 --fl-stagger-delay（只影响本动画的 animation-delay），不污染 hover/active 过渡 */
-  M.stagger = function (container, stepMs) {
+     延迟写进 --fl-stagger-delay（只影响本动画的 animation-delay），不污染 hover/active 过渡 */  M.stagger = function (container, stepMs) {
     var root = (typeof container === "string" ? document.querySelector(container) : container);
     if (!root) return 0;
     var items = root.querySelectorAll(".fl-entrance");

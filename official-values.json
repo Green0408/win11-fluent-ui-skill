@@ -433,6 +433,26 @@
       "type": "Double",
       "source": "raw/xaml_NavigationView_themeresources.xaml"
     },
+    "xaml:NavigationViewCompactPaneLength": {
+      "value": "48",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
+    "xaml:NavigationViewIconBoxWidth": {
+      "value": "40",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
+    "xaml:PaneToggleButtonWidth": {
+      "value": "40",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
+    "xaml:PaneToggleButtonHeight": {
+      "value": "36",
+      "type": "Double",
+      "source": "raw/xaml_NavigationView_themeresources.xaml"
+    },
     "xaml:ComboBoxThemeMinWidth": {
       "value": "64",
       "type": "Double",

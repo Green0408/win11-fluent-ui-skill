@@ -181,6 +181,10 @@
 | 导航选中条宽 | `3` | raw/xaml_NavigationView_themeresources.xaml |
 | 导航选中条高 | `16` | raw/xaml_NavigationView_themeresources.xaml |
 | 导航选中条圆角 | `2` | raw/xaml_NavigationView_themeresources.xaml |
+| NavigationViewCompactPaneLength | `48` | raw/xaml_NavigationView_themeresources.xaml |
+| NavigationViewIconBoxWidth | `40` | raw/xaml_NavigationView_themeresources.xaml |
+| PaneToggleButtonWidth | `40` | raw/xaml_NavigationView_themeresources.xaml |
+| PaneToggleButtonHeight | `36` | raw/xaml_NavigationView_themeresources.xaml |
 | ComboBox 最小宽 | `64` | raw/xaml_ComboBox_themeresources.xaml |
 | ComboBox 下拉面板最小宽 | `80` | raw/xaml_ComboBox_themeresources.xaml |
 | ComboBox 下拉面板描边宽 | `2` | raw/xaml_ComboBox_themeresources.xaml |
@@ -210,6 +214,16 @@
 | Large | ≥1008px |
 
 单位为 effective pixels（epx，网页直接当 CSS px 用）；**4 的倍数规则**：所有 UI 尺寸/边距/位置为 4 epx 的倍数（文本除外）——learn.../breakpoints#multiples-of-four
+
+**同一套断点也决定导航的三档**（NavigationView `PaneDisplayMode=Auto` 的官方默认行为，learn.../design/controls/navigationview）：
+
+| 窗口宽 | DisplayMode | pane | 阈值属性（默认值） |
+|---|---|---|---|
+| ≥1008px | Expanded（并排） | `--fl-nav-width` 240（KIT 自定；官方 OpenPaneLength 默认 320） | `ExpandedModeThresholdWidth`=1008 |
+| 641–1007px | Compact（图标列） | `--fl-nav-compact-width`=48（`NavigationViewCompactPaneLength`） | `CompactModeThresholdWidth`=641 |
+| ≤640px | Minimal（收起 + 浮层） | 同 Expanded 宽 + `--fl-smoke` 遮罩 | 同上（低于 Compact 阈值即 Minimal） |
+
+汉堡按钮 PaneToggleButtonWidth=40 / Height=36（`raw/xaml_NavigationView_themeresources.xaml`），图标盒 NavigationViewIconBoxWidth=40 → 图标中心恒在 pane 内 24px。
 
 ## 材质（网页近似方案，官方无数值页）
 出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/materials>（只有原则）

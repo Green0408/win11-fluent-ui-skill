@@ -44,7 +44,9 @@
   --fl-btn-pad-h: 11px;  --fl-btn-pad-t: 5px;  --fl-btn-pad-b: 6px; /* ButtonPadding */
   --fl-text-pad-l: 10px; --fl-text-pad-t: 5px; --fl-text-pad-r: 6px; --fl-text-pad-b: 6px; /* TextControlThemePadding */
   --fl-control-fill-transparent: transparent;
-  --fl-nav-width: 240px; /* KIT 自定：NavigationView 收起态之外的常用宽度，官方未单列 */
+  --fl-nav-width: 240px; /* KIT 自定：NavigationView 展开态宽度（官方 OpenPaneLength 默认 320，工具型页面偏宽） */
+  --fl-nav-compact-threshold: 641px; /* = 响应式断点 Medium 下界（CompactModeThresholdWidth 默认 641，两者同值） */
+  --fl-nav-expand-threshold: 1008px; /* = 响应式断点 Large 下界（ExpandedModeThresholdWidth 默认 1008，两者同值） */
 
   /* 圆角（XAML ControlCornerRadius / OverlayCornerRadius） */
   --fl-radius-control: 4px;
@@ -73,6 +75,10 @@
   --fl-nav-item-height: 36px; /* NavigationViewItemOnLeftMinHeight */
   --fl-nav-indicator-w: 3px;  /* NavigationViewSelectionIndicatorWidth */
   --fl-nav-indicator-h: 16px; /* NavigationViewSelectionIndicatorHeight */
+  --fl-nav-icon-box: 40px; /* NavigationViewIconBoxWidth */
+  --fl-nav-compact-width: 48px; /* NavigationViewCompactPaneLength */
+  --fl-nav-toggle-w: 40px; /* PaneToggleButtonWidth */
+  --fl-nav-toggle-h: 36px; /* PaneToggleButtonHeight */
   --fl-list-min-width: 88px; /* ListViewItemMinWidth */
   --fl-list-check-offset: 40.5px; /* = -ListViewItemContentOffsetX（XAML 为 -40.5，负号表示内容右移；此处取正值使用） */
   --fl-list-item-height-two-line: 64px; /* KIT 自定：图标+主副两行，官方未单列 */

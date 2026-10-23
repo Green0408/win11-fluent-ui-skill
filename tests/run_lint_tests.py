@@ -184,6 +184,26 @@ BAD_CASES = {
     "R49c": ("fluent2-motion.css",
              "  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;",
              "  opacity: 1;\n  transform: translateY(50px);\n  visibility: visible;\n  pointer-events: auto;"),
+    # 导航断点改成 800 → 与官方 641/1008（= 响应式断点 Medium/Large 下界）不符
+    "R50a": ("fluent2-tokens.css",
+             "--fl-nav-compact-threshold: 641px;",
+             "--fl-nav-compact-threshold: 800px;"),
+    # 紧凑档不隐藏文字 → 48px 里塞着文字，挤成一团
+    "R50b": ("fluent2-controls.css",
+             '.fl-nav[data-nav-mode="compact"] .fl-nav-label { display: none; }',
+             '.fl-nav[data-nav-mode="compact"] .fl-nav-label { display: inline; }'),
+    # 给导航加 width 过渡 → layout 每帧取整，收起变成 3 级台阶
+    "R50c": ("fluent2-controls.css",
+             ".fl-nav {\n  width: var(--fl-nav-width); flex-shrink: 0;",
+             ".fl-nav {\n  width: var(--fl-nav-width); flex-shrink: 0;\n  transition: width var(--fl-dur-control-normal) var(--fl-ease-standard);"),
+    # 极简档把宽度压 0 → 不是 SplitView 的 overlay pane，也没法滑入
+    "R50d": ("fluent2-controls.css",
+             "  transform: translateX(-100%); visibility: hidden;",
+             "  width: 0; visibility: hidden;"),
+    # 导航项文字没包 .fl-nav-label → 紧凑档没有钩子隐藏文字
+    "R50e": ("fluent2-tool-starter.html",
+             '<span class="fl-nav-label">条目管理</span>',
+             '条目管理'),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
     "R43a": ("fluent2-controls.css",

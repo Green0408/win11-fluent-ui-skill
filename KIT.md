@@ -286,6 +286,36 @@
     - 位移与拉伸只走 `transform`，不要过渡 `top`/`height`；
     - **WAAPI 不受 CSS 的 `prefers-reduced-motion` 块约束**，必须在 JS 里判 `REDUCED` 走静态落位（R46）。
 
+27. **导航是响应式的三档**（NavigationView `PaneDisplayMode=Auto` 的官方默认行为）。阈值和上面的
+    响应式断点体系（Small ≤640 / Large ≥1008）**完全同值**，只写一份在 tokens 里，JS 读变量 ——
+    不许在 JS 里再写一遍数字（对应 XAML 的 `AdaptiveTrigger` → `VisualState`）：
+
+| 窗口宽 | DisplayMode | pane | 阈值 |
+|---|---|---|---|
+| ≥1008px | **Expanded** | 并排 **240**（`--fl-nav-width`；官方 OpenPaneLength 默认 320，工具页偏宽） | `--fl-nav-expand-threshold` |
+| 641–1007px | **Compact** | **48** 图标列，文字隐藏（`--fl-nav-compact-width` = `NavigationViewCompactPaneLength`） | `--fl-nav-compact-threshold` |
+| ≤640px | **Minimal** | 收起；点汉堡**从左侧浮出**（`translateX(-100%)→0`，250ms ControlFastOutSlowIn）+ `--fl-smoke` 遮罩；点遮罩或 Esc 关闭 | 同上 |
+
+    结构（校验器 R50 逐条强制）：
+
+| 元素 | 规格 |
+|---|---|
+| `.fl-nav-icon` | 16px 图标 + 左右各 12px 内边距 = 官方 **图标盒 40** → **图标中心在展开/紧凑两档都是 pane 内 24px** |
+| `.fl-nav-label` | 导航项文字必须包这层（紧凑档靠它 `display:none`）；不包就没法收成图标列 |
+| `.fl-nav-panehead` + `.fl-nav-toggle` | 行高 40（`NavigationViewPaneHeaderRowMinHeight`）内放 40×36 的 PaneToggleButton |
+| `.fl-nav-toggle-float` | pane 收起时浮在内容左上（官方 minimal 的 toggle 也压在内容上）；内容层让出 40px |
+| `.fl-nav-scrim` | `--fl-smoke`（SmokeFillColorDefault 30% 黑），只在极简档出现 |
+| `.fl-nav-ind` | 换档后必须重新 `sync()` 落位（宽度变了） |
+
+    - ⚠ **不许过渡 `width`**：布局属性每帧取整 → 3 级台阶（和滑块同一个坑）。档位切换在 JS 里先
+      `nav.style.transition="none"` 改完再清空（官方 AdaptiveTrigger 本身就是布局级瞬变）；
+      **只有用户点汉堡开浮层**那一下才有 250ms 位移；
+    - ⚠ **浮层态背景必须换 `--fl-acrylic-bg`**：并排态的 `--fl-layer-fill` 只有 30% 不透明，
+      浮起来会透出下面的正文（第一版踩过，看着像半透明玻璃贴纸）；
+    - 展开/紧凑档点汉堡 = 手动收起（`data-nav-open="0"`，pane 宽 0、汉堡接管入口），再点还原；
+    - 宽度档变了要**重置开合状态**（Expanded/Compact 默认开、Minimal 默认关），这是官方行为。
+
+
 ## 官方关键数值速查（详见 official-values.md）
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。

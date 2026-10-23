@@ -60,6 +60,9 @@ R48 滑块 thumb：外框恒定（ring = 外框/scale − 内点，反向补偿�
 R49 弹出层：菜单 = 整个弹层滑入视野（行程 = 自身高度 100%、不淡入、方向按放置关系、入 250ms/出 167ms、无缩放）；
     下拉列表 = 压在按钮上（选中项那一行盖住按钮）+ clip-path 从顶边往下揭示，167ms / --fl-ease-popup，
     关闭瞬变；对话框与 ToolTip 只许淡入淡出（基类不带 transform）
+R50 导航响应式：三档阈值 = 响应式断点（641/1008）且只写一份在 tokens 里；紧凑档必须隐藏文字；
+    极简档 pane 用 translateX(-100%) 浮层 + --fl-smoke 遮罩；导航禁过渡 width；
+    页面必须有 .fl-nav-label / .fl-nav-toggle / .fl-nav-scrim
 """
 import re
 import sys
@@ -576,8 +579,15 @@ def main():
                          f"（关掉系统动画后仍会过渡/描画）")
 
     # R33 ComboBox 可达性
+    #     aria-* 必须落在**触发器自己的标签**上查，不能全文搜 —— 页面上任何别的
+    #     aria-expanded（比如导航汉堡 .fl-nav-toggle）都会让"删掉 combo 的 aria-expanded"这个坏例失效。
     if re.search(r'class\s*=\s*["\'][^"\']*fl-combo\b', html_code):
-        for attr in ('role="combobox"', 'aria-expanded', 'aria-controls', 'role="listbox"', 'role="option"'):
+        btn = re.search(r"<button[^>]*fl-combo-btn[^>]*>", html_code)
+        btn_tag = btn.group(0) if btn else ""
+        for attr in ('role="combobox"', 'aria-expanded', 'aria-controls'):
+            if attr not in btn_tag:
+                fails.append(f'R33: combo 触发器（.fl-combo-btn）缺少 {attr}')
+        for attr in ('role="listbox"', 'role="option"'):
             if attr not in html_code:
                 fails.append(f'R33: 出现 .fl-combo 但缺少 {attr}')
         for key in ("Escape", "ArrowDown", "ArrowUp", "aria-activedescendant"):
@@ -906,6 +916,66 @@ def main():
         base = re.search(r"\n\.fl-overlay\s*\{([^}]*)\}", motion_css)
         if base and "transform" in base.group(1):
             fails.append("R49 fluent2-motion.css: 基类 .fl-overlay 不许带 transform —— 对话框/ToolTip 只许淡入淡出")
+
+    # R50 导航响应式（NavigationView PaneDisplayMode=Auto 的官方默认行为）
+    #     官方三档：≥1008 展开；641~1007 只留 48px 图标列；≤640 收起成浮层（汉堡 + 遮罩）。
+    #     这两个阈值和响应式断点体系（Small ≤640 / Medium 641~1007 / Large ≥1008）完全同值，
+    #     所以只允许在 tokens 里写一份，JS 读变量 —— 不许在 JS 里再硬编码一遍。
+    #     pane 宽度切换**不许过渡 width**：layout 每帧取整 → 台阶（滑块那节踩过同一个坑）。
+    for key, want, why in (
+        ("--fl-nav-compact-threshold", "641px", "CompactModeThresholdWidth 默认 641 / 断点 Medium 下界"),
+        ("--fl-nav-expand-threshold", "1008px", "ExpandedModeThresholdWidth 默认 1008 / 断点 Large 下界"),
+        ("--fl-nav-compact-width", "48px", "NavigationViewCompactPaneLength"),
+    ):
+        m = re.search(re.escape(key) + r"\s*:\s*([^;]+);", tokens_css or "")
+        if not m:
+            fails.append(f"R50 fluent2-tokens.css: 缺 {key}（{why}）")
+        elif m.group(1).strip().rstrip(";") != want:
+            fails.append(f"R50 fluent2-tokens.css: {key} 必须是 {want}（{why}），"
+                         f"实际是 {m.group(1).strip()}")
+    if controls_css:
+        # 紧凑档：必须隐藏文字，只留图标（否则 48px 里塞着文字 = 挤压变形）
+        m = re.search(r'\.fl-nav\[data-nav-mode="compact"\][^{]*\.fl-nav-label\s*\{([^}]*)\}', controls_css)
+        if not m or "display: none" not in m.group(1):
+            fails.append("R50 fluent2-controls.css: 紧凑档必须 .fl-nav-label { display: none }"
+                         "（48px 的图标列里不能留文字）")
+        # 极简档：必须是位移浮层，不是把宽度压到 0
+        if not re.search(r'\.fl-nav\[data-nav-mode="minimal"\][^{]*\{[^}]*translateX\(-100%\)',
+                         controls_css):
+            fails.append("R50 fluent2-controls.css: 极简档的 pane 必须用 translateX(-100%) 收在左侧外面"
+                         "（对应 SplitView 的 overlay pane），不是把宽度压 0")
+        if not re.search(r'\.fl-nav\[data-nav-mode="minimal"\][^{]*\{[^}]*z-index\s*:\s*4\d', controls_css):
+            fails.append("R50 fluent2-controls.css: 极简档的 pane 要盖在内容上（z-index 40+）")
+        # 整段 nav 规则里不许过渡 width
+        for m in re.finditer(r"\.fl-nav[^{]*\{([^}]*)\}", controls_css):
+            tr = re.search(r"transition\s*:([^;]*)(?:;|$)", m.group(1).replace("\n", " "))
+            if tr and re.search(r"\bwidth\b", tr.group(1)):
+                fails.append("R50 fluent2-controls.css: 导航不许过渡 width —— 布局属性每帧取整，"
+                             "收起/展开会变成 3 级台阶（滑块那节同一个坑）")
+        # 遮罩用官方 SmokeFillColorDefault
+        m = re.search(r"\.fl-nav-scrim\s*\{([^}]*)\}", controls_css)
+        if not m or "--fl-smoke" not in m.group(1):
+            fails.append("R50 fluent2-controls.css: .fl-nav-scrim 的背景必须是 var(--fl-smoke)"
+                         "（SmokeFillColorDefault）")
+    if html and ".fl-nav" in html:
+        # 导航项文字必须包一层 .fl-nav-label —— 紧凑档要靠它隐藏文字
+        items = re.findall(r'<a[^>]*class="[^"]*fl-nav-item[^"]*"[^>]*>(.*?)</a>', html, re.S)
+        for i, body in enumerate(items, 1):
+            if "fl-nav-label" not in body:
+                fails.append(f"R50 页面第 {i} 个 .fl-nav-item 的文字没有包 <span class=\"fl-nav-label\">"
+                             "—— 紧凑档隐藏文字就靠这个钩子")
+        if "fl-nav-toggle" not in html:
+            fails.append("R50 页面缺汉堡按钮 .fl-nav-toggle（PaneToggleButton 40×36）——"
+                         "极简档没有它就永远打不开导航")
+        if "fl-nav-scrim" not in html:
+            fails.append("R50 页面缺 .fl-nav-scrim 遮罩（极简档打开 pane 时要挡住内容、点它关闭）")
+    if motion_js:
+        if "--fl-nav-compact-threshold" not in motion_js or "--fl-nav-expand-threshold" not in motion_js:
+            fails.append("R50 fluent2-motion.js: 档位阈值必须从 CSS 变量读（--fl-nav-compact-threshold / "
+                         "--fl-nav-expand-threshold），不许在 JS 里写死第二份数字")
+        if "ResizeObserver" not in motion_js:
+            fails.append("R50 fluent2-motion.js: 档位要靠 ResizeObserver 跟随容器宽度变化"
+                         "（对应 XAML 的 AdaptiveTrigger）")
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

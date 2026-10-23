@@ -336,6 +336,10 @@ CONTROL_GEOMETRY = [
     {"key": "NavigationViewSelectionIndicatorWidth", "value": None, "type": "Double"},
     {"key": "NavigationViewSelectionIndicatorHeight", "value": None, "type": "Double"},
     {"key": "NavigationViewSelectionIndicatorRadius", "value": None, "type": "Double"},
+    {"key": "NavigationViewCompactPaneLength", "value": None, "type": "Double"},
+    {"key": "NavigationViewIconBoxWidth", "value": None, "type": "Double"},
+    {"key": "PaneToggleButtonWidth", "value": None, "type": "Double"},
+    {"key": "PaneToggleButtonHeight", "value": None, "type": "Double"},
     # ComboBox（raw/xaml_ComboBox_themeresources.xaml；注意 XAML 原键名拼写 Higlight 少一个 h）
     {"key": "ComboBoxThemeMinWidth", "value": None, "type": "Double"},
     {"key": "ComboBoxPopupThemeMinWidth", "value": None, "type": "Double"},
@@ -520,7 +524,11 @@ def build():
         p = [x.strip() for x in tp.split(",")]
         css.append(f'  --fl-text-pad-l: {p[0]}px; --fl-text-pad-t: {p[1]}px; --fl-text-pad-r: {p[2]}px; --fl-text-pad-b: {p[3]}px; /* TextControlThemePadding */')
     css.append('  --fl-control-fill-transparent: transparent;')
-    css.append('  --fl-nav-width: 240px; /* KIT 自定：NavigationView 收起态之外的常用宽度，官方未单列 */')
+    css.append('  --fl-nav-width: 240px; /* KIT 自定：NavigationView 展开态宽度（官方 OpenPaneLength 默认 320，工具型页面偏宽） */')
+    css.append(f'  --fl-nav-compact-threshold: {BREAKPOINTS["small_max"] + 1}px;'
+               f' /* = 响应式断点 Medium 下界（CompactModeThresholdWidth 默认 641，两者同值） */')
+    css.append(f'  --fl-nav-expand-threshold: {BREAKPOINTS["large_min"]}px;'
+               f' /* = 响应式断点 Large 下界（ExpandedModeThresholdWidth 默认 1008，两者同值） */')
     css.append('')
     css.append('  /* 圆角（XAML ControlCornerRadius / OverlayCornerRadius） */')
     for css_name, g in geometry.items():
@@ -555,6 +563,10 @@ def build():
     css.append(f'  --fl-nav-item-height: {gx("NavigationViewItemOnLeftMinHeight", "36")}px; /* NavigationViewItemOnLeftMinHeight */')
     css.append(f'  --fl-nav-indicator-w: {gx("NavigationViewSelectionIndicatorWidth", "3")}px;  /* NavigationViewSelectionIndicatorWidth */')
     css.append(f'  --fl-nav-indicator-h: {gx("NavigationViewSelectionIndicatorHeight", "16")}px; /* NavigationViewSelectionIndicatorHeight */')
+    css.append(f'  --fl-nav-icon-box: {gx("NavigationViewIconBoxWidth", "40")}px; /* NavigationViewIconBoxWidth */')
+    css.append(f'  --fl-nav-compact-width: {gx("NavigationViewCompactPaneLength", "48")}px; /* NavigationViewCompactPaneLength */')
+    css.append(f'  --fl-nav-toggle-w: {gx("PaneToggleButtonWidth", "40")}px; /* PaneToggleButtonWidth */')
+    css.append(f'  --fl-nav-toggle-h: {gx("PaneToggleButtonHeight", "36")}px; /* PaneToggleButtonHeight */')
     css.append(f'  --fl-list-min-width: {gx("ListViewItemMinWidth", "88")}px; /* ListViewItemMinWidth */')
     css.append(f'  --fl-list-check-offset: {gx("ListViewItemContentOffsetX", "-40.5").lstrip("-")}px;'
                f' /* = -ListViewItemContentOffsetX（XAML 为 -40.5，负号表示内容右移；此处取正值使用） */')
@@ -758,6 +770,22 @@ def build():
     md.append(f"| Large | ≥{BREAKPOINTS['large_min']}px |")
     md.append("")
     md.append("单位为 effective pixels（epx，网页直接当 CSS px 用）；**4 的倍数规则**：" + RULES_4PX)
+    md.append("")
+    md.append("**同一套断点也决定导航的三档**（NavigationView `PaneDisplayMode=Auto` 的官方默认行为，"
+              "learn.../design/controls/navigationview）：")
+    md.append("")
+    md.append("| 窗口宽 | DisplayMode | pane | 阈值属性（默认值） |")
+    md.append("|---|---|---|---|")
+    md.append(f"| ≥{BREAKPOINTS['large_min']}px | Expanded（并排） | `--fl-nav-width` 240（KIT 自定；官方 OpenPaneLength 默认 320） "
+              f"| `ExpandedModeThresholdWidth`={BREAKPOINTS['large_min']} |")
+    md.append(f"| {BREAKPOINTS['small_max']+1}–{BREAKPOINTS['medium_max']}px | Compact（图标列） "
+              f"| `--fl-nav-compact-width`=48（`NavigationViewCompactPaneLength`） "
+              f"| `CompactModeThresholdWidth`={BREAKPOINTS['small_max']+1} |")
+    md.append(f"| ≤{BREAKPOINTS['small_max']}px | Minimal（收起 + 浮层） | 同 Expanded 宽 + `--fl-smoke` 遮罩 "
+              f"| 同上（低于 Compact 阈值即 Minimal） |")
+    md.append("")
+    md.append("汉堡按钮 PaneToggleButtonWidth=40 / Height=36（`raw/xaml_NavigationView_themeresources.xaml`），"
+              "图标盒 NavigationViewIconBoxWidth=40 → 图标中心恒在 pane 内 24px。")
     md.append("")
     md.append("## 材质（网页近似方案，官方无数值页）")
     md.append("出处：<https://learn.microsoft.com/en-us/windows/apps/design/signature-experiences/materials>（只有原则）")

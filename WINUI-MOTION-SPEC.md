@@ -177,3 +177,48 @@
 - 模板实现：KIT 规则 26；两层 ghost/pill，origin 分别锚"尾部边/头部边"；
 - 校验：R47（禁 `|Δ|` 派生、峰值必须来自己命名常量）；`tests/nav_indicator_shots.js` 打印逐帧越界量。
 
+
+## 9. 导航响应式三档与 pane 开合
+
+**官方依据**：`learn.../design/controls/navigationview`（DisplayMode 与 Auto 的行为）+
+`AdaptiveTrigger.MinWindowWidth`（窄窗口把 VisualState 覆盖成别的模式）。
+默认阈值 `CompactModeThresholdWidth=641`、`ExpandedModeThresholdWidth=1008` —— 与响应式断点体系
+（Small ≤640 / Medium 641–1007 / Large ≥1008，`screen-sizes-and-breakpoints-for-responsive-design`）
+**完全同值**，说明 WinUI 直接把设备断点当成 NavigationView 的档位界。
+
+| 窗口宽 | DisplayMode | pane | 内容 |
+|---|---|---|---|
+| ≥1008 | Expanded | 并排展开，与内容分栏 | 不覆盖 |
+| 641–1007 | Compact | 48 图标列（`NavigationViewCompactPaneLength`） | 不覆盖 |
+| ≤640 | Minimal | 收起；打开时**覆盖**内容 + 遮罩 | 被覆盖（可点遮罩关闭） |
+
+**pane 开合动画**（Minimal 的浮层）：
+
+| 项 | 值 |
+|---|---|
+| 动作 | 纯位移：`translateX(-100%) → 0`（不是宽度变化、不是淡入） |
+| 时长 | **250ms**，开与关**对称**（ControlNormal 档） |
+| 曲线 | `ControlFastOutSlowIn` = `cubic-bezier(0,0,0,1)` = `--fl-ease-standard` |
+| 遮罩 | `SmokeFillColorDefault`（`--fl-smoke`，30% 黑），同步淡入 250ms |
+| 关闭 | 点遮罩 / Esc；播完才 `visibility: hidden`（`visibility 0s linear var(--fl-dur-control-normal)`） |
+
+为什么开关对称、不像菜单那样"入 250 / 出 167"：pane 是**布局容器**（SplitView 的 overlay pane），
+进出是同一段位移的两个方向；菜单那种不对称是"出现要快、消失更快"的轻量弹层策略，两者不同档。
+另外 `--fl-ease-standard` 放在这里是对的（起手有加速段），和下拉揭示那节"曲线决定观感"是同一个道理 ——
+只是那里需要首帧就动起来（`ControlFastOutSlowIn`），这里需要慢起（同一条曲线在 250ms 下观感成立）。
+
+**三个坑**（都踩过）：
+
+1. **不许过渡 `width`**：布局属性每帧取整，收起/展开会变成 3 级台阶（滑块 thumb 那节同一个根因）。
+   档位切换在 JS 里先 `transition:"none"`、改完 `offsetHeight` 强制同步、再清空 ——
+   官方 `AdaptiveTrigger` 本身也是布局级瞬变，没有过渡；
+2. **浮层背景必须换成 `--fl-acrylic-bg`**：并排态的 `--fl-layer-fill` 只有 30% 不透明，
+   浮起来直接透出正文（第一版就是"半透明玻璃贴纸"）；
+3. **汉堡要给内容让位**：极简档的 toggle 浮在内容左上（官方也压在内容上），
+   内容层必须让出 40px，否则会压住 Infobar 左侧的 severity 条。
+
+**实现与校验**：KIT 规则 27；`M.nav.responsive`（阈值读 CSS 变量 + `ResizeObserver` 跟随容器）；
+`tests/nav_responsive.js` 16 条（三档宽度/文字隐藏/图标中心 24 一致/浮层开合 250ms 无 width 过渡/
+遮罩与 Esc/手动收起/换档后指示条仍贴项）；配图 `tests/nav-responsive.png`。
+
+

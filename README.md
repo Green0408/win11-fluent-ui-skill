@@ -66,3 +66,11 @@ git clone https://github.com/Green0408/win11-fluent-ui-skill.git ~/.workbuddy/sk
 
 - 自检页：https://green0408.github.io/win11-fluent-ui-skill/selftest.html
 - 界面模板：https://green0408.github.io/win11-fluent-ui-skill/fluent2-tool-starter.html
+
+## 姊妹项目
+
+同一套方法论的上一代 —— **[win8-metro-ui-skill](https://github.com/Green0408/win8-metro-ui-skill)**：
+Windows 8 / Metro 官方 WinJS 动画参数（51 个 API、61 条命名动画 + 102 条过渡）、磁贴与列表控件几何。
+两代规格的差异本身就有参考价值——Win8 的入场是「从下方滑入」，Win11 改成了更克制的 Direct Entrance。
+
+在线看：https://green0408.github.io/win8-metro-ui-skill/win8-animation-demo.html

@@ -1,6 +1,6 @@
 ---
 name: win11-fluent-ui
-description: 用 Windows 11 / WinUI 3 / Fluent 官方规格生成工具界面（HTML/CSS/JS 网页）：官方动效时长与缓动曲线（Direct Entrance/Point to Point/Strong Entrance）、页面转场两轴（一级导航垂直·恒自下方进入 / 二级下钻水平，250ms）、连续型动效（秒针/进度环）、Fluent 颜色 token（暗/亮双主题、Mica/Acrylic/Smoke 网页近似）、Segoe UI Variable 字阶、官方圆角（控件 4px/浮层 8px）与海拔阴影、可拆装界面模块（单页/列表详情/网格详情/设置型）。当用户要求「用 Win11 / Fluent / WinUI 风格做个界面」「Windows 11 风格工具」「照 KIT 做界面」，需要核对 Fluent 官方数值，或发来 Win11 应用录屏要反解整屏动效与控件形态时使用。含组合处方、可复制骨架、录屏动效反解工具与可执行规范检查器。
+description: 用 Windows 11 / WinUI 3 / Fluent 官方规格生成工具界面（HTML/CSS/JS 网页）：官方动效时长与缓动曲线（Direct Entrance/Point to Point/Strong Entrance）、页面转场两轴（一级导航垂直·恒自下方进入 / 二级下钻水平，250ms）、连续型动效（秒针/进度环）、Fluent 颜色 token（暗/亮双主题、Mica/Acrylic/Smoke 网页近似）、Segoe UI Variable 字阶、官方圆角（控件 4px/浮层 8px）与海拔阴影、可拆装界面模块（单页/列表详情/网格详情/设置型）。当用户要求「用 Win11 / Fluent / WinUI 风格做个界面」「Windows 11 风格工具」「照 KIT 做界面」，需要核对 Fluent 官方数值，或要把录屏反解出来的动效结论落成 Fluent 实现时使用。含组合处方、可复制骨架、可执行规范检查器与 Win11 录屏实测记录。录屏反解本身由 video-motion-analyzer 技能负责。
 ---
 
 # Win11 / Fluent 工具界面 KIT
@@ -68,26 +68,32 @@ learn.microsoft.com 文档快照）。不要凭记忆写颜色、字号、圆角
 | 模块怎么拆/怎么组合 | `FLUENT-COMPOSE.md` |
 | 全部官方数值与出处 | `official-values.md`（机读 `official-values.json`） |
 | 完整规则与控件清单 | `KIT.md` |
-| **用户发来录屏要「照着改」** | `VIDEO-ALIGN.md`（整屏动效反解流程、判定阈值、素材要求、已知限制） |
+| **用户发来录屏要「照着改」** | 先用 **`video-motion-analyzer` 技能**出报告（量测都在那边），再回来按 `VIDEO-ALIGN.md` 的落点表改实现 |
 | **要查「官方对某个动效到底怎么规定」** | `WINUI-MOTION-SPEC.md`（官方三层规范、六类动效数值表、转场类型与适用场景、官方自身不一致处、本 kit 的偏离清单） |
 | 官方原文 | `raw/*.xaml`（XAML 源码）、`raw/doc_*.md`（文档快照） |
 
 ## 用户发来录屏时（先出报告，别直接改）
 
-用同目录的 `analyze_video.py`（依赖 `av`/`pillow`/`numpy`，装隔离 venv）：
+**量测不在这里做**，在独立技能 `video-motion-analyzer` 里做（依赖 `av`/`pillow`/`numpy`，装隔离 venv）：
 
 ```bash
-python analyze_video.py probe 录屏.mp4 --work video-analysis/<名字>   # 先看帧率能不能测
-python analyze_video.py segments 录屏.mp4 --work ...                  # 切出 s1/s2..
-python analyze_video.py motion 录屏.mp4 --work ... --seg s1           # 整屏动效（重点）
-python analyze_video.py quality 录屏.mp4 --work ... --seg s1          # 抖/跳/生硬体检
-python analyze_video.py micro  录屏.mp4 --work ... --from 1330 --to 1560 --roi "switch:268,398,52,30"
-python analyze_video.py report 录屏.mp4 --work ...                    # 10 节 report.md
+PY=~/.workbuddy/binaries/python/envs/default/bin/python
+T=~/.workbuddy/skills/video-motion-analyzer/analyze_video.py
+
+$PY $T probe   录屏.mp4 --work video-analysis/<名字> --profile win11   # 先看帧率能不能测
+$PY $T segments 录屏.mp4 --work ... --profile win11                    # 切出 s1/s2..
+$PY $T motion   录屏.mp4 --work ... --seg s1 --profile win11           # 整屏动效（重点）
+$PY $T quality  录屏.mp4 --work ... --seg s1 --profile win11           # 抖/跳/生硬体检
+$PY $T micro    录屏.mp4 --work ... --from 1330 --to 1560 --roi "switch:268,398,52,30"
+$PY $T report   录屏.mp4 --work ... --profile win11                    # 10 节 report.md
 ```
+
+`--profile win11` 就是本 KIT 的 83/167/250/333 档，报告会直接写「250ms 档（Point to Point / 页面转场）」。
+拿到报告后回到本技能：**第 6–9 节按 `.fl-*` 类补写，差异建议落到具体文件，落点表见 `VIDEO-ALIGN.md` 第 3 节。**
 
 **范围**：只参考**整屏动效**、**整屏动效质量**、**控件形态与控件微动效**；**颜色一律不参考**
 （继续用官方 token —— 录屏取色必然偏移，拿视频校准颜色只会把准确值改坏）。
-30fps 下 83ms 档测不出、167/250 档可能互判，`VIDEO-ALIGN.md` 里有完整可测性表与素材要求。
+30fps 下 83ms 档测不出、167/250 档可能互判，`VIDEO-ALIGN.md` 第 1 节有完整可测性表与素材要求。
 
 ## 最高频错误
 

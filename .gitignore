@@ -16,3 +16,6 @@ out/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# WorkBuddy 本地安装元数据（不应进仓库）
+_user_meta.json

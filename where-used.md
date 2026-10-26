@@ -39,6 +39,7 @@
 | 位移过渡（拖拽/排序） | `.fl-movable`（point 曲线） | motion Point to Point |
 | 纯透明度切换 | `.fl-fade`（linear 83ms） | motion Fade |
 | 焦点框 | `:focus-visible` 双描边 outer/inner | XAML FocusStrokeColor* |
+| 触屏按下反馈 | KIT 已在 `:root` 关掉 `-webkit-tap-highlight-color`；可点类必须自带 `:active`（`.fl-btn` / `.fl-nav-item` / `.fl-listitem` / `.fl-settings-row` / `.fl-combo-item` / `.fl-flyout-item`），新加的可点类要自己补一条 —— 否则安卓上先闪一块半透明方块、按下又没反馈 | 浏览器 UA 行为（非官方值）；KIT 规则 28 / 校验器 R51 |
 | 成功/警告/错误 | `--fl-success/caution/critical`(+`-bg`) | XAML SystemFillColor* |
 | 分隔线 | `--fl-divider-stroke` | XAML DividerStrokeColorDefault |
 | 间距 | `--fl-space-*`（4 的倍数）；语义 8/12/16/48 见 KIT 规则 10 | content-basics |

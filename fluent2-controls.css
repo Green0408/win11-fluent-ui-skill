@@ -35,6 +35,15 @@ body {
               0 0 0 calc(var(--fl-stroke) * 2) var(--fl-focus-stroke-outer);
 }
 
+/* ---- 触屏点按：只留 :active，关掉 UA 系统高亮 ----
+   -webkit-tap-highlight-color 是**可继承**属性，浏览器默认值 ≈ rgba(0,0,0,.18)
+   （Android Chrome 偏蓝）。KIT 从不覆盖它，等于把每个元素的点按都交给 UA 去画，
+   在图标、列表行、卡片上就是一块生硬的半透明方框 —— 和 Fluent「按下 = 底色压暗一档」
+   完全不是一套语言。写 :root 而不是 *（可继承，一处足够，且要覆盖挂在 body 下的
+   弹层/对话框/toast —— 写局部容器会漏掉它们）。只关高亮不够，可点类必须自己有 :active，
+   否则按下没反应（校验器 R51 会逐类强制）。 */
+:root { -webkit-tap-highlight-color: transparent; }
+
 /* ---- 双层系统：Base（导航/命令）+ Content（卡片内容） ---- */
 /* 外壳：整页不滚，只有右侧内容区滚（左导航固定）。
    用 :has() 给"带 .fl-shell 的页面"开启应用外壳模式 —— 没用到 shell 的普通长页面仍然照常整页滚动。
@@ -914,6 +923,12 @@ button.fl-settings-row, a.fl-settings-row {
 .fl-combo-item[aria-selected="true"][data-active="true"] { background: var(--fl-subtle-fill-pressed); }
 .fl-combo-item[aria-disabled="true"] { opacity: 0.3; cursor: default; }
 .fl-combo-item[aria-disabled="true"]:hover { background: transparent; }
+/* 按下态：关掉 UA 高亮之后，只有 hover 的类会「点下去完全没反应」——
+   档位与 .fl-btn-subtle / .fl-listitem / .fl-settings-row 一致（不引入新语义） */
+.fl-combo-item:not([aria-disabled="true"]):active { background: var(--fl-subtle-fill-pressed); }
+/* 已选中的项在六档语义里整体上移一档（hover 已是 pressed 档），所以按下回到 hover 档；
+   照抄 .fl-listitem[aria-selected="true"]:active —— 否则按下反而变淡，像被取消选中 */
+.fl-combo-item[aria-selected="true"]:active { background: var(--fl-subtle-fill-hover); }
 
 /* ---- Acrylic 浮层（flyout / contextmenu 模块）----
    官方：Acrylic 只用于瞬态轻触消失表面；elevation 32；圆角 8 */
@@ -936,6 +951,8 @@ button.fl-settings-row, a.fl-settings-row {
   transition: background var(--fl-dur-fast) var(--fl-ease-standard);
 }
 .fl-flyout-item:hover { background: var(--fl-subtle-fill-hover); }
+/* 按下态（菜单项的 hover 档是 subtle-hover，按下压到 pressed，和列表行同一语义） */
+.fl-flyout-item:active { background: var(--fl-subtle-fill-pressed); }
 
 /* ---- ContentDialog（dialog 模块）----
    官方：Padding 24、MaxWidth 548、MinHeight 184；Smoke 遮罩；elevation 128；圆角 8 */

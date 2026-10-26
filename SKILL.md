@@ -54,6 +54,7 @@ learn.microsoft.com 文档快照）。不要凭记忆写颜色、字号、圆角
 - 一次性动效（入场/出场/转场）用 `animation`，状态切换（hover/active/浮层开合）用 `transition`，连续型（秒针/进度环）用 `animation + infinite + linear/steps（禁 both）` —— 三类别混用。
 - 圆角两档：控件 4px / 浮层 8px（`--fl-radius-*`）；字号只用 `.fl-*` 字阶类；间距/尺寸 4 的倍数（`--fl-space-*`）。
 - 浮层隐藏必须 visibility/pointer-events（`.fl-overlay` 已内置，且 visibility 延迟切换以保证出场动画可见）；对话框只用于不可撤销且后果重大的确认。
+- **触屏按下态**：KIT 已关闭 `-webkit-tap-highlight-color`（否则安卓上点任何元素先闪一块半透明方块）。所以**新增可点类必须自己写 `:active`**（官方可点类已有）：档位用 `--fl-subtle-fill-pressed`，禁用项用 `:not([aria-disabled="true"])` 排除，已选中项按下回 `--fl-subtle-fill-hover`（别压成 pressed）。KIT 规则 28 / 校验器 R51。
 - 多页布局是 grid 同格叠放（`.fl-page { grid-area: 1 / 1 }`），转场期靠 `.fl-page-leaving` 保持离场页渲染，不要改成上下堆叠。
 - 明暗双主题：`<html data-theme>` + `M.toggleTheme()`，两主题都要渲染正确。
 - 海拔语义：dialog=128 / flyout=32 / tooltip=16 / card=8 / control=2 / layer=1；CSS 阴影为 KIT 换算近似（已在注释登记）。

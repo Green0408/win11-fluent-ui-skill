@@ -316,6 +316,27 @@
     - 宽度档变了要**重置开合状态**（Expanded/Compact 默认开、Minimal 默认关），这是官方行为。
 
 
+28. **触屏按下反馈统一走 `:active`，KIT 已关闭 UA 系统高亮**（校验器 R51 逐条强制）。
+
+    `-webkit-tap-highlight-color` 是**可继承**属性，浏览器默认值 ≈ `rgba(0,0,0,.18)`
+    （Android Chrome 偏蓝）。不覆盖它，手机上点图标、列表行、卡片、菜单项，
+    都会先闪一块**生硬的半透明方块**，然后才发生操作 —— 和 Fluent「按下 = 底色压暗一档」
+    完全不是一套语言。`fluent2-controls.css` 已在 `:root` 关掉它
+    （写 `:root` 而不是 `*`：属性可继承，一处足够；而且弹层、对话框、toast 都挂在 `body` 下，
+    写 `.fl-page` / `.fl-shell` 这类局部容器会漏）。
+
+    ⚠ **只关高亮是不够的**：关掉之后，原本只有 `:hover` 的类会变成「点下去毫无反应」。两条都要：
+
+    | 要求 | 说明 |
+    |---|---|
+    | 官方可点类自带 `:active` | `.fl-btn` / `.fl-nav-item` / `.fl-listitem` / `.fl-settings-row` / `.fl-combo-item` / `.fl-flyout-item` 都有，校验器逐个复核 |
+    | **新增可点类必须自己补** | KIT 管不到业务自建的类；漏了那个元素就是按下没反馈 |
+    | 按下档位 | `--fl-subtle-fill-pressed`（与 `.fl-btn-subtle` / `.fl-listitem` / `.fl-settings-row` 同档，不引入新语义） |
+    | 禁用态 | `[aria-disabled="true"]` 按下**不许**亮 —— 照 `.fl-listitem` 的写法用 `:not([aria-disabled="true"])` 排除 |
+    | 选中态 | 已选中项在六档语义里整体上移一档：`[aria-selected="true"]:active` 回 `--fl-subtle-fill-hover`，**不要**压成 pressed（否则像被取消选中） |
+
+    页面里**不要**再写一遍 `-webkit-tap-highlight-color`（KIT 已统一关闭）。
+
 ## 官方关键数值速查（详见 official-values.md）
 
 - 动效：Direct Entrance/Exit 167ms（exit 必须配 fade out）、Point to Point 167/250/333、Gentle Exit 167、Fade 83、Strong Entrance 三关键帧 167+167+333。

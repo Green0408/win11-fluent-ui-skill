@@ -198,6 +198,23 @@
         </div>
         <span class="fl-caption">连续型动效（秒针/分针）</span>
       </div>
+      <!-- 触屏点按：安卓真机自查（R51）——
+           ① 点任何元素都不该有半透明方块闪现；② 按下底色要变一档；③ 禁用项按下不亮 -->
+      <div class="fl-card" id="tap-card">
+        <span class="fl-caption">触屏点按（R51）：安卓真机点下面三行，核对「无方块闪现 / 按下有底色变化 / 禁用不亮」</span>
+        <div class="fl-list" id="tap-list" role="listbox" aria-label="触屏点按测试">
+          <div class="fl-listitem" role="option" aria-selected="false" tabindex="0">
+            <div class="fl-list-content"><span class="fl-list-text"><span class="fl-body">普通行：按下 → pressed 档</span></span></div>
+          </div>
+          <div class="fl-listitem" role="option" aria-selected="true" tabindex="0">
+            <div class="fl-list-content"><span class="fl-list-text"><span class="fl-body">已选中行：按下回 hover 档（不许压成 pressed）</span></span></div>
+          </div>
+          <div class="fl-listitem" role="option" aria-disabled="true">
+            <div class="fl-list-content"><span class="fl-list-text"><span class="fl-body">禁用行：按下不亮</span></span></div>
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <section class="fl-page" id="page-b">

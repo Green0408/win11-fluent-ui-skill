@@ -63,6 +63,9 @@ R49 弹出层：菜单 = 整个弹层滑入视野（行程 = 自身高度 100%�
 R50 导航响应式：三档阈值 = 响应式断点（641/1008）且只写一份在 tokens 里；紧凑档必须隐藏文字；
     极简档 pane 用 translateX(-100%) 浮层 + --fl-smoke 遮罩；导航禁过渡 width；
     页面必须有 .fl-nav-label / .fl-nav-toggle / .fl-nav-scrim
+R51 触屏点按反馈：fluent2-controls.css 必须声明 -webkit-tap-highlight-color: transparent（关掉 UA 高亮）；
+    主要可点类必须有 :active 按下态（.fl-btn / .fl-nav-item / .fl-listitem / .fl-settings-row /
+    .fl-combo-item / .fl-flyout-item），且 [aria-selected="true"] 的项按下时不得压成 pressed 档
 """
 import re
 import sys
@@ -976,6 +979,31 @@ def main():
         if "ResizeObserver" not in motion_js:
             fails.append("R50 fluent2-motion.js: 档位要靠 ResizeObserver 跟随容器宽度变化"
                          "（对应 XAML 的 AdaptiveTrigger）")
+
+    # R51 触屏点按反馈：UA 高亮关掉之后，可点类必须自己给 :active
+    #     -webkit-tap-highlight-color 可继承，浏览器默认 ≈ rgba(0,0,0,.18)（Android 偏蓝）：
+    #     不覆盖它，点任何元素都先闪一块半透明方框，是「生硬方块」的唯一来源。
+    #     只关高亮不够 —— 本来只有 hover 的类会变成「点下去毫无反应」，两件事都要查。
+    #     范围只查资产自身，不查业务 CSS：页面自建的类（如表格行 .wt-due）不该被误报。
+    if controls_css:
+        if not re.search(r"-webkit-tap-highlight-color\s*:\s*transparent", controls_css):
+            fails.append("R51 fluent2-controls.css: 缺 :root { -webkit-tap-highlight-color: transparent }"
+                         "—— 不关掉它，Android Chrome 点任何元素都会盖一层半透明方块")
+        for cls in ("fl-btn", "fl-nav-item", "fl-listitem", "fl-settings-row",
+                    "fl-combo-item", "fl-flyout-item"):
+            # :not(...) 可能夹在选择器中间（.fl-listitem:not([aria-disabled="true"]):active），
+            # 所以不能假设 :active 紧贴类名；词尾边界防止 .fl-btn 误匹配 .fl-btn-accent
+            if not re.search(r"\." + cls + r"(?![\w-])[^{}]*:active", controls_css):
+                fails.append("R51 fluent2-controls.css: .%s 缺 :active 按下态 —— "
+                             "UA 高亮已关，没写它这个元素点下去完全没反馈" % cls)
+        sel = re.search(r'\.fl-combo-item\[aria-selected="true"\][^{}]*:active\s*\{([^}]*)\}',
+                        controls_css)
+        if not sel:
+            fails.append('R51 fluent2-controls.css: 缺 .fl-combo-item[aria-selected="true"]:active'
+                         "—— 选中项按下要回 hover 档，否则先压成 pressed 灰再回弹，像被取消选中")
+        elif "pressed" in sel.group(1):
+            fails.append('R51 fluent2-controls.css: .fl-combo-item[aria-selected="true"]:active 不许用 pressed 档'
+                         "（selected 项在六档语义里整体上移一档，按下应回 --fl-subtle-fill-hover）")
 
     # R44 弹层不许越出视口
     #     弹层是 position: fixed + 内容撑宽（选项 nowrap），贴着右边缘的按钮会把弹层顶到视口外，

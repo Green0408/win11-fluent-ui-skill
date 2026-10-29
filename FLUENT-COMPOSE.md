@@ -38,4 +38,4 @@
 - 导航：左导航（NavigationView）用于顶层页、>5 项、不频繁切换；顶部导航用于要全展示/省空间；>2 层加面包屑；扁平 ≤8 页 / 层级 >7 页（navigation-basics）。
 - 命令：能直接操作内容就不加命令；核心高频命令放画布靠近作用对象；其余 CommandBar；菜单/上下文菜单收纳次要命令（commanding-basics）。
 - 对话框只用于**不可撤销且后果重大**的操作确认（永久删除、覆盖、提交、购买）；可撤销的给 toast/undo 即可（commanding-basics）。
-- 断点：≤640px 收起 nav 为汉堡/顶部；≥1008px 完整布局（breakpoints）。
+- 断点：≤640px 收起 nav 为汉堡浮层；641–1007px 图标列（点汉堡打开 240 覆盖）；≥1008px 完整布局（breakpoints）。

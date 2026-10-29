@@ -49,7 +49,7 @@ learn.microsoft.com 文档快照）。不要凭记忆写颜色、字号、圆角
 - **转场两轴**：点侧栏（一级）用默认 `nav`（垂直 108px），**恒自下往上进入** —— 点任意一项都一样，不按导航序反向；点内容区入口进二级页用 `{kind:'drill'}`（水平 264px），返回用 `M.back('drill')`。要反向只能显式写 `{dir:'up'}`。两者都是 250ms、纯滑动（转场期两页不透明，不做交叉淡化，否则会重影）。
 - **侧栏选中指示条**：3×16 胶囊，换项时「旧项内拉伸 → 新项满高出现 → 收成 16」，全程 500ms，条始终不出按钮（`M.transitionTo` 自动接管，reduced-motion 下瞬间落位）。
 - **布局**：`.fl-shell` 左导航固定、右侧内容区独立滚动（每页各自记滚动位置），整页不出现滚动条；KIT 规则 24。
-- **响应式侧栏**：按 NavigationView `PaneDisplayMode=Auto` 三档收放 —— ≥1008px 展开 240、641–1007px 收成 48 图标列、≤640px 收起并由汉堡浮出（+ Smoke 遮罩）。阈值就是断点值（641/1008），tokens 里写一份、JS 读变量自动切（`M.nav.responsive.auto()` 已默认启用）；导航项文字必须包 `.fl-nav-label`。KIT 规则 27。
+- **响应式侧栏**：按 NavigationView `PaneDisplayMode=Auto` 三档 × 独立开合 —— ≥1008px 开 240 / 关 48 图标列（开合 = clip + 内容 margin 同步 250ms 推挤）；641–1007px 关 48 图标列、点汉堡开 240 覆盖层（内容不重排）；≤640px 收起、浮动汉堡开 240 覆盖（+ Smoke 遮罩）。覆盖层里选中项/点遮罩/Esc 关闭；手动收起跨档保留。阈值就是断点值（641/1008），tokens 里写一份、JS 读变量自动切（`M.nav.responsive.auto()` 已默认启用）；导航项文字必须包 `.fl-nav-label`。KIT 规则 27。
 - **列表/勾选/下拉**：列表用 `.fl-list` + `.fl-list-content` 三层结构与六档状态；勾号是 SVG 描画（不是字符 ✓）；下拉首选自绘 `.fl-combo`（弹层压在按钮上、选中项那一行盖住按钮，从顶边往下揭示 167ms；`.fl-select` 仅作无 JS 回退）。
 - 一次性动效（入场/出场/转场）用 `animation`，状态切换（hover/active/浮层开合）用 `transition`，连续型（秒针/进度环）用 `animation + infinite + linear/steps（禁 both）` —— 三类别混用。
 - 圆角两档：控件 4px / 浮层 8px（`--fl-radius-*`）；字号只用 `.fl-*` 字阶类；间距/尺寸 4 的倍数（`--fl-space-*`）。

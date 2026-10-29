@@ -286,34 +286,48 @@
     - 位移与拉伸只走 `transform`，不要过渡 `top`/`height`；
     - **WAAPI 不受 CSS 的 `prefers-reduced-motion` 块约束**，必须在 JS 里判 `REDUCED` 走静态落位（R46）。
 
-27. **导航是响应式的三档**（NavigationView `PaneDisplayMode=Auto` 的官方默认行为）。阈值和上面的
-    响应式断点体系（Small ≤640 / Large ≥1008）**完全同值**，只写一份在 tokens 里，JS 读变量 ——
+27. **导航是「三档 × 独立开合」**（NavigationView `PaneDisplayMode=Auto` / SplitView DisplayMode 的官方行为）。
+    阈值和响应式断点体系（Small ≤640 / Large ≥1008）**完全同值**，只写一份在 tokens 里，JS 读变量 ——
     不许在 JS 里再写一遍数字（对应 XAML 的 `AdaptiveTrigger` → `VisualState`）：
 
-| 窗口宽 | DisplayMode | pane | 阈值 |
+| 窗口宽 | DisplayMode | 关（`data-nav-open="0"`） | 开（`data-nav-open="1"`） |
 |---|---|---|---|
-| ≥1008px | **Expanded** | 并排 **240**（`--fl-nav-width`；官方 OpenPaneLength 默认 320，工具页偏宽） | `--fl-nav-expand-threshold` |
-| 641–1007px | **Compact** | **48** 图标列，文字隐藏（`--fl-nav-compact-width` = `NavigationViewCompactPaneLength`） | `--fl-nav-compact-threshold` |
-| ≤640px | **Minimal** | 收起；点汉堡**从左侧浮出**（`translateX(-100%)→0`，250ms ControlFastOutSlowIn）+ `--fl-smoke` 遮罩；点遮罩或 Esc 关闭 | 同上 |
+| ≥1008px | **Expanded** | **48 图标列**：pane 盒 240 + `clip-path` 只露 48；内容 margin 48 | **240 并排**（`--fl-nav-width`；官方 OpenPaneLength 默认 320，工具页偏宽）；内容 margin 240；**开合 = clip 与 margin 同步 250ms 推挤** |
+| 641–1007px | **Compact** | **48 图标列**：pane 盒仍 240，用 `clip-path` 只露左侧 48 | **240 覆盖内容**（官方 CompactOverlay）+ Acrylic + `--fl-smoke` 遮罩；内容仍从 48 起 |
+| ≤640px | **Minimal** | 收在左侧外（`translateX(-100%)` + visibility），浮动汉堡在内容左上 | **240 覆盖**（`translateX(0)`，250ms）+ 遮罩；内容仍从 40 起 |
+
+    官方状态迁移（NavigationView.cpp `UpdateAdaptiveLayout` / `OnPaneToggleButtonClick`）：
+
+    - 初始 / 进入 Compact、Minimal → **关**；进入 Expanded → **开**，除非用户手动关过（`m_wasForceClosed`）；
+    - 点汉堡：开 ↔ 关；**手动关**记 `wasForceClosed=true`，手动开清零；
+    - 覆盖层（Compact/Minimal 打开）里**选中导航项 / 点遮罩 / Esc** 都会收起（flyout 行为），但**不改**
+      `wasForceClosed`（之后再变宽仍按默认打开）；
+    - 换档是布局级瞬变：JS 先 `transition:none`、改完 reflow、再清空；**任何档位都不许过渡 `width`**
+      （布局属性逐帧取整 → 3 级台阶）。Expanded 开合是 `clip-path` + 内容层 `margin-left` 同时 250ms
+      （官方 CompactInline 的推挤；两者同曲线，内容左边缘始终贴着 pane 可见边）；Compact 只过渡 `clip-path`；
+      Minimal 只过渡 `transform`。
 
     结构（校验器 R50 逐条强制）：
 
 | 元素 | 规格 |
 |---|---|
 | `.fl-nav-icon` | 16px 图标 + 左右各 12px 内边距 = 官方 **图标盒 40** → **图标中心在展开/紧凑两档都是 pane 内 24px** |
-| `.fl-nav-label` | 导航项文字必须包这层（紧凑档靠它 `display:none`）；不包就没法收成图标列 |
-| `.fl-nav-panehead` + `.fl-nav-toggle` | 行高 40（`NavigationViewPaneHeaderRowMinHeight`）内放 40×36 的 PaneToggleButton |
-| `.fl-nav-toggle-float` | pane 收起时浮在内容左上（官方 minimal 的 toggle 也压在内容上）；内容层让出 40px |
-| `.fl-nav-scrim` | `--fl-smoke`（SmokeFillColorDefault 30% 黑），只在极简档出现 |
-| `.fl-nav-ind` | 换档后必须重新 `sync()` 落位（宽度变了） |
+| `.fl-nav-label` | 导航项文字必须包这层；收起档（Expanded 关 / Compact 关）靠它 `display:none`，名称由 JS 补 `aria-label` |
+| `.fl-nav-panehead` + `.fl-nav-toggle` | 行高 40（`NavigationViewPaneHeaderRowMinHeight`）内放 40×36 的 PaneToggleButton；`aria-expanded` 与名称（打开/关闭导航）随状态同步 |
+| `.fl-nav-toggle-float` | **只**在 Minimal 收起时浮在内容左上；展开/紧凑档的入口在 pane 头部，不能多出一个汉堡 |
+| `.fl-nav-scrim` | `--fl-smoke`（SmokeFillColorDefault 30% 黑），只在 Compact/Minimal **覆盖层打开**时出现 |
+| `.fl-content-layer` | Expanded：`margin-left` 240/48 随开合 250ms；Compact：恒定 48；Minimal：恒定 40。开合不按 `data-nav-open` 改档位之外的让位 |
+| `.fl-nav-ind` | 换档后必须重新 `sync()` 落位（宽度/位置变了） |
 
-    - ⚠ **不许过渡 `width`**：布局属性每帧取整 → 3 级台阶（和滑块同一个坑）。档位切换在 JS 里先
-      `nav.style.transition="none"` 改完再清空（官方 AdaptiveTrigger 本身就是布局级瞬变）；
-      **只有用户点汉堡开浮层**那一下才有 250ms 位移；
-    - ⚠ **浮层态背景必须换 `--fl-acrylic-bg`**：并排态的 `--fl-layer-fill` 只有 30% 不透明，
+    - ⚠ **Compact/Minimal 的 pane 背景用 `--fl-acrylic-bg`**（官方 LeftCompact/LeftMinimal 的
+      NavigationViewDefaultPaneBackground）：并排态的 `--fl-layer-fill` 只有 30% 不透明，
       浮起来会透出下面的正文（第一版踩过，看着像半透明玻璃贴纸）；
-    - 展开/紧凑档点汉堡 = 手动收起（`data-nav-open="0"`，pane 宽 0、汉堡接管入口），再点还原；
-    - 宽度档变了要**重置开合状态**（Expanded/Compact 默认开、Minimal 默认关），这是官方行为。
+    - ⚠ **Expanded/Compact 关闭时 pane 盒仍是 240**，只是被 `clip-path: inset(0 192px 0 0)` 裁到 48；
+      用 `getBoundingClientRect().width` 会读到 240，判读要用内容层左边界 / clip / item 宽；
+      打开态的 clip 要用负 inset（`inset(0 -24px -24px 0)`），否则 e32 阴影被裁掉；
+    - ⚠ **Expanded 的推挤动画**：nav 的 `clip-path` 与内容层 `margin-left` 必须同为 250ms / 同曲线，
+      否则正文边缘和 pane 可见边会错开；漏掉 margin 过渡就会看到「pane 在动、正文瞬移」；
+    - 收起档的项宽 40（48 − 左右各 4）、文字隐藏；打开态的 Compact 项宽约 232（240 − 8 内边距）。
 
 
 28. **触屏按下反馈统一走 `:active`，KIT 已关闭 UA 系统高亮**（校验器 R51 逐条强制）。

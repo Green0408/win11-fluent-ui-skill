@@ -277,6 +277,9 @@
   /* 状态切换：瞬时完成，但显隐仍由各自规则（opacity/visibility）决定 */
   .fl-overlay,
   .fl-smoke,
+  .fl-nav,
+  .fl-nav-scrim,
+  .fl-content-layer,
   .fl-movable,
   .fl-fade,
   /* 控件级状态过渡（新增控件必须挂在这里，否则 reduced 下仍有位移/描画） */

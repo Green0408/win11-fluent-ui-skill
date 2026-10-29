@@ -60,9 +60,11 @@ R48 滑块 thumb：外框恒定（ring = 外框/scale − 内点，反向补偿�
 R49 弹出层：菜单 = 整个弹层滑入视野（行程 = 自身高度 100%、不淡入、方向按放置关系、入 250ms/出 167ms、无缩放）；
     下拉列表 = 压在按钮上（选中项那一行盖住按钮）+ clip-path 从顶边往下揭示，167ms / --fl-ease-popup，
     关闭瞬变；对话框与 ToolTip 只许淡入淡出（基类不带 transform）
-R50 导航响应式：三档阈值 = 响应式断点（641/1008）且只写一份在 tokens 里；紧凑档必须隐藏文字；
-    极简档 pane 用 translateX(-100%) 浮层 + --fl-smoke 遮罩；导航禁过渡 width；
-    页面必须有 .fl-nav-label / .fl-nav-toggle / .fl-nav-scrim
+R50 导航响应式 + 开合：三档阈值 = 响应式断点（641/1008）且只写一份在 tokens 里；
+    Expanded 关 = clip 只露 48 + 内容 margin 48、开 = 240，开合用 clip + margin 同步 250ms（不是宽 0）；
+    Compact 关 = clip 只露 48、开 = 240 覆盖（内容恒定让出 48）；
+    Minimal 关 = translateX(-100%)、开 = 240 覆盖 + --fl-smoke；选中项/遮罩/Esc 关闭；
+    导航禁过渡 width；页面必须有 .fl-nav-label / .fl-nav-toggle / .fl-nav-toggle-float / .fl-nav-scrim
 R51 触屏点按反馈：fluent2-controls.css 必须声明 -webkit-tap-highlight-color: transparent（关掉 UA 高亮）；
     主要可点类必须有 :active 按下态（.fl-btn / .fl-nav-item / .fl-listitem / .fl-settings-row /
     .fl-combo-item / .fl-flyout-item），且 [aria-selected="true"] 的项按下时不得压成 pressed 档
@@ -920,9 +922,12 @@ def main():
         if base and "transform" in base.group(1):
             fails.append("R49 fluent2-motion.css: 基类 .fl-overlay 不许带 transform —— 对话框/ToolTip 只许淡入淡出")
 
-    # R50 导航响应式（NavigationView PaneDisplayMode=Auto 的官方默认行为）
-    #     官方三档：≥1008 展开；641~1007 只留 48px 图标列；≤640 收起成浮层（汉堡 + 遮罩）。
-    #     这两个阈值和响应式断点体系（Small ≤640 / Medium 641~1007 / Large ≥1008）完全同值，
+    # R50 导航响应式 + 开合（NavigationView PaneDisplayMode=Auto / SplitView DisplayMode）
+    #     官方三档：≥1008 展开；641~1007 关=48 图标列、开=240 覆盖；≤640 关=收起、开=240 覆盖。
+    #     开合是独立状态（IsPaneOpen）：
+    #       expanded 关 = 48 图标列（不是宽 0）；compact 关 = 240 盒 + clip 只露 48；
+    #       compact/minimal 开 = 240 覆盖 + Smoke；选中项/遮罩/Esc 关闭覆盖层。
+    #     阈值和响应式断点体系（Small ≤640 / Medium 641~1007 / Large ≥1008）完全同值，
     #     所以只允许在 tokens 里写一份，JS 读变量 —— 不许在 JS 里再硬编码一遍。
     #     pane 宽度切换**不许过渡 width**：layout 每帧取整 → 台阶（滑块那节踩过同一个坑）。
     for key, want, why in (
@@ -937,11 +942,78 @@ def main():
             fails.append(f"R50 fluent2-tokens.css: {key} 必须是 {want}（{why}），"
                          f"实际是 {m.group(1).strip()}")
     if controls_css:
-        # 紧凑档：必须隐藏文字，只留图标（否则 48px 里塞着文字 = 挤压变形）
-        m = re.search(r'\.fl-nav\[data-nav-mode="compact"\][^{]*\.fl-nav-label\s*\{([^}]*)\}', controls_css)
-        if not m or "display: none" not in m.group(1):
-            fails.append("R50 fluent2-controls.css: 紧凑档必须 .fl-nav-label { display: none }"
-                         "（48px 的图标列里不能留文字）")
+        # 收起档必须隐藏文字（展开档收起 / 紧凑档关闭）；文字靠 .fl-nav-label 钩子，
+        # 读屏名称由 JS 补 aria-label（下面单独查）。
+        for mode in ("expanded", "compact"):
+            m = re.search(
+                rf'\.fl-nav\[data-nav-mode="{mode}"\]\[data-nav-open="0"\]\s+\.fl-nav-label\s*\{{([^}}]*)\}}',
+                controls_css)
+            if not m or "display: none" not in m.group(1):
+                fails.append(f"R50 fluent2-controls.css: {mode} 收起档必须隐藏 .fl-nav-label"
+                             "（48px 图标列里不能留文字），且只在 data-nav-open=\"0\" 下隐藏")
+        # 展开档 = 官方 CompactInline：pane 绝对定位、盒宽 240、关闭时 clip 只露 48；
+        # 内容 margin 48↔240 与 clip 同 250ms 推挤（不是 width:0，也不过过渡 width）。
+        m = re.search(r'\.fl-nav\[data-nav-mode="expanded"\]\s*\{([^}]*)\}', controls_css)
+        eb = m.group(1) if m else ""
+        if "position: absolute" not in eb:
+            fails.append("R50 fluent2-controls.css: expanded 档 pane 必须 position:absolute"
+                         "（内容层用 margin 让位，开合才能和 clip 同步推挤）")
+        if "clip-path" not in eb:
+            fails.append("R50 fluent2-controls.css: expanded 档必须用 clip-path 表达 48↔240"
+                         "（不许过渡 width）")
+        m = re.search(r'\.fl-nav\[data-nav-mode="expanded"\]\[data-nav-open="0"\]\s*\{([^}]*)\}',
+                      controls_css)
+        if not m or not re.search(r"clip-path\s*:\s*inset\(0\s+calc\(", m.group(1)):
+            fails.append("R50 fluent2-controls.css: expanded 收起必须用 clip 只露左侧 48"
+                         "（clip-path: inset(0 calc(...))），不是 width:0")
+        if not re.search(
+                r'\.fl-shell:has\(\.fl-nav\[data-nav-mode="expanded"\]\)\s*>\s*\.fl-content-layer\s*\{[^}]*'
+                r'margin-left\s*:\s*var\(--fl-nav-width\)[^}]*'
+                r'transition\s*:\s*margin-left\s+var\(--fl-dur-control-normal\)', controls_css):
+            fails.append("R50 fluent2-controls.css: expanded 档内容层必须 margin-left:240 并过渡 margin-left"
+                         "（官方 CompactInline 的推挤；和 clip 同 250ms）")
+        if not re.search(
+                r'\.fl-shell:has\(\.fl-nav\[data-nav-mode="expanded"\]\[data-nav-open="0"\]\)\s*>\s*'
+                r'\.fl-content-layer\s*\{[^}]*margin-left\s*:\s*var\(--fl-nav-compact-width\)', controls_css):
+            fails.append("R50 fluent2-controls.css: expanded 收起时内容层必须收到 48"
+                         "（margin-left: var(--fl-nav-compact-width)）")
+        if re.search(r"\.fl-nav[^{}]*\{[^{}]*?(?<![\w-])width\s*:\s*0(?:px)?\b", controls_css):
+            fails.append("R50 fluent2-controls.css: 导航任何档位都不许把 width 压成 0"
+                         "（收起 = 48 图标列 / 左侧外位移，不是宽 0）")
+        # 紧凑档 = 官方 CompactOverlay：盒宽 240、绝对定位、关闭时 clip 只露左侧 48
+        m = re.search(r'\.fl-nav\[data-nav-mode="compact"\]\s*\{([^}]*)\}', controls_css)
+        block = m.group(1) if m else ""
+        if "position: absolute" not in block:
+            fails.append("R50 fluent2-controls.css: compact 档 pane 必须 position:absolute"
+                         "（打开时覆盖内容，不推正文）")
+        if not re.search(r"clip-path\s*:\s*inset\(", block):
+            fails.append("R50 fluent2-controls.css: compact 档必须用 clip-path 只露左侧 48"
+                         "（官方 SplitView PaneClipRectangle，不是把盒宽改成 48/0）")
+        m = re.search(r'\.fl-nav\[data-nav-mode="compact"\]\[data-nav-open="1"\]\s*\{([^}]*)\}',
+                      controls_css)
+        if not m or "clip-path" not in m.group(1):
+            fails.append("R50 fluent2-controls.css: compact 打开态必须放开 clip-path"
+                         "（否则打开后仍是 48 图标列）")
+        elif not re.search(r"inset\(0\s+-24px\s+-24px\s+0\)", m.group(1)):
+            fails.append("R50 fluent2-controls.css: compact 打开态的 clip 要给 e32 阴影留出"
+                         "负 inset（inset(0 -24px -24px 0)），否则阴影被裁掉")
+        # 内容层让位：compact 恒定 48（开合不重排）；minimal 按档位保留 40（开合不横跳）
+        if not re.search(
+                r'\.fl-shell:has\(\.fl-nav\[data-nav-mode="compact"\]\)\s*>\s*\.fl-content-layer\s*\{[^}]*'
+                r'margin-left\s*:\s*var\(--fl-nav-compact-width\)', controls_css):
+            fails.append("R50 fluent2-controls.css: compact 档内容层必须恒定让出 48"
+                         "（margin-left: var(--fl-nav-compact-width)），覆盖层开合不得重排正文")
+        if not re.search(
+                r'\.fl-shell:has\(\.fl-nav\[data-nav-mode="minimal"\]\)\s*>\s*\.fl-content-layer\s*\{[^}]*'
+                r'padding-left\s*:\s*var\(--fl-nav-toggle-w\)', controls_css):
+            fails.append("R50 fluent2-controls.css: minimal 档内容让位必须按档位而不是按开合"
+                         "（padding-left: var(--fl-nav-toggle-w)，打开浮层时正文不横跳）")
+        # 浮动汉堡只属于 minimal 收起态；展开/紧凑档的入口在 pane 头部
+        if not re.search(
+                r'\.fl-nav\[data-nav-mode="minimal"\]\[data-nav-open="0"\]\s*~\s*'
+                r'\.fl-nav-toggle-float', controls_css):
+            fails.append("R50 fluent2-controls.css: 浮动汉堡只允许 minimal 收起态出现"
+                         "（展开/紧凑档的入口在 pane 头部，不能多出一个汉堡）")
         # 极简档：必须是位移浮层，不是把宽度压到 0
         if not re.search(r'\.fl-nav\[data-nav-mode="minimal"\][^{]*\{[^}]*translateX\(-100%\)',
                          controls_css):
@@ -970,8 +1042,11 @@ def main():
         if "fl-nav-toggle" not in html:
             fails.append("R50 页面缺汉堡按钮 .fl-nav-toggle（PaneToggleButton 40×36）——"
                          "极简档没有它就永远打不开导航")
+        if "fl-nav-toggle-float" not in html:
+            fails.append("R50 页面缺浮动汉堡 .fl-nav-toggle-float —— minimal 收起时 pane 在视口外，"
+                         "没有它就没有入口")
         if "fl-nav-scrim" not in html:
-            fails.append("R50 页面缺 .fl-nav-scrim 遮罩（极简档打开 pane 时要挡住内容、点它关闭）")
+            fails.append("R50 页面缺 .fl-nav-scrim 遮罩（compact/minimal 打开覆盖层时要挡住内容、点它关闭）")
     if motion_js:
         if "--fl-nav-compact-threshold" not in motion_js or "--fl-nav-expand-threshold" not in motion_js:
             fails.append("R50 fluent2-motion.js: 档位阈值必须从 CSS 变量读（--fl-nav-compact-threshold / "
@@ -979,6 +1054,18 @@ def main():
         if "ResizeObserver" not in motion_js:
             fails.append("R50 fluent2-motion.js: 档位要靠 ResizeObserver 跟随容器宽度变化"
                          "（对应 XAML 的 AdaptiveTrigger）")
+        if "wasForceClosed" not in motion_js:
+            fails.append("R50 fluent2-motion.js: 必须记 wasForceClosed（官方 m_wasForceClosed）——"
+                         "手动收起后换档回 expanded 不能自动弹开")
+        if "closeOverlay" not in motion_js or '!== "expanded"' not in motion_js:
+            fails.append("R50 fluent2-motion.js: 覆盖层关闭必须按「open 且 mode !== expanded」判断"
+                         "（compact/minimal 的选中项、遮罩、Esc 都要能关）")
+        if 'closest(".fl-nav-item")' not in motion_js:
+            fails.append("R50 fluent2-motion.js: 覆盖层里选中导航项后必须自动收起"
+                         "（官方 ClosePaneIfNeccessaryAfterItemIsClicked）")
+        if 'setAttribute("aria-label", name)' not in motion_js or '"aria-label", text' not in motion_js:
+            fails.append("R50 fluent2-motion.js: 收起档要用 aria-label 保住导航项与汉堡的名称"
+                         "（label display:none 后读屏不能失去项名）")
 
     # R51 触屏点按反馈：UA 高亮关掉之后，可点类必须自己给 :active
     #     -webkit-tap-highlight-color 可继承，浏览器默认 ≈ rgba(0,0,0,.18)（Android 偏蓝）：

@@ -20,11 +20,14 @@
 <div class="fl-shell">
 
   <!-- 模块：nav —— NavigationView 左导航（顶层页、>5 项、不频繁切换时用；单页工具整块删除）
-       响应式：≥1008px 展开 240 / 641~1007 收成 48px 图标列 / ≤640 收起，点汉堡从左侧浮出 + 遮罩。
-       图标 16px、文字必须包在 .fl-nav-label 里（紧凑档要隐藏文字、只留图标）。 -->
+       响应式（官方 PaneDisplayMode=Auto）：≥1008 展开 240；641~1007 关是 48 图标列、
+       点 pane 头部汉堡打开 240 覆盖层（内容不动）；≤640 收起，由浮动汉堡打开 240 覆盖层。
+       展开档点汉堡收成 48 图标列（不是消失），再点以 250 毫秒推挤动画展开。覆盖层里
+       选中项 / 点遮罩 / Esc 都会收起。
+       图标 16px、文字必须包在 .fl-nav-label 里（收起档隐藏文字，名称由 JS 补 aria-label）。 -->
   <nav class="fl-nav" id="nav" aria-label="主导航">
     <div class="fl-nav-panehead">
-      <button class="fl-nav-toggle" type="button" aria-label="收起导航" aria-expanded="true">
+      <button class="fl-nav-toggle" type="button" aria-label="关闭导航" aria-expanded="true">
         <svg class="fl-nav-glyph" viewBox="0 0 16 16" aria-hidden="true">
           <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
         </svg>
@@ -60,7 +63,7 @@
       <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
     </svg>
   </button>
-  <!-- 极简档打开 pane 时的遮罩（SmokeFillColorDefault 30% 黑），点它关闭 -->
+  <!-- 覆盖层（compact/minimal 打开 pane）的遮罩（SmokeFillColorDefault 30% 黑），点它关闭 -->
   <div class="fl-nav-scrim" data-open="0" aria-hidden="true"></div>
 
   <main class="fl-content-layer">

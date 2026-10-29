@@ -188,10 +188,10 @@ BAD_CASES = {
     "R50a": ("fluent2-tokens.css",
              "--fl-nav-compact-threshold: 641px;",
              "--fl-nav-compact-threshold: 800px;"),
-    # 紧凑档不隐藏文字 → 48px 里塞着文字，挤成一团
+    # 收起档（expanded/compact 关）不隐藏文字 → 48px 里塞着文字，挤成一团
     "R50b": ("fluent2-controls.css",
-             '.fl-nav[data-nav-mode="compact"] .fl-nav-label { display: none; }',
-             '.fl-nav[data-nav-mode="compact"] .fl-nav-label { display: inline; }'),
+             '.fl-nav[data-nav-mode="compact"][data-nav-open="0"] .fl-nav-label { display: none; }',
+             '.fl-nav[data-nav-mode="compact"][data-nav-open="0"] .fl-nav-label { display: inline; }'),
     # 给导航加 width 过渡 → layout 每帧取整，收起变成 3 级台阶
     "R50c": ("fluent2-controls.css",
              ".fl-nav {\n  width: var(--fl-nav-width); flex-shrink: 0;",
@@ -200,10 +200,26 @@ BAD_CASES = {
     "R50d": ("fluent2-controls.css",
              "  transform: translateX(-100%); visibility: hidden;",
              "  width: 0; visibility: hidden;"),
-    # 导航项文字没包 .fl-nav-label → 紧凑档没有钩子隐藏文字
+    # 导航项文字没包 .fl-nav-label → 收起档没有钩子隐藏文字
     "R50e": ("fluent2-tool-starter.html",
              '<span class="fl-nav-label">条目管理</span>',
              '条目管理'),
+    # 展开档收起不再 clip → 收起后仍是 240，看不到 48 图标列的推挤
+    "R50f": ("fluent2-controls.css",
+             "  clip-path: inset(0 calc(var(--fl-nav-width) - var(--fl-nav-compact-width)) 0 0);",
+             "  clip-path: inset(0 0 0 0);"),
+    # 浮动汉堡不再限定 minimal → 展开/紧凑档会多出一个汉堡
+    "R50g": ("fluent2-controls.css",
+             '.fl-nav[data-nav-mode="minimal"][data-nav-open="0"] ~ .fl-nav-toggle-float',
+             '.fl-nav[data-nav-open="0"] ~ .fl-nav-toggle-float'),
+    # 紧凑档打开态不给阴影留负 inset → e32 阴影被 clip 切掉
+    "R50h": ("fluent2-controls.css",
+             "  clip-path: inset(0 -24px -24px 0);",
+             "  clip-path: inset(0 0 0 0);"),
+    # 展开档内容层不过渡 margin-left → 只有 clip 在动，正文瞬间跳到 240
+    "R50i": ("fluent2-controls.css",
+             "  transition: margin-left var(--fl-dur-control-normal) var(--fl-ease-standard);",
+             "  transition: margin-left 0s linear;"),
     # 滚动条拖动态把透明边框收到 0 → thumb 画满 12px，太粗
     # 悬停态只写 border-width（没有 style）→ 等于没有边框，thumb 回弹成 12px
     "R43a": ("fluent2-controls.css",

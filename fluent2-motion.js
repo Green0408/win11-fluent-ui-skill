@@ -436,12 +436,20 @@
   }
 
   /* ---- 导航响应式档位（对应 XAML NavigationView 的 PaneDisplayMode=Auto）----
-       ≥ --fl-nav-expand-threshold(1008)  expanded —— pane 并排展开
-       641~1007                           compact  —— 只留 48px 图标列（紧凑态）
-       < --fl-nav-compact-threshold(641)  minimal  —— pane 收起，汉堡从左侧浮出 + 遮罩
-     阈值直接读 CSS 变量，不在 JS 里写第二份数字（XAML 侧对应 AdaptiveTrigger → VisualState）。
-     toggle：展开/紧凑档点它 = 手动收起（open=0，汉堡移到内容左上）；极简档点它 = 开浮层。
-     切档时**不重置用户已手动收起的意图**，只在新档位上给官方默认值。 */
+       官方把「显示档位」和「pane 是否打开」当成两个正交状态（NavigationView.cpp
+       UpdateAdaptiveLayout / OnPaneToggleButtonClick）：
+        ≥ --fl-nav-expand-threshold(1008)  expanded —— 240 并排；关上 = 48 图标列（CompactInline）
+        641~1007                           compact  —— 关：48 图标列；开：240 覆盖（CompactOverlay）
+        < --fl-nav-compact-threshold(641)  minimal  —— 关：收在左侧外；开：240 覆盖（Overlay）
+      阈值直接读 CSS 变量，不在 JS 里写第二份数字（XAML 侧对应 AdaptiveTrigger → VisualState）。
+
+      换档（官方 UpdateAdaptiveLayout）：进入 expanded 且用户没手动关过 → 打开；
+      进入 compact/minimal → 一律关闭。用户点汉堡手动关闭记 wasForceClosed（= 官方
+      m_wasForceClosed），再变宽也不会自己弹开；选中导航项 / 点遮罩 / Esc 属于轻关闭，
+      不改这个意图（官方 AttemptClosePaneLightly / ClosePaneIfNeccessaryAfterItemIsClicked）。
+
+      覆盖层打开时（compact/minimal）选中导航项会自动收起 —— 对应
+      NavigationView::OnNavigationViewItemInvoked → ClosePaneIfNeccessaryAfterItemIsClicked。 */
   (function () {
     function num(v, fb) {
       var n = parseFloat(v);
@@ -455,42 +463,75 @@
       var expandT = num(cs.getPropertyValue("--fl-nav-expand-threshold"), 1008);
       var shell = nav.parentElement;
       var scrim = shell ? shell.querySelector(".fl-nav-scrim") : null;
+      var content = shell ? shell.querySelector(".fl-content-layer") : null;
       var floats = shell ? shell.querySelectorAll(".fl-nav-toggle-float") : [];
+      var wasForceClosed = false;   /* 官方 m_wasForceClosed：手动关过，换档回 expanded 也不自动打开 */
 
       function modeFor(w) {
         if (w < compactT) return "minimal";
         if (w < expandT) return "compact";
         return "expanded";
       }
+      /* 开合状态是唯一真相：aria-expanded 与按钮名称都从它派生（官方
+         SetPaneToggleButtonAutomationName：开 = 关闭导航 / 关 = 打开导航）。 */
       function syncToggles() {
         var open = nav.dataset.navOpen === "1";
+        var name = open ? "关闭导航" : "打开导航";
         var all = nav.querySelectorAll(".fl-nav-toggle");
-        for (var i = 0; i < all.length; i++) all[i].setAttribute("aria-expanded", open ? "true" : "false");
-        for (var j = 0; j < floats.length; j++) floats[j].setAttribute("aria-expanded", open ? "true" : "false");
+        var i;
+        for (i = 0; i < all.length; i++) {
+          all[i].setAttribute("aria-expanded", open ? "true" : "false");
+          all[i].setAttribute("aria-label", name);
+        }
+        for (i = 0; i < floats.length; i++) {
+          floats[i].setAttribute("aria-expanded", open ? "true" : "false");
+          floats[i].setAttribute("aria-label", name);
+        }
       }
       function setOpen(open) {
         nav.dataset.navOpen = open ? "1" : "0";
-        /* 遮罩只在「极简档 + 打开」时出现：展开档手动收起不浮层，内容直接占满 */
-        if (scrim) scrim.dataset.open = (open && nav.dataset.navMode === "minimal") ? "1" : "0";
+        /* 遮罩只在覆盖层（compact/minimal）打开时出现：expanded 收起是并排的 48 列，不浮 */
+        if (scrim) scrim.dataset.open = (open && nav.dataset.navMode !== "expanded") ? "1" : "0";
         syncToggles();
       }
       function apply() {
         var w = shell ? shell.clientWidth : global.innerWidth;
         var m = modeFor(w);
-        if (nav.dataset.navMode !== m) {
-          /* 档位切换是布局级瞬变（官方 AdaptiveTrigger 语义）：先掐掉过渡再改，
-             否则从 expanded 到 minimal 会先"浮起来"再滑走，内容闪一下。
-             inline transition 清空后会自动回落到样式表里的过渡。 */
-          nav.style.transition = "none";
-          nav.dataset.navMode = m;
-          setOpen(m !== "minimal");
-          void nav.offsetHeight;              /* 强制同步样式，让 none 立即生效 */
-          nav.style.transition = "";
-          if (M.nav.indicator) M.nav.indicator.sync(nav); /* 宽度变了，指示条要重新落位 */
-        }
+        if (nav.dataset.navMode === m) return;
+        /* 档位切换是布局级瞬变（官方 AdaptiveTrigger 语义）：先掐掉过渡再改，
+           否则从 compact 到 minimal 会先播一段 clip/位移，内容闪一下。
+           inline transition 清空后会自动回落到样式表里的过渡。 */
+        nav.style.transition = "none";
+        if (scrim) scrim.style.transition = "none";
+        if (content) content.style.transition = "none";
+        nav.dataset.navMode = m;
+        /* 官方 UpdateAdaptiveLayout：只有 expanded 按用户意图打开；compact/minimal 一律关闭 */
+        setOpen(m === "expanded" && !wasForceClosed);
+        void nav.offsetHeight;              /* 强制同步样式，让 none 立即生效 */
+        nav.style.transition = "";
+        if (scrim) scrim.style.transition = "";
+        if (content) content.style.transition = "";
+        if (M.nav.indicator) M.nav.indicator.sync(nav); /* 宽度变了，指示条要重新落位 */
       }
       function toggle() {
-        setOpen(nav.dataset.navOpen !== "1");
+        var opening = nav.dataset.navOpen !== "1";
+        /* 手动关 = 记住（官方 m_wasForceClosed=true）；手动开 = 清除 */
+        wasForceClosed = !opening;
+        setOpen(opening);
+      }
+      function closeOverlay() {
+        if (nav.dataset.navOpen === "1" && nav.dataset.navMode !== "expanded") setOpen(false);
+      }
+
+      /* 收起档会让 .fl-nav-label display:none；把名称补到链接上，读屏仍有项名。
+         官方 NavigationViewItem 的自动化名称也来自 Content，不随 label 收起而消失。 */
+      var items = nav.querySelectorAll(".fl-nav-item");
+      for (var k = 0; k < items.length; k++) {
+        var label = items[k].querySelector(".fl-nav-label");
+        if (label && !items[k].hasAttribute("aria-label")) {
+          var text = (label.textContent || "").replace(/\s+/g, " ").trim();
+          if (text) items[k].setAttribute("aria-label", text);
+        }
       }
 
       var btns = nav.querySelectorAll(".fl-nav-toggle");
@@ -498,19 +539,26 @@
       for (var j = 0; j < floats.length; j++) floats[j].addEventListener("click", toggle);
       if (scrim) scrim.addEventListener("click", function () { setOpen(false); });
       document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" && nav.dataset.navMode === "minimal" && nav.dataset.navOpen === "1") {
-          setOpen(false);
-        }
+        if (e.key === "Escape") closeOverlay();
       });
+      /* 覆盖层里选中导航项就收起（展开档不关）。用捕获阶段：即使业务自己的 click
+         处理器先 stopPropagation，也能在页面转场前收起浮层。 */
+      nav.addEventListener("click", function (e) {
+        var t = e.target;
+        var item = t && t.closest ? t.closest(".fl-nav-item") : null;
+        if (item && item.getAttribute("aria-disabled") !== "true") closeOverlay();
+      }, true);
 
       if (global.ResizeObserver && shell) {
         new global.ResizeObserver(apply).observe(shell);
       } else {
         global.addEventListener("resize", apply);
       }
-      apply();
+      apply();          /* 首次：按当前宽度落档位；expanded 默认开，compact/minimal 默认关 */
       if (!nav.dataset.navMode) nav.dataset.navMode = modeFor(shell ? shell.clientWidth : global.innerWidth);
-      if (!nav.dataset.navOpen) nav.dataset.navOpen = nav.dataset.navMode === "minimal" ? "0" : "1";
+      if (nav.dataset.navOpen !== "0" && nav.dataset.navOpen !== "1") {
+        setOpen(nav.dataset.navMode === "expanded" && !wasForceClosed);
+      }
       syncToggles();
       nav.__flNav = { apply: apply, setOpen: setOpen, mode: function () { return nav.dataset.navMode; } };
       return nav.__flNav;

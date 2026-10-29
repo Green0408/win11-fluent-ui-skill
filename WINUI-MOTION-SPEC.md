@@ -186,39 +186,49 @@
 （Small ≤640 / Medium 641–1007 / Large ≥1008，`screen-sizes-and-breakpoints-for-responsive-design`）
 **完全同值**，说明 WinUI 直接把设备断点当成 NavigationView 的档位界。
 
-| 窗口宽 | DisplayMode | pane | 内容 |
+| 窗口宽 | DisplayMode | 关（`IsPaneOpen=false`） | 开（`IsPaneOpen=true`） |
 |---|---|---|---|
-| ≥1008 | Expanded | 并排展开，与内容分栏 | 不覆盖 |
-| 641–1007 | Compact | 48 图标列（`NavigationViewCompactPaneLength`） | 不覆盖 |
-| ≤640 | Minimal | 收起；打开时**覆盖**内容 + 遮罩 | 被覆盖（可点遮罩关闭） |
+| ≥1008 | Expanded | **48 图标列**：pane 盒 240 + clip 只露 48；内容 margin 48 | **240 并排**，内容从 240 起；**开合 = clip + margin 同步 250ms** |
+| 641–1007 | Compact | **48 图标列**：pane 盒仍 240，`clip-path` 只露左侧 48 | **240 覆盖内容**（官方 CompactOverlay），内容仍从 48 起 |
+| ≤640 | Minimal | 收在左侧外（`translateX(-100%)`），浮动汉堡 | **240 覆盖 + 遮罩**，内容仍从 40 起 |
 
-**pane 开合动画**（Minimal 的浮层）：
+官方状态迁移（`NavigationView.cpp` `UpdateAdaptiveLayout` / `OnPaneToggleButtonClick`）：
+初始与进入 Compact/Minimal → 关；进入 Expanded → 开，除非用户手动关过（`m_wasForceClosed`）。
+覆盖层里选中项 / 点遮罩 / Esc → 关（轻关闭，不改手动关的意图）。
 
-| 项 | 值 |
-|---|---|
-| 动作 | 纯位移：`translateX(-100%) → 0`（不是宽度变化、不是淡入） |
-| 时长 | **250ms**，开与关**对称**（ControlNormal 档） |
-| 曲线 | `ControlFastOutSlowIn` = `cubic-bezier(0,0,0,1)` = `--fl-ease-standard` |
-| 遮罩 | `SmokeFillColorDefault`（`--fl-smoke`，30% 黑），同步淡入 250ms |
-| 关闭 | 点遮罩 / Esc；播完才 `visibility: hidden`（`visibility 0s linear var(--fl-dur-control-normal)`） |
+**pane 开合动画**：
+
+| 项 | Expanded | Compact | Minimal |
+|---|---|---|---|
+| 动作 | `clip-path: inset(0 192px 0 0) ↔ inset(0)` **同时** 内容层 `margin-left: 48px ↔ 240px`（推挤） | `clip-path: inset(0 192px 0 0) ↔ inset(0 -24px -24px 0)`（覆盖揭示） | 纯位移：`translateX(-100%) ↔ 0` |
+| 时长 | **250ms**，开与关**对称** | 同左 | 同左 |
+| 曲线 | `ControlFastOutSlowIn` = `cubic-bezier(0,0,0,1)` = `--fl-ease-standard` | 同左 | 同左 |
+| 遮罩 | 无（并排推挤） | `--fl-smoke`，同步淡入 250ms | 同左 |
+| 关闭 | clip 收回 48 + 内容 margin 回到 48 | clip 收回 48 / 遮罩/Esc/选中项关闭 | 位移回 -100% / 播完才 visibility:hidden |
+
+Expanded 的 clip 与 margin 必须同曲线同 250ms：pane 可见边 = `240 − 192×(1−p)`，
+内容左边缘 = `48 + 192×p`，两者恒等，正文才贴着 pane 边走。**不做 width 过渡**。
 
 为什么开关对称、不像菜单那样"入 250 / 出 167"：pane 是**布局容器**（SplitView 的 overlay pane），
-进出是同一段位移的两个方向；菜单那种不对称是"出现要快、消失更快"的轻量弹层策略，两者不同档。
+进出是同一段位移/裁剪的两个方向；菜单那种不对称是"出现要快、消失更快"的轻量弹层策略，两者不同档。
 另外 `--fl-ease-standard` 放在这里是对的（起手有加速段），和下拉揭示那节"曲线决定观感"是同一个道理 ——
 只是那里需要首帧就动起来（`ControlFastOutSlowIn`），这里需要慢起（同一条曲线在 250ms 下观感成立）。
 
-**三个坑**（都踩过）：
+**四个坑**（都踩过）：
 
 1. **不许过渡 `width`**：布局属性每帧取整，收起/展开会变成 3 级台阶（滑块 thumb 那节同一个根因）。
-   档位切换在 JS 里先 `transition:"none"`、改完 `offsetHeight` 强制同步、再清空 ——
-   官方 `AdaptiveTrigger` 本身也是布局级瞬变，没有过渡；
-2. **浮层背景必须换成 `--fl-acrylic-bg`**：并排态的 `--fl-layer-fill` 只有 30% 不透明，
-   浮起来直接透出正文（第一版就是"半透明玻璃贴纸"）；
-3. **汉堡要给内容让位**：极简档的 toggle 浮在内容左上（官方也压在内容上），
-   内容层必须让出 40px，否则会压住 Infobar 左侧的 severity 条。
+   档位切换在 JS 里先对 nav / scrim / content 设 `transition:"none"`、改完 `offsetHeight` 强制同步、再清空；
+2. **Expanded/Compact 关闭时 pane 盒仍是 240**，只是被 clip 裁到 48 —— 别用元素宽度判断"是不是 48 列"，
+   要看内容层左边界 / clip / 项宽。打开态的 clip 必须带负 inset，否则 e32 阴影被切掉；
+3. **Compact/Minimal 的 pane 背景用 `--fl-acrylic-bg`**（官方 NavigationViewDefaultPaneBackground）：
+   并排态的 `--fl-layer-fill` 只有 30% 不透明，浮起来直接透出正文（第一版就是"半透明玻璃贴纸"）；
+4. **内容让位**：Expanded 跟随开合（`margin-left` 48↔240，和 clip 同 250ms 推挤）；Compact 恒定 48；
+   Minimal 恒定 40。只有 Expanded 允许跟 `data-nav-open` 动，且只能动 `margin-left`，绝不碰 nav 的 `width`。
 
-**实现与校验**：KIT 规则 27；`M.nav.responsive`（阈值读 CSS 变量 + `ResizeObserver` 跟随容器）；
-`tests/nav_responsive.js` 16 条（三档宽度/文字隐藏/图标中心 24 一致/浮层开合 250ms 无 width 过渡/
-遮罩与 Esc/手动收起/换档后指示条仍贴项）；配图 `tests/nav-responsive.png`。
+**实现与校验**：KIT 规则 27；`M.nav.responsive`（阈值读 CSS 变量 + `ResizeObserver` 跟随容器 +
+`wasForceClosed` 状态）；`tests/nav_responsive.js` 覆盖三档两态、图标中心 24、Expanded 展开动画
+（clip + margin 同 250ms）、Compact 覆盖不重排、Minimal 开合不横跳、选中项/遮罩/Esc 关闭、
+手动收起跨档保留、指示条跟随；配图 `tests/nav-responsive.png`
+（1200 开 / 800 关 / 500 关 / 500 开，仍是本方案的有效截图）。
 
 

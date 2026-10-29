@@ -125,16 +125,67 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
 }
 .fl-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* 紧凑档：48px 图标列。内边距 4 → 导航项 40 宽（与官方 compact item 一致），图标水平居中 */
-.fl-nav[data-nav-mode="compact"] {
-  width: var(--fl-nav-compact-width);
-  padding: var(--fl-space-1);
+/* ---- 开合状态：对应 NavigationView 的 IsPaneOpen × SplitView DisplayMode ----
+   官方源码（NavigationView.cpp UpdateAdaptiveLayout；SplitView 的 ClosedCompactLeft /
+   OpenCompactOverlayLeft、ListSizeCompact）：
+     expanded 开 = 240 并排（CompactInline；内容 margin 240）
+     expanded 关 = 48 图标列（pane 盒 240 + clip；内容 margin 48）
+     compact  关 = 48 图标列；开 = 240 覆盖（CompactOverlay；内容恒定 48）
+     minimal  关 = 收在左侧外；开 = 240 覆盖（Overlay；内容恒定 40）
+   所有档位的 pane 盒都保持 240，只用 clip/位移表达开合；expanded 额外把内容 margin
+   从 48 推到 240（官方 CompactInline 的推挤），与 clip 同为 250ms —— 不过渡 width。 */
+/* Expanded = CompactInline：pane 绝对定位，内容层用 margin 让位。开合时 clip 只露
+   48↔240，同时 content margin 48↔240；两者同曲线同 250ms，内容左边缘始终贴着 pane 可见边。 */
+.fl-nav[data-nav-mode="expanded"] {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 45;
+  width: var(--fl-nav-width);
+  clip-path: inset(0);
+  transition: clip-path var(--fl-dur-control-normal) var(--fl-ease-standard);
 }
-.fl-nav[data-nav-mode="compact"] .fl-nav-panehead { margin-left: 0; padding: 0; }
-.fl-nav[data-nav-mode="compact"] .fl-nav-item {
+.fl-nav[data-nav-mode="expanded"][data-nav-open="0"] {
+  clip-path: inset(0 calc(var(--fl-nav-width) - var(--fl-nav-compact-width)) 0 0);
+}
+.fl-shell:has(.fl-nav[data-nav-mode="expanded"]) > .fl-content-layer {
+  margin-left: var(--fl-nav-width);
+  transition: margin-left var(--fl-dur-control-normal) var(--fl-ease-standard);
+}
+.fl-shell:has(.fl-nav[data-nav-mode="expanded"][data-nav-open="0"]) > .fl-content-layer {
+  margin-left: var(--fl-nav-compact-width);
+  box-shadow: inset var(--fl-stroke) 0 0 var(--fl-divider-stroke);
+}
+/* 收起档导航项 40 宽（48 − 左右各 4），图标水平居中；文字收回，名称由 aria-label 保住 */
+.fl-nav[data-nav-mode="expanded"][data-nav-open="0"] .fl-nav-item,
+.fl-nav[data-nav-mode="compact"][data-nav-open="0"] .fl-nav-item {
+  width: var(--fl-nav-icon-box);
   justify-content: center; gap: 0; padding: 0;
 }
-.fl-nav[data-nav-mode="compact"] .fl-nav-label { display: none; }
+.fl-nav[data-nav-mode="expanded"][data-nav-open="0"] .fl-nav-label { display: none; }
+.fl-nav[data-nav-mode="compact"][data-nav-open="0"] .fl-nav-label { display: none; }
+
+/* 紧凑档：48 图标列 ↔ 240 覆盖层（官方 LeftCompact）。内容层恒定让出 48，
+   覆盖层开合时正文不横向重排（官方 CompactOverlay 同样不挪内容）。 */
+.fl-nav[data-nav-mode="compact"] {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 45;
+  width: var(--fl-nav-width);
+  clip-path: inset(0 calc(var(--fl-nav-width) - var(--fl-nav-compact-width)) 0 0);
+  transition: clip-path var(--fl-dur-control-normal) var(--fl-ease-standard);
+  /* 官方 LeftCompact/LeftMinimal 的 pane 背景都是 NavigationViewDefaultPaneBackground（Acrylic）。
+     关闭的图标列也保持这层：如果收起时切回 30% 的 --fl-layer-fill，正在收窄的那条会透出正文。 */
+  background: var(--fl-acrylic-bg);
+  -webkit-backdrop-filter: blur(60px) saturate(125%);
+  backdrop-filter: blur(60px) saturate(125%);
+}
+.fl-nav[data-nav-mode="compact"][data-nav-open="1"] {
+  /* 负 inset 给 --fl-shadow-flyout 留扩散区，否则 clip 会把阴影切掉 */
+  clip-path: inset(0 -24px -24px 0);
+  box-shadow: var(--fl-shadow-flyout);
+}
+.fl-nav[data-nav-mode="compact"] .fl-nav-panehead { margin-left: 0; padding: 0; }
+/* 关闭时 pane 的右描边被裁掉，divider 由内容层内侧 1px 线补；打开后被浮层盖住 */
+.fl-shell:has(.fl-nav[data-nav-mode="compact"]) > .fl-content-layer {
+  margin-left: var(--fl-nav-compact-width);
+  box-shadow: inset var(--fl-stroke) 0 0 var(--fl-divider-stroke);
+}
 
 /* 极简档：pane 变成盖在内容上的浮层，从左侧滑出（SplitView Pane 的 overlay 行为）。
    开关对称用 ControlNormal 250ms —— pane 是布局元素，和菜单那种轻量弹层不同档。
@@ -157,7 +208,7 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   transition: transform var(--fl-dur-control-normal) var(--fl-ease-standard),
               visibility 0s linear;
 }
-/* 遮罩（SmokeFillColorDefault）：只在极简档存在；点它关闭 pane */
+/* 遮罩（SmokeFillColorDefault）：compact/minimal 的覆盖层打开时出现；点它关闭 pane */
 .fl-nav-scrim {
   position: absolute; inset: 0; z-index: 44;
   background: var(--fl-smoke);
@@ -170,19 +221,13 @@ body:has(.fl-shell) { height: 100%; overflow: hidden; display: flex; flex-direct
   transition: opacity var(--fl-dur-control-normal) var(--fl-ease-standard),
               visibility 0s linear;
 }
-/* 展开/紧凑档手动收起（点 pane 头部汉堡）：pane 直接让位，内容占满，汉堡移到内容左上。
-   这里**不能过渡 width** —— layout 会把每帧宽度量化，看到的是 3 级台阶而不是平滑收起。 */
-.fl-nav[data-nav-mode="expanded"][data-nav-open="0"],
-.fl-nav[data-nav-mode="compact"][data-nav-open="0"] {
-  width: 0; padding: 0; border-right-width: 0; overflow: hidden;
-}
-/* 极简档收起时，汉堡浮在内容左上角（官方 minimal 的 PaneToggleButton 也压在内容上）；
-   pane 打开后由 pane 头部那个代替，这个隐藏 */
+/* 浮动汉堡只在极简档收起时出现：展开/紧凑档的入口在 pane 头部（官方只有 minimal 的
+   PaneToggleButton 压在内容上）。pane 打开后由 pane 头部那个代替，这个隐藏。 */
 .fl-nav-toggle-float { position: absolute; left: 0; top: 0; z-index: 46; display: none; }
-.fl-nav[data-nav-open="0"] ~ .fl-nav-toggle-float { display: inline-flex; }
-/* 汉堡浮在内容上时要给它让位，否则会压住 Infobar 左侧的 severity 条（官方 minimal 的
-   toggle 也是独占内容左上一格，内容不会被它盖住） */
-.fl-shell:has(.fl-nav[data-nav-open="0"]) > .fl-content-layer {
+.fl-nav[data-nav-mode="minimal"][data-nav-open="0"] ~ .fl-nav-toggle-float { display: inline-flex; }
+/* 极简档的让位按档位而不是按开合：开合都保留 40，打开浮层时正文不会左跳 40。
+   否则会压住 Infobar 左侧的 severity 条（官方 minimal 的 toggle 也独占内容左上一格）。 */
+.fl-shell:has(.fl-nav[data-nav-mode="minimal"]) > .fl-content-layer {
   padding-left: var(--fl-nav-toggle-w);
 }
 .fl-nav-item {
